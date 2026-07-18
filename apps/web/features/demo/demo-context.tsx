@@ -179,7 +179,7 @@ const localLesson = (timing: ContentWorkflowTiming, draftKind: "FULL_LESSON" | "
     explanation: "Dãy bắt đầu ở 2 và dừng trước 6, nên phần tử cuối là 5."
   },
   sections: [
-    { phase: "THEORY", title: "Lý thuyết có minh họa", durationMinutes: draftKind === "FULL_LESSON" ? 23 : 3, summary: "Bài giảng, video và phiếu đọc về start, stop, step.", activityTypes: ["LECTURE", "VIDEO", "DOCUMENT"] },
+    { phase: "THEORY", title: "Lý thuyết có minh họa", durationMinutes: draftKind === "FULL_LESSON" ? 23 : 3, summary: "Bài giảng, AI animation và phiếu đọc về start, stop, step.", activityTypes: ["LECTURE", "ANIMATION", "DOCUMENT"] },
     { phase: "PRACTICE", title: "Thực hành có phản hồi", durationMinutes: draftKind === "FULL_LESSON" ? 29 : 3, summary: "Dự đoán output, chạy code và sửa lỗi lệch một đơn vị.", activityTypes: ["CODE", "MULTIPLE_CHOICE", "DEBUG"] },
     { phase: "CHECKPOINT", title: "Kiểm tra cuối bài", durationMinutes: draftKind === "FULL_LESSON" ? 13 : 1, summary: "Ba tình huống mới dùng để cập nhật mastery và lộ trình.", activityTypes: ["MULTIPLE_CHOICE", "CODE"] }
   ],

@@ -1,7 +1,7 @@
 import type { DemoSlide } from "../../common/types";
 import type { GenerateContentDto } from "../dto/generate-content.dto";
 
-export type LessonActivityType = "LECTURE" | "VIDEO" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT";
+export type LessonActivityType = "LECTURE" | "VIDEO" | "ANIMATION" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT";
 
 export interface LessonDraftSection {
   phase: "THEORY" | "PRACTICE" | "CHECKPOINT";

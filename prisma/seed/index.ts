@@ -206,7 +206,7 @@ async function main(): Promise<void> {
     });
     const resources = [
       ["THEORY", "LECTURE", `Bài giảng: ${title}`, Math.round(durationMinutes * 0.22)],
-      ["THEORY", "VIDEO", `Video minh họa: ${title}`, Math.max(5, Math.round(durationMinutes * 0.1))],
+      ["THEORY", "ANIMATION", `AI animation: ${title}`, Math.max(5, Math.round(durationMinutes * 0.1))],
       ["THEORY", "DOCUMENT", `Phiếu ghi nhớ: ${title}`, Math.max(4, Math.round(durationMinutes * 0.06))]
     ] as const;
     for (const [phase, type, resourceTitle, minutes] of resources) {

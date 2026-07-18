@@ -66,9 +66,9 @@ Lưu ý: ngay cả sau khi local PostgreSQL được migrate và seed, API hiệ
 
 Dùng cách này nếu muốn paste script SQL có sẵn:
 
-1. Mở file `prisma/migrations/202607180001_init/migration.sql`.
-2. Paste toàn bộ vào SQL Editor của một project/schema chưa có các bảng EduRecall.
-3. Chạy một lần và kiểm tra không có statement lỗi.
+1. Mở file `prisma/migrations/202607180001_init/migration.sql`, paste vào SQL Editor của project/schema mới và chạy một lần.
+2. Mở file `prisma/migrations/202607180002_product_learning_flow/migration.sql`, paste và chạy sau khi migration đầu đã thành công.
+3. Kiểm tra cả hai lần chạy không có statement lỗi.
 4. Chạy seed bằng Prisma từ máy local:
 
 ```powershell
@@ -76,7 +76,7 @@ npm install
 npm run db:seed
 ```
 
-Migration SQL tạo schema nhưng không chứa demo rows. `prisma/seed/index.ts` mới tạo 1 course, 1 class, 20 students, 8 concepts, 10 lessons và 50 exercises.
+Migration SQL tạo schema nhưng không chứa demo rows. `prisma/seed/index.ts` mới tạo 1 course, 1 class, 20 students, 8 concepts, 12 lessons, 36 learning resources và 84 exercises.
 
 Script migration không idempotent: enum/table không có `IF NOT EXISTS`. Không paste lại trên cùng schema. Chạy SQL thủ công cũng không tạo lịch sử `_prisma_migrations`; vì vậy không chạy tiếp `npm run db:setup` trên database đó nếu chưa thực hiện một quy trình Prisma baseline có chủ đích.
 
@@ -90,13 +90,13 @@ npm run db:setup
 npm run db:seed
 ```
 
-Trong cách này, không paste `migration.sql` trong SQL Editor trước. `DATABASE_URL` phải là direct connection hoặc session-pooler connection cho phép DDL. `DIRECT_URL` trong file mẫu chỉ là chỗ lưu tham khảo; `prisma/schema.prisma` hiện chỉ đọc `DATABASE_URL`.
+Trong cách này, không paste `migration.sql` trong SQL Editor trước. `prisma/schema.prisma` đọc cả `DATABASE_URL` và `DIRECT_URL`; URL direct phải cho phép DDL để Prisma triển khai migration. URL-encode ký tự đặc biệt trong password.
 
 ### Không trộn hai cách
 
 | Database mới | Thao tác đúng |
 | --- | --- |
-| SQL Editor | Paste migration một lần, sau đó chỉ chạy seed |
+| SQL Editor | Paste `0001`, rồi `0002`, sau đó chỉ chạy seed |
 | Prisma | `db:setup`, sau đó `db:seed` |
 
 Nếu paste SQL rồi chạy `db:setup`, Prisma không biết migration đã được áp dụng và có thể thử tạo lại enum/table. Nếu `db:setup` rồi paste SQL, SQL cũng sẽ lỗi vì object đã tồn tại.
@@ -112,10 +112,11 @@ select count(*) as classes from "Class";
 select count(*) as students from "StudentProfile";
 select count(*) as concepts from "LearningConcept";
 select count(*) as lessons from "Lesson";
+select count(*) as resources from "LearningResource";
 select count(*) as exercises from "Exercise";
 ```
 
-Kết quả seed mong đợi lần lượt là `1, 1, 1, 20, 8, 10, 50`. Tiếp tục kiểm tra:
+Kết quả seed mong đợi lần lượt là `1, 1, 1, 20, 8, 12, 36, 84`. Tiếp tục kiểm tra:
 
 - `npm exec -- prisma validate --schema prisma/schema.prisma` chạy thành công;
 - `npm run db:seed` có thể chạy lại mà không nhân đôi các record dùng `upsert`;

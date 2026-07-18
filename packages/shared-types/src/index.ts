@@ -3,7 +3,7 @@ export type ContentStatus = "GENERATING" | "DRAFT" | "IN_REVIEW" | "REVISION_REQ
 export type RecommendationAction = "FLASH_REVIEW" | "MICRO_LESSON" | "PRACTICE_SET" | "PREREQUISITE_REVIEW" | "CONTINUE_PATH" | "CHECKPOINT" | "GAME_PRACTICE" | "TEACHER_SUPPORT";
 export type SlideType = "CONCEPT" | "CODE_STEP" | "EXAMPLE" | "MISCONCEPTION" | "VISUAL" | "QUIZ" | "SUMMARY";
 export type LessonPhase = "THEORY" | "PRACTICE" | "CHECKPOINT";
-export type LearningActivityType = "LECTURE" | "VIDEO" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT";
+export type LearningActivityType = "LECTURE" | "VIDEO" | "ANIMATION" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT";
 
 export interface ConceptState {
   conceptCode: string;

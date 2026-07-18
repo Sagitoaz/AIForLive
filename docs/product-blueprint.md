@@ -17,7 +17,7 @@ Website chỉ là lớp giao tiếp cho hai vòng lặp này. Sidebar học sinh
 
 Mỗi bài gồm:
 
-- **Lý thuyết:** bài giảng ngắn, video có phụ đề, tài liệu đọc và visual animation từ allowlist an toàn.
+- **Lý thuyết:** bài giảng ngắn, AI animation HTML/CSS từ allowlist an toàn, tài liệu đọc; video có phụ đề là tài nguyên tùy chọn khi giáo viên có sẵn.
 - **Thực hành:** code, predict output, code order, trắc nghiệm và sửa lỗi. Hình thức “game” được trình bày như một hoạt động học có mục tiêu, độ khó và event; không tách thành game arcade.
 - **Kiểm tra cuối bài:** câu hỏi mới theo kỹ năng, pass rule rõ ràng và kết quả dùng để quyết định học tiếp, luyện thêm hay ôn prerequisite.
 

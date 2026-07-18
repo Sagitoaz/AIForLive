@@ -43,7 +43,7 @@ function courseLesson(
     status,
     outcome,
     phases: [
-      { phase: "THEORY" as const, title: "Lý thuyết", durationMinutes: Math.round(durationMinutes * 0.36), summary: outcome, resources: ["Bài giảng ngắn", "Video minh họa", "Tài liệu đọc"] },
+      { phase: "THEORY" as const, title: "Lý thuyết", durationMinutes: Math.round(durationMinutes * 0.36), summary: outcome, resources: ["Bài giảng ngắn", "AI animation hoặc video", "Tài liệu đọc"] },
       { phase: "PRACTICE" as const, title: "Thực hành", durationMinutes: Math.round(durationMinutes * 0.44), summary: practice, resources: ["Code tương tác", "Trắc nghiệm", "Sửa lỗi"] },
       { phase: "CHECKPOINT" as const, title: "Kiểm tra cuối bài", durationMinutes: Math.max(8, Math.round(durationMinutes * 0.2)), summary: checkpoint, resources: ["3 câu theo kỹ năng", "Phản hồi cá nhân"] }
     ]

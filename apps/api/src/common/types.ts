@@ -105,6 +105,6 @@ export interface DemoContent {
     title: string;
     durationMinutes: number;
     summary: string;
-    activityTypes: Array<"LECTURE" | "VIDEO" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT">;
+    activityTypes: Array<"LECTURE" | "VIDEO" | "ANIMATION" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT">;
   }>;
 }

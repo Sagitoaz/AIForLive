@@ -68,7 +68,7 @@ export function StudentDashboard() {
 
       <section className="surface-card weekly-learning-summary">
         <SectionHeading eyebrow="Tuần học hiện tại" title="Tiến bộ theo hoạt động học" description="Hệ thống theo dõi từng pha để tránh trường hợp chỉ xem bài giảng nhưng chưa luyện hoặc kiểm tra." action={<Link href="/student/progress" className="text-link">Xem phân tích →</Link>} />
-        <div>{[["Lý thuyết", "2/3", 67, "Bài giảng · video · tài liệu"], ["Thực hành", "5/7", 71, "Code · dự đoán · sửa lỗi"], ["Kiểm tra cuối bài", "1/2", 50, "Còn checkpoint range()"]].map(([label, value, progress, note]) => <article key={String(label)}><span>{label}</span><strong>{value}</strong><ProgressBar value={Number(progress)}/><small>{note}</small></article>)}</div>
+        <div>{[["Lý thuyết", "2/3", 67, "Bài giảng · AI animation · tài liệu"], ["Thực hành", "5/7", 71, "Code · dự đoán · sửa lỗi"], ["Kiểm tra cuối bài", "1/2", 50, "Còn checkpoint range()"]].map(([label, value, progress, note]) => <article key={String(label)}><span>{label}</span><strong>{value}</strong><ProgressBar value={Number(progress)}/><small>{note}</small></article>)}</div>
       </section>
     </div>
   );

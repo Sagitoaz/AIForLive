@@ -134,4 +134,4 @@ Docker Compose is suitable for a local judge demo. Before production, rotate sec
 - Browser speech quality varies by OS and installed Vietnamese voices.
 - The source ZIP excludes dependencies and database volumes by design.
 
-See `docs/product-blueprint.md` for the product scope and flows, `docs/design-research.md` for the evidence behind key decisions, `docs/brief-fit-audit.md` for requirement status, `docs/run-local-and-supabase.md` for database setup, `docs/pilot-roadmap.md` for the 4–6 week pilot and `docs/demo-script.md` for the judge walkthrough.
+See `docs/product-blueprint.md` for the product scope and flows, `docs/ai-mechanisms.md` for the complete AI runtime explanation, `docs/design-research.md` for the evidence behind key decisions, `docs/brief-fit-audit.md` for requirement status, `docs/run-local-and-supabase.md` for database setup, `docs/pilot-roadmap.md` for the 4–6 week pilot and `docs/demo-script.md` for the judge walkthrough.

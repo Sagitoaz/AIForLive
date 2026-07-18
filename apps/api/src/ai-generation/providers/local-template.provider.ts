@@ -114,8 +114,8 @@ export class LocalTemplateProvider implements ContentProvider {
           phase: "THEORY",
           title: "Lý thuyết có minh họa",
           durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.35)),
-          summary: `Bài giảng, video ngắn và phiếu đọc được grounding từ ${input.sourceId}.`,
-          activityTypes: ["LECTURE", "VIDEO", "DOCUMENT"]
+          summary: `Bài giảng, AI animation và phiếu đọc được grounding từ ${input.sourceId}.`,
+          activityTypes: ["LECTURE", "ANIMATION", "DOCUMENT"]
         },
         {
           phase: "PRACTICE",

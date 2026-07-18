@@ -153,7 +153,7 @@ export class CoursesController {
           durationMinutes,
           status: module.id === "module-1" || module.id === "module-2" || lessonId === "lesson-07" ? "COMPLETED" : lessonId === "lesson-08" ? "CURRENT" : "LOCKED",
           phases: [
-            { phase: "THEORY", activityTypes: ["LECTURE", "VIDEO", "DOCUMENT"] },
+            { phase: "THEORY", activityTypes: ["LECTURE", "ANIMATION", "DOCUMENT"] },
             { phase: "PRACTICE", activityTypes: ["CODE", "MULTIPLE_CHOICE", "DEBUG"] },
             { phase: "CHECKPOINT", activityTypes: ["MULTIPLE_CHOICE", "CODE"] }
           ],
@@ -174,7 +174,7 @@ export class CoursesController {
       durationMinutes: 65,
       objectives: ["Đọc đúng start và stop", "Dự đoán dãy", "Tránh bẫy stop included"],
       sections: [
-        { phase: "THEORY", title: "Lý thuyết", durationMinutes: 23, resources: [{ type: "LECTURE", title: "Start, stop và step" }, { type: "VIDEO", title: "Robot Mầm đi qua trạm số", durationMinutes: 6 }, { type: "DOCUMENT", title: "Phiếu ghi nhớ range()" }] },
+        { phase: "THEORY", title: "Lý thuyết", durationMinutes: 23, resources: [{ type: "LECTURE", title: "Start, stop và step" }, { type: "ANIMATION", title: "Robot Mầm đi qua trạm số", durationMinutes: 6 }, { type: "DOCUMENT", title: "Phiếu ghi nhớ range()" }] },
         { phase: "PRACTICE", title: "Thực hành", durationMinutes: 29, activities: [{ id: "range-predict-01", type: "MULTIPLE_CHOICE", difficulty: 0.45 }, { id: "range-code-02", type: "CODE", difficulty: 0.55 }, { id: "range-debug-03", type: "DEBUG", difficulty: 0.6 }] },
         { phase: "CHECKPOINT", title: "Kiểm tra cuối bài", durationMinutes: 13, passRule: { minimumCorrect: 2, totalQuestions: 3 }, updatesPath: true }
       ]

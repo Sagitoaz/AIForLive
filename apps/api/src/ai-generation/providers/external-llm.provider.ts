@@ -147,7 +147,7 @@ function parseLesson(payload: JsonRecord, input: ContentGenerationInput): Omit<P
       explanation: text(quiz.explanation, "quiz.explanation")
     },
     sections: [
-      { phase: "THEORY", title: "Lý thuyết có minh họa", durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.35)), summary: "Bài giảng, video và tài liệu đọc bám theo nguồn đã được giáo viên xác minh.", activityTypes: ["LECTURE", "VIDEO", "DOCUMENT"] },
+      { phase: "THEORY", title: "Lý thuyết có minh họa", durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.35)), summary: "Bài giảng, AI animation và tài liệu đọc bám theo nguồn đã được giáo viên xác minh.", activityTypes: ["LECTURE", "ANIMATION", "DOCUMENT"] },
       { phase: "PRACTICE", title: "Thực hành có phản hồi", durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.45)), summary: "Code, câu hỏi dự đoán và hoạt động sửa lỗi tạo learning event cho cá nhân hóa.", activityTypes: ["CODE", "MULTIPLE_CHOICE", "DEBUG"] },
       { phase: "CHECKPOINT", title: "Kiểm tra cuối bài", durationMinutes: Math.max(1, input.durationMinutes - Math.round(input.durationMinutes * 0.35) - Math.round(input.durationMinutes * 0.45)), summary: "Câu hỏi mới kiểm tra khả năng chuyển giao kiến thức trước khi cập nhật lộ trình.", activityTypes: ["MULTIPLE_CHOICE", "CODE"] }
     ]
