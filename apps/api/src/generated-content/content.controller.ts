@@ -15,7 +15,9 @@ import { ApiConsumes, ApiTags } from "@nestjs/swagger";
 import { createHash, randomUUID } from "node:crypto";
 import { GenerateContentDto } from "../ai-generation/dto/generate-content.dto";
 import { ContentService } from "./content.service";
+import { LessonExportService } from "./lesson-export.service";
 import { EditContentDto, ReviewActionDto } from "./dto/review-content.dto";
+import type { LessonSectionType } from "../common/types";
 
 const allowedMime = new Set([
   "text/plain",
@@ -29,7 +31,10 @@ const allowedMime = new Set([
 export class ContentController {
   private readonly sources = new Map<string, Record<string, unknown>>();
 
-  constructor(private readonly content: ContentService) {}
+  constructor(
+    private readonly content: ContentService,
+    private readonly exporter: LessonExportService
+  ) {}
 
   @Post("content-sources/upload")
   @ApiConsumes("multipart/form-data")
@@ -134,5 +139,51 @@ export class ContentController {
   complete(@Param("id") id: string): Record<string, unknown> {
     this.content.getPublished(id);
     return { id, status: "COMPLETED", completedAt: new Date().toISOString() };
+  }
+
+  /* FEATURE-016 — three-part lesson endpoints */
+
+  @Get("micro-lessons/:id/sections")
+  sections(@Param("id") id: string) {
+    this.content.getPublished(id);
+    return this.content.getSections(id);
+  }
+
+  @Get("micro-lessons/:id/progress")
+  progress(@Param("id") id: string, @Body("studentId") studentId?: string) {
+    return this.content.lessonProgress(id, studentId ?? "student-minh");
+  }
+
+  @Post("micro-lessons/:id/sections/:type/progress")
+  sectionProgress(
+    @Param("id") id: string,
+    @Param("type") type: LessonSectionType,
+    @Body() body: { progressPercent?: number; completed?: boolean; studentId?: string }
+  ) {
+    return this.content.recordSectionProgress(id, type, body ?? {});
+  }
+
+  @Post("micro-lessons/:id/final-assessment")
+  finalAssessment(
+    @Param("id") id: string,
+    @Body() body: { answers?: Array<{ questionId: string; selectedIndex?: number; answer?: string }>; studentId?: string }
+  ) {
+    if (!body?.answers || !Array.isArray(body.answers)) {
+      throw new BadRequestException("answers array is required");
+    }
+    return this.content.submitFinalAssessment(id, body.answers, body.studentId ?? "student-minh");
+  }
+
+  @Get("teacher/generated-content/:id/sections")
+  teacherSections(@Param("id") id: string) {
+    return this.content.getSections(id);
+  }
+
+  @Post("export")
+  export(@Body("contentId") contentId: string): Record<string, unknown> {
+    if (!contentId) throw new BadRequestException("contentId is required");
+    const content = this.content.getForTeacher(contentId);
+    const { filename, html } = this.exporter.build(content);
+    return { filename, sizeBytes: Buffer.byteLength(html, "utf8"), contentType: "text/html", html };
   }
 }

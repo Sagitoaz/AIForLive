@@ -55,6 +55,42 @@ function workflowDurationMs(lesson: ReturnType<typeof useDemo>["lesson"]): numbe
   return Math.max(0, lesson.generationMs ?? 0) + Math.max(0, lesson.teacherEditingSeconds ?? 0) * 1_000;
 }
 
+// FEATURE-016 — teacher sees the three mandatory parts of every lesson.
+function LessonSectionTabs({ lesson }: { lesson: NonNullable<ReturnType<typeof useDemo>["lesson"]> }) {
+  const [active, setActive] = useState<"THEORY" | "PRACTICE" | "FINAL_ASSESSMENT">("THEORY");
+  const sections = lesson.sections ?? [];
+  const theory = sections.find((section) => section.type === "THEORY");
+  const practice = sections.find((section) => section.type === "PRACTICE");
+  const final = sections.find((section) => section.type === "FINAL_ASSESSMENT");
+  type SectionKey = "THEORY" | "PRACTICE" | "FINAL_ASSESSMENT";
+  const counts: Record<SectionKey, number> = {
+    THEORY: theory?.resources?.length ?? lesson.slides.length,
+    PRACTICE: practice?.activities?.length ?? 1,
+    FINAL_ASSESSMENT: final?.assessment?.questions.length ?? 0
+  };
+  const labels: Array<{ key: SectionKey; label: string; hint: string }> = [
+    { key: "THEORY", label: "Lý thuyết", hint: "Slide, video, tài liệu" },
+    { key: "PRACTICE", label: "Thực hành", hint: "Code, bài tập, quiz" },
+    { key: "FINAL_ASSESSMENT", label: "Kiểm tra cuối bài", hint: "Câu hỏi tổng hợp" }
+  ];
+  const activeFinalMissing = active === "FINAL_ASSESSMENT" && counts.FINAL_ASSESSMENT === 0;
+  return (
+    <div className="lesson-section-tabs">
+      <div className="tabs">
+        {labels.map((item) => (
+          <button key={item.key} className={active === item.key ? "active" : ""} onClick={() => setActive(item.key)}>
+            {item.label} <em>({counts[item.key]})</em>
+          </button>
+        ))}
+      </div>
+      <p className="section-tab-hint">
+        {labels.find((item) => item.key === active)?.hint}
+        {activeFinalMissing && " · Cần giảng viên bổ sung bài kiểm tra cuối bài trước khi duyệt."}
+      </p>
+    </div>
+  );
+}
+
 function ContentStudio() {
   const demo = useDemo();
   const [activeSlide, setActiveSlide] = useState(0);
@@ -95,6 +131,7 @@ function ContentStudio() {
   return (
     <div className="studio-editor">
       <header className="editor-header"><div><span className="eyebrow">Micro-lesson editor</span><input aria-label="Tiêu đề micro-lesson" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })}/></div><div className="editor-status"><StatusPill tone={draft.status === "PUBLISHED" ? "green" : draft.status === "APPROVED" ? "blue" : "yellow"}>{draft.status}</StatusPill><span>v{draft.version} · {draft.provider === "LOCAL_TEMPLATE" ? "Local fallback" : "FPT · DeepSeek-V4-Flash"}</span></div><div className="editor-actions"><button className="button ghost small" disabled={demo.busy || draft.status === "PUBLISHED"} onClick={save}>Lưu bản sửa</button>{draft.status === "DRAFT" && <button className="button dark small" disabled={demo.busy} onClick={demo.approveLesson}>Approve</button>}{draft.status === "APPROVED" && <button className="button primary small" disabled={demo.busy} onClick={demo.publishLesson}>Publish</button>}{draft.status === "PUBLISHED" && <Link className="button primary small" href="/student/micro-lesson">Mở student view →</Link>}</div></header>
+      <LessonSectionTabs lesson={draft} />
       <div className="editor-grid">
         <aside className="slide-list"><div className="slide-list-head"><strong>Slides</strong><span>{draft.slides.length}/5</span></div>{draft.slides.map((item, index) => <button className={index === activeSlide ? "active" : ""} onClick={() => setActiveSlide(index)} key={item.id}><span>{index + 1}</span><div><small>{item.type}</small><strong>{item.title}</strong></div></button>)}<button className={activeSlide === draft.slides.length ? "active quiz" : "quiz"} onClick={() => setActiveSlide(draft.slides.length)}><span>Q</span><div><small>QUIZ</small><strong>Knowledge check</strong></div></button></aside>
         <section className="editor-canvas">

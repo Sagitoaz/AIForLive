@@ -1,5 +1,15 @@
 import { Injectable } from "@nestjs/common";
-import type { DemoAttempt, DemoContent } from "../common/types";
+import type { DemoAttempt, DemoContent, LessonSectionType, SectionProgress } from "../common/types";
+
+export interface LessonRecommendation {
+  id: string;
+  studentId: string;
+  contentId: string;
+  conceptCode: string;
+  action: "REVIEW_THEORY" | "MORE_PRACTICE" | "MICRO_LESSON" | "CONTINUE";
+  reason: string;
+  createdAt: string;
+}
 
 const studentNames = [
   "Minh", "Lan", "An", "Bình", "Chi", "Dũng", "Giang", "Hà", "Khánh", "Linh",
@@ -16,6 +26,10 @@ const initialConceptMastery = new Map<string, number>([
 export class DemoStoreService {
   readonly attempts = new Map<string, DemoAttempt>();
   readonly contents = new Map<string, DemoContent>();
+  /** FEATURE-016: per-student progress for each of the three lesson sections. */
+  readonly sectionProgress = new Map<string, SectionProgress>();
+  /** FEATURE-016: recommendations produced after the final assessment. */
+  readonly recommendations = new Map<string, LessonRecommendation>();
   private readonly conceptMasteryByStudent = new Map<string, Map<string, number>>();
   readonly students = studentNames.map((name, index) => ({
     id: index === 0 ? "student-minh" : index === 1 ? "student-lan" : `student-${index + 1}`,
@@ -31,7 +45,36 @@ export class DemoStoreService {
   reset(): void {
     this.attempts.clear();
     this.contents.clear();
+    this.sectionProgress.clear();
+    this.recommendations.clear();
     this.conceptMasteryByStudent.clear();
+  }
+
+  static sectionKey(studentId: string, contentId: string, sectionType: LessonSectionType): string {
+    return `${studentId}:${contentId}:${sectionType}`;
+  }
+
+  getSectionProgress(studentId: string, contentId: string, sectionType: LessonSectionType): SectionProgress | undefined {
+    return this.sectionProgress.get(DemoStoreService.sectionKey(studentId, contentId, sectionType));
+  }
+
+  setSectionProgress(progress: SectionProgress): void {
+    this.sectionProgress.set(
+      DemoStoreService.sectionKey(progress.studentId, progress.contentId, progress.sectionType),
+      progress
+    );
+  }
+
+  progressForContent(studentId: string, contentId: string): SectionProgress[] {
+    return [...this.sectionProgress.values()].filter(
+      (entry) => entry.studentId === studentId && entry.contentId === contentId
+    );
+  }
+
+  recommendationsForStudent(studentId: string): LessonRecommendation[] {
+    return [...this.recommendations.values()]
+      .filter((entry) => entry.studentId === studentId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
   getConceptMastery(studentId: string, conceptCode: string, fallback = 0.3): number {

@@ -5,10 +5,11 @@ import { MockDevelopmentProvider } from "../ai-generation/providers/mock-develop
 import { ContentController } from "./content.controller";
 import { ContentService } from "./content.service";
 import { ContentValidatorService } from "./content-validator.service";
+import { LessonExportService } from "./lesson-export.service";
 
 @Module({
   controllers: [ContentController],
-  providers: [ContentService, ContentValidatorService, LocalTemplateProvider, ExternalLlmProvider, MockDevelopmentProvider],
+  providers: [ContentService, ContentValidatorService, LessonExportService, LocalTemplateProvider, ExternalLlmProvider, MockDevelopmentProvider],
   exports: [ContentService]
 })
 export class ContentModule {}

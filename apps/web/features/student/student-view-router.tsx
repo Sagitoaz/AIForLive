@@ -1,5 +1,6 @@
 "use client";
 
+import type { FinalAssessment, LessonSection } from "@edurecall/shared-types";
 import Link from "next/link";
 import { useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -219,39 +220,211 @@ function NumberSequence({ values }: { values: string[] }) {
 
 function MicroLessonPlayer() {
   const demo = useDemo();
+  return demo.lesson && demo.lesson.status === "PUBLISHED"
+    ? <ThreePartPlayer />
+    : <EmptyState illustration="review" title="Bài ôn chưa được xuất bản" description="Học sinh chỉ thấy nội dung PUBLISHED. Hãy chuyển sang teacher, tạo, chỉnh sửa, approve và publish." href="/teacher/studio" action="Mở Teacher studio" />;
+}
+
+// FEATURE-016 — every published lesson is played as three ordered parts.
+function ThreePartPlayer() {
+  const demo = useDemo();
+  const lesson = demo.lesson!;
+  const sections = deriveClientSections(lesson);
+  const theory = sections.find((section) => section.type === "THEORY");
+  const practice = sections.find((section) => section.type === "PRACTICE");
+  const final = sections.find((section) => section.type === "FINAL_ASSESSMENT");
+
+  const [part, setPart] = useState<"THEORY" | "PRACTICE" | "FINAL_ASSESSMENT">("THEORY");
   const [slide, setSlide] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [result, setResult] = useState<{ correct: boolean; masteryAfter: number } | null>(null);
+  const [theoryDone, setTheoryDone] = useState(false);
+  const [practiceDone, setPracticeDone] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState<number | null>(null);
+  const [quizResult, setQuizResult] = useState<{ correct: boolean; masteryAfter: number } | null>(null);
+  const [finalAnswers, setFinalAnswers] = useState<Record<string, number>>({});
+  const [finalResult, setFinalResult] = useState<FinalGrade | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [speechNotice, setSpeechNotice] = useState("");
-  if (!demo.lesson || demo.lesson.status !== "PUBLISHED") {
-    return <EmptyState illustration="review" title="Bài ôn chưa được xuất bản" description="Học sinh chỉ thấy nội dung PUBLISHED. Hãy chuyển sang teacher, tạo, chỉnh sửa, approve và publish." href="/teacher/studio" action="Mở Teacher studio" />;
-  }
-  const current = demo.lesson.slides[slide];
+
+  const status = (target: typeof part) => {
+    if (target === "THEORY") return theoryDone ? "COMPLETED" : part === "THEORY" ? "IN_PROGRESS" : "NOT_STARTED";
+    if (target === "PRACTICE") return practiceDone ? "COMPLETED" : !theoryDone ? "LOCKED" : part === "PRACTICE" ? "IN_PROGRESS" : "NOT_STARTED";
+    return finalResult?.passed ? "COMPLETED" : finalResult ? "FAILED" : !practiceDone ? "LOCKED" : "IN_PROGRESS";
+  };
+  const lessonComplete = Boolean(finalResult?.passed) && theoryDone && practiceDone;
+
+  const current = lesson.slides[slide];
   const speak = async () => {
     if (!current) return;
     setSpeaking(true);
     setSpeechNotice("Đang đọc bằng giọng tiếng Việt...");
-    const speechResult = await speakVietnamese(current.narration);
-    setSpeechNotice(vietnameseSpeechMessage(speechResult));
+    setSpeechNotice(vietnameseSpeechMessage(await speakVietnamese(current.narration)));
     setSpeaking(false);
   };
-  const answer = async () => {
-    if (selected === null) return;
-    setResult(await demo.completeQuiz(selected));
+  const answerQuiz = async () => {
+    if (selectedQuiz === null) return;
+    setQuizResult(await demo.completeQuiz(selectedQuiz));
+    setPracticeDone(true);
   };
+  const submitFinal = () => {
+    if (!final?.assessment) return;
+    setFinalResult(gradeClientAssessment(final.assessment, finalAnswers));
+  };
+
+  const steps: Array<{ key: typeof part; label: string }> = [
+    { key: "THEORY", label: "1. Lý thuyết" },
+    { key: "PRACTICE", label: "2. Thực hành" },
+    { key: "FINAL_ASSESSMENT", label: "3. Kiểm tra cuối bài" }
+  ];
+
   return (
     <div className="micro-player">
-      <header className="micro-header"><Link href="/student/reviews">← Bài ôn</Link><div><StatusPill tone="green">PUBLISHED</StatusPill><strong>{demo.lesson.title}</strong></div><span>{slide + 1}/{demo.lesson.slides.length}</span></header>
-      <div className="micro-progress">{demo.lesson.slides.map((item, index) => <button aria-label={`Mở slide ${index + 1}`} className={index <= slide ? "active" : ""} onClick={() => setSlide(index)} key={item.id} />)}</div>
-      <section className="micro-stage">
-        <div className="micro-visual"><Asset type="mascot" name={slide === 2 ? "mam-error" : slide === 3 ? "mam-celebrate" : "mam-code"} alt="Robot Mầm" width={210} height={190} />{current && <NumberSequence values={(current.animationData.values as string[] | undefined) ?? ["1", "2", "3", "4", "stop"]} />}</div>
-        <article className="micro-copy">{current && <><span className="eyebrow">{current.type} · {current.animationTemplate}</span><h1>{current.title}</h1><p>{current.body}</p>{current.code && <pre><code>{current.code}</code></pre>}<button className="narration-button" disabled={speaking} onClick={speak}><Asset type="icon" name="media-audio" alt="" width={22} height={22} /> {speaking ? "Đang đọc..." : "Nghe tiếng Việt"}</button>{speechNotice && <small className="speech-notice" role="status">{speechNotice}</small>}</>}</article>
-      </section>
-      <div className="micro-actions"><button className="button ghost" disabled={slide === 0} onClick={() => setSlide((value) => value - 1)}>← Trước</button>{slide < demo.lesson.slides.length - 1 ? <button className="button primary" onClick={() => setSlide((value) => value + 1)}>Tiếp tục →</button> : <a className="button primary" href="#quiz">Làm quiz →</a>}</div>
-      <section id="quiz" className="micro-quiz"><span className="eyebrow">Checkpoint</span><h2>{demo.lesson.quiz.question}</h2><div className="answer-list">{demo.lesson.quiz.options.map((option, index) => <button className={selected === index ? "selected" : ""} disabled={Boolean(result)} onClick={() => setSelected(index)} key={option}><span>{String.fromCharCode(65 + index)}</span><code>{option}</code></button>)}</div>{!result ? <button className="button primary" disabled={selected === null || demo.busy} onClick={answer}>Kiểm tra & cập nhật mastery</button> : <div className={result.correct ? "quiz-result correct" : "quiz-result incorrect"}><Asset type="mascot" name={result.correct ? "mam-celebrate" : "mam-thinking"} alt="" width={110} height={100} /><div><h3>{result.correct ? "Chính xác! +40 XP" : "Chưa đúng, hẹn ôn lại ngày mai"}</h3><p>{demo.lesson.quiz.explanation}</p><strong>Mastery {Math.round(demo.masteryBeforeReview * 100)}% → {Math.round(result.masteryAfter * 100)}%</strong></div><Link href="/student/progress" className="button ghost">Xem tiến bộ →</Link></div>}</section>
+      <header className="micro-header"><Link href="/student/reviews">← Bài ôn</Link><div><StatusPill tone="green">PUBLISHED</StatusPill><strong>{lesson.title}</strong></div><span>{lessonComplete ? "Đã hoàn thành" : "Đang học"}</span></header>
+
+      <nav className="three-part-stepper" aria-label="Ba phần của bài học">
+        {steps.map((step) => {
+          const state = status(step.key);
+          const locked = state === "LOCKED";
+          return (
+            <button
+              key={step.key}
+              className={`stepper-item ${part === step.key ? "active" : ""} ${state.toLowerCase()}`}
+              disabled={locked}
+              onClick={() => !locked && setPart(step.key)}
+            >
+              <strong>{step.label}</strong>
+              <StatusPill tone={state === "COMPLETED" ? "green" : state === "FAILED" ? "red" : state === "LOCKED" ? "gray" : "yellow"}>
+                {state === "COMPLETED" ? "Đã hoàn thành" : state === "FAILED" ? "Chưa đạt" : state === "LOCKED" ? "Đã khóa" : state === "IN_PROGRESS" ? "Đang học" : "Chưa bắt đầu"}
+              </StatusPill>
+            </button>
+          );
+        })}
+      </nav>
+
+      {part === "THEORY" && (
+        <>
+          <div className="micro-progress">{lesson.slides.map((item, index) => <button aria-label={`Mở slide ${index + 1}`} className={index <= slide ? "active" : ""} onClick={() => setSlide(index)} key={item.id} />)}</div>
+          <section className="micro-stage">
+            <div className="micro-visual"><Asset type="mascot" name={slide === 2 ? "mam-error" : slide === 3 ? "mam-celebrate" : "mam-code"} alt="Robot Mầm" width={210} height={190} />{current && <NumberSequence values={(current.animationData.values as string[] | undefined) ?? ["1", "2", "3", "4", "stop"]} />}</div>
+            <article className="micro-copy">{current && <><span className="eyebrow">{current.type} · {current.animationTemplate}</span><h1>{current.title}</h1><p>{current.body}</p>{current.code && <pre><code>{current.code}</code></pre>}<button className="narration-button" disabled={speaking} onClick={speak}><Asset type="icon" name="media-audio" alt="" width={22} height={22} /> {speaking ? "Đang đọc..." : "Nghe tiếng Việt"}</button>{speechNotice && <small className="speech-notice" role="status">{speechNotice}</small>}</>}</article>
+          </section>
+          {theory?.resources?.some((resource) => resource.type === "VIDEO" || resource.type === "DOCUMENT") && (
+            <section className="theory-resources"><span className="eyebrow">Tài nguyên lý thuyết</span>{theory.resources.filter((resource) => resource.type === "VIDEO" || resource.type === "DOCUMENT").map((resource) => <div className="resource-row" key={resource.id}><StatusPill tone="purple">{resource.type}</StatusPill><strong>{resource.title}</strong>{resource.durationSeconds ? <small>{resource.durationSeconds}s · không tự phát</small> : null}</div>)}</section>
+          )}
+          <div className="micro-actions">
+            <button className="button ghost" disabled={slide === 0} onClick={() => setSlide((value) => value - 1)}>← Trước</button>
+            {slide < lesson.slides.length - 1
+              ? <button className="button primary" onClick={() => setSlide((value) => value + 1)}>Tiếp tục →</button>
+              : <button className="button primary" onClick={() => { setTheoryDone(true); setPart("PRACTICE"); }}>Hoàn thành lý thuyết →</button>}
+          </div>
+        </>
+      )}
+
+      {part === "PRACTICE" && (
+        <section id="quiz" className="micro-quiz">
+          <span className="eyebrow">Thực hành</span>
+          {(practice?.activities ?? []).filter((activity) => activity.type !== "MULTIPLE_CHOICE").map((activity) => (
+            <div className="practice-activity" key={activity.id}><StatusPill tone="purple">{activity.type}</StatusPill><strong>{activity.title}</strong><p>{activity.instructions}</p>{activity.starterCode && <pre><code>{activity.starterCode}</code></pre>}{activity.solution && <details><summary>Lời giải</summary><pre><code>{activity.solution}</code></pre></details>}</div>
+          ))}
+          <h2>{lesson.quiz.question}</h2>
+          <div className="answer-list">{lesson.quiz.options.map((option, index) => <button className={selectedQuiz === index ? "selected" : ""} disabled={Boolean(quizResult)} onClick={() => setSelectedQuiz(index)} key={option}><span>{String.fromCharCode(65 + index)}</span><code>{option}</code></button>)}</div>
+          {!quizResult
+            ? <button className="button primary" disabled={selectedQuiz === null || demo.busy} onClick={answerQuiz}>Kiểm tra & cập nhật mastery</button>
+            : <div className={quizResult.correct ? "quiz-result correct" : "quiz-result incorrect"}><Asset type="mascot" name={quizResult.correct ? "mam-celebrate" : "mam-thinking"} alt="" width={110} height={100} /><div><h3>{quizResult.correct ? "Chính xác! +40 XP" : "Chưa đúng, xem lại rồi tiếp tục"}</h3><p>{lesson.quiz.explanation}</p><strong>Mastery {Math.round(demo.masteryBeforeReview * 100)}% → {Math.round(quizResult.masteryAfter * 100)}%</strong></div><button className="button primary" onClick={() => setPart("FINAL_ASSESSMENT")}>Vào kiểm tra cuối bài →</button></div>}
+        </section>
+      )}
+
+      {part === "FINAL_ASSESSMENT" && final?.assessment && (
+        <section className="final-assessment">
+          <span className="eyebrow">Kiểm tra cuối bài · điểm đạt {Math.round(final.assessment.passingScore * 100)}%</span>
+          {final.assessment.questions.map((question, index) => (
+            <div className="assessment-question" key={question.id}>
+              <strong>Câu {index + 1}. {question.prompt}</strong>
+              {question.options
+                ? <div className="answer-list">{question.options.map((option, optionIndex) => <button className={finalAnswers[question.id] === optionIndex ? "selected" : ""} disabled={Boolean(finalResult)} onClick={() => setFinalAnswers((current) => ({ ...current, [question.id]: optionIndex }))} key={option}><span>{String.fromCharCode(65 + optionIndex)}</span><code>{option}</code></button>)}</div>
+                : <p className="assessment-open"><em>Câu tự luận ngắn — nộp để xem đáp án mẫu.</em></p>}
+              {finalResult && <small className={finalResult.perQuestion[question.id] ? "correct" : "incorrect"}>{finalResult.perQuestion[question.id] ? "✓ Đúng" : "✕ Chưa đúng"} · {question.explanation}</small>}
+            </div>
+          ))}
+          {!finalResult
+            ? <button className="button primary" onClick={submitFinal}>Nộp bài kiểm tra</button>
+            : (
+              <div className={finalResult.passed ? "assessment-result passed" : "assessment-result failed"}>
+                <h3>{finalResult.passed ? `Đạt! ${Math.round(finalResult.score * 100)}%` : `Chưa đạt · ${Math.round(finalResult.score * 100)}%`}</h3>
+                <div className="skill-breakdown">{finalResult.skillResults.map((skill) => <div key={skill.conceptCode} className={skill.weak ? "weak" : "ok"}><strong>{skill.conceptCode}</strong><ProgressBar value={Math.round(skill.scoreRatio * 100)} color={skill.weak ? "orange" : "green"} /></div>)}</div>
+                {finalResult.passed
+                  ? <p className="success-note">Bài học đã hoàn thành. Mastery đã được cập nhật.</p>
+                  : (
+                    <div className="recommendation-block">
+                      <strong>Đề xuất ôn tập theo kỹ năng yếu:</strong>
+                      <ul>{finalResult.skillResults.filter((skill) => skill.weak).map((skill) => <li key={skill.conceptCode}>Ôn lại Lý thuyết và luyện thêm Thực hành cho <code>{skill.conceptCode}</code>.</li>)}</ul>
+                      <div className="micro-actions"><button className="button ghost" onClick={() => setPart("THEORY")}>Học lại Lý thuyết</button><button className="button primary" onClick={() => { setFinalResult(null); setFinalAnswers({}); }}>Làm lại kiểm tra</button></div>
+                    </div>
+                  )}
+              </div>
+            )}
+          {lessonComplete && <Link href="/student/progress" className="button ghost">Xem tiến bộ →</Link>}
+        </section>
+      )}
     </div>
   );
+}
+
+interface FinalGrade {
+  passed: boolean;
+  score: number;
+  perQuestion: Record<string, boolean>;
+  skillResults: Array<{ conceptCode: string; scoreRatio: number; weak: boolean }>;
+}
+
+function gradeClientAssessment(assessment: FinalAssessment, answers: Record<string, number>): FinalGrade {
+  let earned = 0;
+  let total = 0;
+  const perQuestion: Record<string, boolean> = {};
+  const skillTotals = new Map<string, { earned: number; total: number }>();
+  for (const question of assessment.questions) {
+    total += question.points;
+    const bucket = skillTotals.get(question.conceptCode) ?? { earned: 0, total: 0 };
+    bucket.total += question.points;
+    const correct = typeof question.correctIndex === "number" && answers[question.id] === question.correctIndex;
+    perQuestion[question.id] = correct;
+    if (correct) {
+      earned += question.points;
+      bucket.earned += question.points;
+    }
+    skillTotals.set(question.conceptCode, bucket);
+  }
+  const score = total > 0 ? earned / total : 0;
+  const skillResults = [...skillTotals.entries()].map(([conceptCode, value]) => {
+    const scoreRatio = value.total > 0 ? value.earned / value.total : 0;
+    return { conceptCode, scoreRatio, weak: scoreRatio < assessment.passingScore };
+  });
+  return { passed: score >= assessment.passingScore, score, perQuestion, skillResults };
+}
+
+/** Build a display-ready three-part structure from a lesson, deriving one from legacy slides/quiz when absent. */
+function deriveClientSections(lesson: NonNullable<ReturnType<typeof useDemo>["lesson"]>): LessonSection[] {
+  if (lesson.sections && lesson.sections.length > 0) return lesson.sections;
+  return [
+    { id: "theory", type: "THEORY" as const, title: "Lý thuyết", order: 1, isRequired: true, reviewStatus: "APPROVED" as const, resources: [] },
+    { id: "practice", type: "PRACTICE" as const, title: "Thực hành", order: 2, isRequired: true, reviewStatus: "APPROVED" as const, activities: [] },
+    {
+      id: "final",
+      type: "FINAL_ASSESSMENT" as const,
+      title: "Kiểm tra cuối bài",
+      order: 3,
+      isRequired: true,
+      reviewStatus: "APPROVED" as const,
+      assessment: {
+        id: "assessment-legacy",
+        title: "Kiểm tra cuối bài",
+        passingScore: 0.7,
+        skillCoverage: [lesson.conceptCode],
+        questions: [
+          { id: "legacy-q1", type: "MULTIPLE_CHOICE" as const, conceptCode: lesson.conceptCode, prompt: lesson.quiz.question, options: lesson.quiz.options, correctIndex: lesson.quiz.correctIndex, points: 100, explanation: lesson.quiz.explanation }
+        ]
+      }
+    }
+  ];
 }
 
 function GameCenter() {

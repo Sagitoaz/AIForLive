@@ -2,6 +2,12 @@ import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import type { DemoSlide } from "../../common/types";
 import type { GenerateContentDto } from "../dto/generate-content.dto";
 import type { ContentProvider, ProviderOutput } from "./content-provider";
+import {
+  buildFinalAssessmentMaterial,
+  buildPracticeMaterial,
+  buildTheoryMaterial,
+  isAdvancedLevel
+} from "./section-material";
 
 const slideTypes = new Set<DemoSlide["type"]>([
   "CONCEPT",
@@ -136,17 +142,26 @@ function parseLesson(payload: JsonRecord, input: GenerateContentDto): Omit<Provi
   if (correctIndex < 0 || correctIndex >= options.length) throw new Error("quiz.correctIndex is outside quiz.options");
   const objectives = strings(payload.objectives, "objectives");
   if (objectives.length > 4) throw new Error("objectives must contain at most 4 items");
+  const parsedQuiz = {
+    question: text(quiz.question, "quiz.question"),
+    options,
+    correctIndex,
+    explanation: text(quiz.explanation, "quiz.explanation")
+  };
+  // FEATURE-016: the FPT model returns the THEORY slide deck + quiz. The
+  // PRACTICE and FINAL_ASSESSMENT material is derived deterministically so the
+  // three-part structure is always complete and passes the section validator.
+  const isRange = input.misconceptionCode === "RANGE_STOP_INCLUDED";
+  const advanced = isAdvancedLevel(input.level);
   return {
     title: text(payload.title, "title"),
     objectives,
     sourceReferences: [input.sourceId],
     slides,
-    quiz: {
-      question: text(quiz.question, "quiz.question"),
-      options,
-      correctIndex,
-      explanation: text(quiz.explanation, "quiz.explanation")
-    }
+    quiz: parsedQuiz,
+    theory: buildTheoryMaterial(input, isRange, advanced),
+    practice: buildPracticeMaterial(input, isRange, advanced, parsedQuiz),
+    finalAssessment: buildFinalAssessmentMaterial(input, isRange, advanced)
   };
 }
 

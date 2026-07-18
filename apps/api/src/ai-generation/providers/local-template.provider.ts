@@ -2,6 +2,12 @@ import { Injectable } from "@nestjs/common";
 import type { DemoSlide } from "../../common/types";
 import type { GenerateContentDto } from "../dto/generate-content.dto";
 import type { ContentProvider, ProviderOutput } from "./content-provider";
+import {
+  buildFinalAssessmentMaterial,
+  buildPracticeMaterial,
+  buildTheoryMaterial,
+  isAdvancedLevel
+} from "./section-material";
 
 @Injectable()
 export class LocalTemplateProvider implements ContentProvider {
@@ -89,27 +95,34 @@ export class LocalTemplateProvider implements ContentProvider {
             animationData: { wrongLine: "Giả định", fixedLine: "Kiểm tra evidence", message: "Need evidence" }
           }
         ];
+    const advanced = isAdvancedLevel(input.level);
+    const quiz = isRange
+      ? {
+          question: "list(range(2, 6)) cho kết quả nào?",
+          options: ["[2, 3, 4, 5]", "[2, 3, 4, 5, 6]", "[1, 2, 3, 4, 5]"],
+          correctIndex: 0,
+          explanation: "Dãy bắt đầu ở 2 và dừng trước 6, nên phần tử cuối là 5."
+        }
+      : {
+          question: "Bước nào giúp kiểm tra hiểu nhầm đáng tin cậy?",
+          options: ["Dựa vào một lỗi", "Kết hợp đáp án và lịch sử", "Đoán ngẫu nhiên"],
+          correctIndex: 1,
+          explanation: "Cần nhiều evidence phù hợp trước khi kết luận misconception."
+        };
+
     return {
       title,
       objectives: [input.learningObjective, "Tự giải thích được vì sao đáp án sai", "Áp dụng đúng trong một ví dụ mới"],
       sourceReferences: [input.sourceId],
       slides,
-      quiz: isRange
-        ? {
-            question: "list(range(2, 6)) cho kết quả nào?",
-            options: ["[2, 3, 4, 5]", "[2, 3, 4, 5, 6]", "[1, 2, 3, 4, 5]"],
-            correctIndex: 0,
-            explanation: "Dãy bắt đầu ở 2 và dừng trước 6, nên phần tử cuối là 5."
-          }
-        : {
-            question: "Bước nào giúp kiểm tra hiểu nhầm đáng tin cậy?",
-            options: ["Dựa vào một lỗi", "Kết hợp đáp án và lịch sử", "Đoán ngẫu nhiên"],
-            correctIndex: 1,
-            explanation: "Cần nhiều evidence phù hợp trước khi kết luận misconception."
-          },
+      quiz,
+      theory: buildTheoryMaterial(input, isRange, advanced),
+      practice: buildPracticeMaterial(input, isRange, advanced, quiz),
+      finalAssessment: buildFinalAssessmentMaterial(input, isRange, advanced),
       provider: "LOCAL_TEMPLATE",
       generationMs: Math.max(8, Math.round(performance.now() - start)),
       estimatedCostUsd: 0
     };
   }
+
 }

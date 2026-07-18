@@ -65,3 +65,7 @@ EduRecall-AI-source.zip
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# FEATURE-016 local docs (untracked by request)
+FAILED_TEST_RETEST_GUIDE.md
+FIX_REPORT.md

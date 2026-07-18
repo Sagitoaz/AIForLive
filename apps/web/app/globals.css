@@ -543,3 +543,23 @@ pre { background: var(--code); border-radius: 16px; color: #c6f3d0; font-size: 1
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* FEATURE-016 — three-part lesson UI */
+.three-part-stepper { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+.three-part-stepper .stepper-item { flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border, #dce8df); border-radius: 12px; background: #fff; cursor: pointer; text-align: left; }
+.three-part-stepper .stepper-item.active { border-color: #4aaa64; box-shadow: 0 0 0 2px rgba(74,170,100,.18); }
+.three-part-stepper .stepper-item.completed { background: #f0fff4; }
+.three-part-stepper .stepper-item.locked { opacity: .55; cursor: not-allowed; }
+.three-part-stepper .stepper-item.failed { background: #fff5f5; }
+.lesson-section-tabs { margin: 12px 0; }
+.lesson-section-tabs .tabs button em { font-style: normal; opacity: .7; }
+.section-tab-hint { font-size: 13px; color: #52606d; margin: 6px 2px 0; }
+.theory-resources, .practice-activity, .assessment-question, .final-assessment { border: 1px solid #dce8df; border-radius: 12px; padding: 14px; margin: 12px 0; background: #fff; }
+.resource-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.skill-breakdown { display: grid; gap: 8px; margin: 12px 0; }
+.skill-breakdown .weak strong { color: #c05621; }
+.assessment-result.passed { border-left: 4px solid #4aaa64; padding-left: 12px; }
+.assessment-result.failed { border-left: 4px solid #e53e3e; padding-left: 12px; }
+.recommendation-block ul { margin: 8px 0; padding-left: 18px; }
+.assessment-question small.correct { color: #2f855a; }
+.assessment-question small.incorrect { color: #c53030; }
