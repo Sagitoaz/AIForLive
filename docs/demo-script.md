@@ -5,7 +5,7 @@
 3. Show stored diagnosis `RANGE_STOP_INCLUDED`, evidence, BKT change, recall risk and `MICRO_LESSON` recommendation.
 4. Switch to Teacher workspace.
 5. Open recommendation detail and point to formula weights, attempt evidence, model/rule version and mode.
-6. Open AI Content Studio. Generate with Local demo provider; explain that it is not presented as an LLM.
+6. Open AI Content Studio. Generate with Local Template provider; explain that it is a structured zero-cost authoring engine, not an external LLM.
 7. Edit one slide title/narration and change/reconfirm the quiz answer.
 8. Save, approve and publish. Show validation checks and status.
 9. Return to Minh, open Due reviews, then the published micro-lesson.

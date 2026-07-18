@@ -19,9 +19,7 @@
     "dev:api": "npm run dev --workspace @edurecall/api",
     "dev:ai": "node scripts/run-python.mjs -m uvicorn app.main:app --app-dir apps/ai-service --host 0.0.0.0 --port 8001 --reload",
     "db:setup": "prisma migrate deploy --schema prisma/schema.prisma",
-    "db:seed": "node --import tsx prisma/seed/index.ts",
     "db:check": "node scripts/check-database.mjs",
-    "demo:reset": "node --import tsx scripts/reset-demo.ts",
     "ai:install": "node scripts/install-python.mjs",
     "ai:data": "node scripts/run-python.mjs apps/ai-service/scripts/generate_synthetic_data.py",
     "ai:train": "node scripts/run-python.mjs apps/ai-service/scripts/train_models.py",
@@ -56,8 +54,5 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.49.0",
     "vitest": "^4.0.18"
-  },
-  "prisma": {
-    "seed": "node --import tsx prisma/seed/index.ts"
   }
 }

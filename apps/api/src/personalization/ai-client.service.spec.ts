@@ -1,4 +1,4 @@
-import type { DemoAttempt } from "../common/types";
+import type { LearningAttempt } from "../common/types";
 import { SubmitAttemptDto } from "../learning-events/dto/submit-attempt.dto";
 import { AiClientService } from "./ai-client.service";
 import { FallbackAnalysisService } from "./fallback-analysis.service";
@@ -32,7 +32,7 @@ describe("AiClientService", () => {
     const current = dto();
     const fallback = new FallbackAnalysisService();
     const createdAt = "2026-07-18T08:00:00.000Z";
-    const previous: DemoAttempt = {
+    const previous: LearningAttempt = {
       id: "previous-attempt",
       idempotencyKey: "previous-attempt-key",
       studentId: "student-minh",

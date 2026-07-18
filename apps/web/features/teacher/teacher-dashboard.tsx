@@ -2,24 +2,146 @@
 
 import Link from "next/link";
 import { Asset } from "@/components/asset";
-import { Metric, ProgressBar, SectionHeading, StatusPill } from "@/components/ui";
-import { useDemo } from "@/features/demo/demo-context";
-import { concepts, learners } from "@/lib/demo-data";
+import { Metric, SectionHeading, StatusPill } from "@/components/ui";
+import { useProduct } from "@/features/product/product-context";
+
+const pendingStatuses = new Set(["DRAFT", "IN_REVIEW", "REVISION_REQUIRED", "APPROVED"]);
+
+function statusTone(status: string): "green" | "yellow" | "red" | "blue" | "purple" | "gray" {
+  if (status === "PUBLISHED") return "green";
+  if (status === "APPROVED") return "blue";
+  if (status === "REVISION_REQUIRED") return "red";
+  if (status === "IN_REVIEW") return "purple";
+  return "yellow";
+}
 
 export function TeacherDashboard() {
-  const demo = useDemo();
+  const product = useProduct();
+  const data = product.teacher;
+
+  if (!data) {
+    return (
+      <div className="surface-card">
+        <h2>Chưa tải được dashboard lớp</h2>
+        <p>{product.error}</p>
+      </div>
+    );
+  }
+
+  const pending = product.reviewQueue.filter((item) => pendingStatuses.has(item.status));
+  const published = product.reviewQueue.filter((item) => item.status === "PUBLISHED");
+  const verifiedSources = product.sources.filter((item) => item.status === "VERIFIED").length;
+
   return (
     <div className="page-stack teacher-dashboard">
-      <header className="teacher-welcome"><div><span className="eyebrow">Python Explorers · Cập nhật lúc 08:30</span><h1>Chào buổi sáng, Cô Mai.</h1><p>Lớp đang tiến bộ, nhưng có <strong>4 học viên</strong> cần hỗ trợ trước checkpoint.</p></div><div className="teacher-actions"><Link href="/teacher/studio" className="button primary"><Asset type="icon" name="ai-spark" alt="" width={20} height={20} /> Tạo nội dung AI</Link><Link href="/teacher/classes" className="button ghost">Mở lớp học</Link></div></header>
-      <div className="metric-grid four"><Metric label="Mastery trung bình" value="58%" note="+6% tuần này" icon="learning-brain"/><Metric label="Hoạt động hôm nay" value="17/20" note="3 học viên chưa vào" icon="student-group" tone="blue"/><Metric label="Cần hỗ trợ" value="4" note="Dựa trên nhiều signal" icon="teacher-support" tone="orange"/><Metric label="Review queue" value={demo.lesson && demo.lesson.status !== "PUBLISHED" ? "1" : "0"} note="Teacher phải quyết định" icon="nav-review" tone="purple"/></div>
-      <div className="teacher-grid-main">
-        <section className="surface-card heatmap-preview"><SectionHeading eyebrow="Knowledge heatmap" title="Lớp đang mắc ở đâu?" description="20 học viên × 8 concept" action={<Link href="/teacher/heatmap" className="text-link">Mở heatmap →</Link>} /><div className="mini-heatmap"><div className="heatmap-head"><span>Học viên</span>{concepts.map((concept) => <Asset key={concept.code} type="icon" name={concept.icon} alt={concept.title} width={24} height={24}/>)}</div>{learners.slice(0, 7).map((learner, row) => <div className="heatmap-row" key={learner.id}><span><img src={learner.avatar} alt=""/>{learner.name}</span>{concepts.map((concept, column) => { const value = row === 0 && concept.code === "PYTHON_RANGE" ? Math.round(demo.mastery * 100) : 25 + ((row * 17 + column * 13) % 66); return <i title={`${concept.title}: ${value}%`} className={value < 45 ? "low" : value < 65 ? "mid" : "high"} key={concept.code}>{value}</i>; })}</div>)}</div><div className="heat-legend"><span><i className="low"/>Cần hỗ trợ</span><span><i className="mid"/>Đang phát triển</span><span><i className="high"/>Vững</span></div></section>
-        <aside className="surface-card misconception-list"><SectionHeading eyebrow="Pattern nổi bật" title="Misconception" action={<Link href="/teacher/misconceptions" className="text-link">Tất cả →</Link>} />{[
-          ["RANGE_STOP_INCLUDED", 7, 18, "red"], ["WHILE_VARIABLE_NOT_UPDATED", 5, 12, "orange"], ["LIST_INDEX_STARTS_AT_ONE", 4, 8, "yellow"]
-        ].map(([code, students, attempts, tone]) => <Link href="/teacher/recommendations/latest" className="misconception-row" key={String(code)}><span className={`severity ${tone}`}/><div><strong>{code}</strong><small>{students} học viên · {attempts} attempt</small></div><em>→</em></Link>)}<Link href="/teacher/studio" className="reuse-callout"><Asset type="icon" name="ai-reuse" alt="" width={30} height={30}/><span><strong>Tái sử dụng thông minh</strong><small>1 micro-lesson đã duyệt phù hợp 4 học viên</small></span></Link></aside>
+      <header className="teacher-welcome">
+        <div>
+          <span className="eyebrow">{data.class.name} · dữ liệu Supabase</span>
+          <h1>Chào Cô Mai.</h1>
+          <p>
+            Có <strong>{data.needsSupport} học sinh</strong> cần hỗ trợ theo nhiều signal,
+            không chỉ một câu sai.
+          </p>
+        </div>
+        <div className="teacher-actions">
+          <Link href="/teacher/studio" className="button primary">
+            <Asset type="icon" name="ai-spark" alt="" width={20} height={20} />
+            Soạn bài với AI
+          </Link>
+          <Link href="/teacher/reviews" className="button ghost">Duyệt bản nháp</Link>
+        </div>
+      </header>
+
+      <div className="metric-grid four">
+        <Metric
+          label="Mastery trung bình"
+          value={`${Math.round(data.averageMastery * 100)}%`}
+          note={`${data.class.students} học sinh`}
+          icon="learning-brain"
+        />
+        <Metric
+          label="Hoạt động hôm nay"
+          value={`${data.activeToday}/${data.class.students}`}
+          note="Từ LearningEvent"
+          icon="student-group"
+          tone="blue"
+        />
+        <Metric
+          label="Bản chờ xử lý"
+          value={String(pending.length)}
+          note="Draft, review và approved"
+          icon="nav-review"
+          tone="purple"
+        />
+        <Metric
+          label="Nguồn đã xác minh"
+          value={String(verifiedSources)}
+          note={`${published.length} nội dung đã xuất bản`}
+          icon="teacher-source"
+          tone="orange"
+        />
       </div>
-      {demo.analysis && <section className="teacher-alert"><Asset type="illustration" name="illustration-teacher-review" alt="" width={220} height={145}/><div><StatusPill tone="red">Cần xem evidence</StatusPill><h2>Minh vừa lặp lại RANGE_STOP_INCLUDED</h2><p>Mastery {Math.round(demo.analysis.mastery_before * 100)}% → {Math.round(demo.analysis.mastery_after * 100)}% · confidence {Math.round(demo.analysis.diagnosis.confidence * 100)}% · {demo.analysis.mode}</p><div className="signal-chips">{demo.analysis.diagnosis.evidence.map((evidence) => <span key={evidence}>{evidence}</span>)}</div></div><Link className="button dark" href="/teacher/studio">Tạo micro-lesson →</Link></section>}
-      <section><SectionHeading eyebrow="Học viên cần chú ý" title="Can thiệp đúng người, đúng lý do" description="Không gắn nhãn chỉ từ một lần sai." action={<Link href="/teacher/classes" className="text-link">Xem 20 học viên →</Link>} /><div className="student-attention-grid">{learners.filter((_, index) => index % 5 === 0).slice(0, 4).map((learner, index) => <article key={learner.id}><img src={learner.avatar} alt=""/><div><strong>{learner.name}</strong><small>Yếu: {learner.weak}</small><ProgressBar value={39 + index * 4}/></div><StatusPill tone={index === 0 ? "red" : "yellow"}>{index === 0 ? "High" : "Watch"}</StatusPill><Link href={`/teacher/students/${learner.id}`}>Chi tiết →</Link></article>)}</div></section>
+
+      <div className="teacher-grid-main">
+        <section className="surface-card">
+          <SectionHeading
+            eyebrow="Knowledge gaps"
+            title="Lớp đang mắc ở đâu?"
+            action={<Link href="/teacher/heatmap" className="text-link">Mở heatmap →</Link>}
+          />
+          {data.topGaps.map((gap) => (
+            <article className="misconception-row" key={gap.conceptCode}>
+              <span className={`severity ${gap.mastery < 0.4 ? "red" : "yellow"}`} />
+              <div>
+                <strong>{gap.title}</strong>
+                <small>{gap.students} học sinh dưới 50%</small>
+              </div>
+              <StatusPill tone={gap.mastery < 0.4 ? "red" : "yellow"}>
+                {Math.round(gap.mastery * 100)}%
+              </StatusPill>
+            </article>
+          ))}
+        </section>
+
+        <aside className="surface-card misconception-list">
+          <SectionHeading
+            eyebrow="Content workflow"
+            title="Bản nháp cần quyết định"
+            action={<Link href="/teacher/studio" className="text-link">Mở studio →</Link>}
+          />
+          {pending.length ? pending.slice(0, 4).map((item) => (
+            <article className="misconception-row" key={item.id}>
+              <span className={`severity ${item.status === "REVISION_REQUIRED" ? "red" : "yellow"}`} />
+              <div>
+                <strong>{item.title}</strong>
+                <small>{item.draftKind === "FULL_LESSON" ? "Bài đầy đủ" : "Bài bổ trợ"} · v{item.version}</small>
+              </div>
+              <StatusPill tone={statusTone(item.status)}>{item.status}</StatusPill>
+            </article>
+          )) : (
+            <p>Không có bản nháp đang chờ. Có thể bắt đầu từ một lesson brief mới.</p>
+          )}
+          <Link href="/teacher/studio" className="button primary small">Tạo hoặc tiếp tục bài →</Link>
+        </aside>
+      </div>
+
+      {data.misconceptions.length > 0 && (
+        <section className="surface-card">
+          <SectionHeading
+            eyebrow="Pattern từ attempt"
+            title="Misconception có thể chuyển thành bài bổ trợ"
+            description="Giáo viên vẫn chọn mục tiêu, nguồn và quyết định xuất bản."
+          />
+          <div className="analytics-grid">
+            {data.misconceptions.slice(0, 4).map((item) => (
+              <article className="context-row" key={item.code}>
+                <span>{item.code}</span>
+                <strong>{item.students} học sinh · {item.attempts} attempt</strong>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

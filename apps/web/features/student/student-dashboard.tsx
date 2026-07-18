@@ -2,74 +2,34 @@
 
 import Link from "next/link";
 import { Asset } from "@/components/asset";
-import { MotionReveal } from "@/components/motion-reveal";
-import { Metric, ProgressBar, SectionHeading, StatusPill } from "@/components/ui";
-import { useDemo } from "@/features/demo/demo-context";
-import { concepts } from "@/lib/demo-data";
+import { EmptyState, Metric, ProgressBar, SectionHeading, StatusPill } from "@/components/ui";
+import { useProduct } from "@/features/product/product-context";
+import styles from "./student-learning.module.css";
 
-export function StudentDashboard() {
-  const demo = useDemo();
-  const mastery = Math.round(demo.mastery * 100);
+function DashboardSkeleton() {
   return (
-    <div className="page-stack">
-      <MotionReveal className="student-welcome">
-        <div className="welcome-copy">
-          <span className="eyebrow">Thứ bảy · Nhiệm vụ ngày 18</span>
-          <h1>Chào Minh, sẵn sàng<br />cho một bước tiến nhỏ?</h1>
-          <p>Mầm đã xem lại nhịp học của bạn. Chỉ cần <strong>15 phút</strong> để giữ đúng lộ trình 4 tuần.</p>
-          <div className="welcome-actions"><Link href="/student/lesson" className="button primary">Học tiếp bài 8 →</Link><Link href="/student/course" className="button ghost">Xem khóa học</Link></div>
-        </div>
-        <div className="welcome-mascot"><Asset type="mascot" name="mam-guide" alt="Mầm chỉ về nhiệm vụ hôm nay" width={230} height={210} /><span className="speech-bubble">Mình dừng <strong>trước</strong> số 5 nhé!</span></div>
-        <Asset type="decoration" name="decoration-leaf-01" alt="" width={120} height={120} className="welcome-leaf" />
-      </MotionReveal>
-
-      <div className="metric-grid four">
-        <Metric label="Tiến độ khóa" value="7/12 bài" note="Đang học module 3" icon="nav-roadmap" tone="yellow" />
-        <Metric label="Thời gian tuần" value="96 phút" note="Mục tiêu 120 phút" icon="gamify-streak" tone="orange" />
-        <Metric label="Mastery trung bình" value="58%" note="+9% trong 2 tuần" icon="learning-brain" tone="green" />
-        <Metric label="Bài ôn đến hạn" value={demo.lesson?.status === "PUBLISHED" ? "1" : "2"} note="Khoảng 8 phút" icon="nav-review" tone="blue" />
+    <div className={styles.skeletonPage} aria-label="Đang tải trang học hôm nay" aria-busy="true">
+      <div className={styles.skeletonHero}/>
+      <div className={styles.skeletonGrid}>
+        {Array.from({ length: 3 }, (_, index) => <div className={styles.skeletonCard} key={index}/>) }
       </div>
-
-      <div className="dashboard-columns">
-        <section className="surface-card roadmap-preview">
-          <SectionHeading eyebrow="Learning path cá nhân" title="Đường đến sản phẩm cuối khóa" description="Node tiếp theo thay đổi theo mastery, recall risk, quỹ thời gian và mục tiêu tạo trò chơi hỏi–đáp." action={<Link href="/student/roadmap" className="text-link">Mở toàn bộ →</Link>} />
-          <div className="path-line">
-            {concepts.slice(0, 6).map((concept, index) => {
-              const value = concept.code === "PYTHON_RANGE" ? mastery : concept.mastery;
-              return (
-                <Link key={concept.code} href={`/student/concepts/${concept.code}`} className={`path-node ${concept.status}`}>
-                  <span className="node-icon"><Asset type="icon" name={concept.icon} alt="" width={28} height={28} /></span>
-                  <span className="node-copy"><strong>{concept.title}</strong><small>{index < 4 ? `${value}% mastery` : index === 4 ? "Nhiệm vụ hiện tại" : "Cần mở khóa"}</small></span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        <aside className="focus-card">
-          <div className="focus-top"><StatusPill tone="yellow">AI đề xuất hôm nay</StatusPill><span>{demo.analysis?.recommendation.priority_score ? Math.round(demo.analysis.recommendation.priority_score * 100) : 87}/100 ưu tiên</span></div>
-          <Asset type="illustration" name="illustration-micro-lesson" alt="Bài học ngắn về range" width={260} height={160} />
-          <h3>{demo.analysis?.recommendation.target?.title ?? "Bài 8: Khám phá range()"}</h3>
-          <p>{demo.analysis?.recommendation.reasons[0] ?? "Bắt đầu bằng lý thuyết ngắn, sau đó thực hành để hệ thống kiểm tra cách bạn hiểu điểm dừng."}</p>
-          <div className="signal-row"><span>Mastery <strong>{mastery}%</strong></span><span>Recall <strong>{Math.round((demo.analysis?.retrievability ?? 0.48) * 100)}%</strong></span></div>
-          <ProgressBar value={mastery} />
-          <Link className="button dark full" href={demo.analysis ? "/student/reviews" : "/student/lesson"}>{demo.analysis ? "Mở hoạt động được đề xuất" : "Mở bài học 3 pha"} →</Link>
-          <Link className="reason-link" href="/student/concepts/PYTHON_RANGE">Vì sao mình nhận đề xuất này?</Link>
-        </aside>
-      </div>
-
-      {demo.analysis && (
-        <MotionReveal className="evidence-banner">
-          <Asset type="icon" name="ai-evidence" alt="" width={40} height={40} />
-          <div><StatusPill tone={demo.analysis.mode === "AI_SERVICE" ? "green" : "yellow"}>{demo.analysis.mode === "AI_SERVICE" ? "Python AI service" : "Fallback mode"}</StatusPill><h3>{demo.analysis.diagnosis.misconception_code}</h3><p>{demo.analysis.diagnosis.evidence.join(" · ")}</p></div>
-          <Link href="/student/concepts/PYTHON_RANGE" className="button ghost small">Xem evidence</Link>
-        </MotionReveal>
-      )}
-
-      <section className="surface-card weekly-learning-summary">
-        <SectionHeading eyebrow="Tuần học hiện tại" title="Tiến bộ theo hoạt động học" description="Hệ thống theo dõi từng pha để tránh trường hợp chỉ xem bài giảng nhưng chưa luyện hoặc kiểm tra." action={<Link href="/student/progress" className="text-link">Xem phân tích →</Link>} />
-        <div>{[["Lý thuyết", "2/3", 67, "Bài giảng · AI animation · tài liệu"], ["Thực hành", "5/7", 71, "Code · dự đoán · sửa lỗi"], ["Kiểm tra cuối bài", "1/2", 50, "Còn checkpoint range()"]].map(([label, value, progress, note]) => <article key={String(label)}><span>{label}</span><strong>{value}</strong><ProgressBar value={Number(progress)}/><small>{note}</small></article>)}</div>
-      </section>
     </div>
   );
+}
+
+export function StudentDashboard() {
+  const product = useProduct();
+  const dashboard = product.student;
+  if (!dashboard && product.busy) return <DashboardSkeleton/>;
+  if (!dashboard) return <div className="page-stack"><EmptyState illustration="activity" title="Chưa tải được hồ sơ học sinh" description={product.error ?? "Dữ liệu học tập chưa sẵn sàng."}/><button className="button primary" disabled={product.busy} onClick={() => void product.refresh()}>{product.busy ? "Đang tải lại…" : "Tải lại dữ liệu"}</button></div>;
+  const average = product.concepts.length ? product.concepts.reduce((sum, item) => sum + item.mastery, 0) / product.concepts.length : 0;
+  const recommendation = product.recommendations.find((item) => item.status === "ACTIVE");
+  const lessonCount = product.course?.modules.reduce((sum, module) => sum + module.lessons.length, 0) ?? 0;
+  const currentLessonHref = product.lesson ? `/student/lessons/${product.lesson.id}` : "/student/course";
+  return <div className="page-stack">
+    <header className="student-welcome"><div className="welcome-copy"><span className="eyebrow">Lộ trình cá nhân · dữ liệu từ Supabase</span><h1>Chào {dashboard.student.name},<br/>hôm nay mình học đúng một bước cần thiết.</h1><p>Mục tiêu: <strong>{dashboard.goal.objective}</strong> · {dashboard.goal.weeklyMinutes} phút/tuần.</p><div className="welcome-actions"><Link href={currentLessonHref} className="button primary">Học bài đang tập trung →</Link><Link href="/student/course" className="button ghost">{lessonCount ? `Xem ${lessonCount} bài` : "Xem khóa học"}</Link></div></div><Asset type="mascot" name="mam-guide" alt="Robot Mầm đang chỉ vào bài học hôm nay" width={230} height={210}/></header>
+    <div className="metric-grid four"><Metric label="Tiến độ khóa" value={`${Math.round(dashboard.course.progress * 100)}%`} note={dashboard.course.title} icon="nav-roadmap" tone="yellow"/><Metric label="Tuần này" value={`${dashboard.weeklyActivity.reduce((a, b) => a + b, 0)} phút`} note={`Mục tiêu ${dashboard.goal.weeklyMinutes} phút`} icon="gamify-streak" tone="orange"/><Metric label="Mastery trung bình" value={`${Math.round(average * 100)}%`} note={`${product.concepts.length} kỹ năng`} icon="learning-brain" tone="green"/><Metric label="Bài ôn đến hạn" value={String(dashboard.dueReviews)} note="Từ lịch ôn Supabase" icon="nav-review" tone="blue"/></div>
+    <div className="dashboard-columns"><section className="surface-card roadmap-preview"><SectionHeading eyebrow="Lộ trình cá nhân" title="Kỹ năng của bạn" description="Bài đã học luôn có thể mở lại; AI chỉ thay đổi thứ tự ưu tiên."/><div className="path-line">{product.concepts.map((concept) => <Link key={concept.id} href={`/student/concepts/${concept.code}`} className={`path-node ${concept.mastery >= .65 ? "completed" : "available"}`}><span className="node-icon"><Asset type="icon" name="concept-branch" alt="" width={28} height={28}/></span><span className="node-copy"><strong>{concept.title}</strong><small>Nắm vững {Math.round(concept.mastery * 100)}% · nhớ lại {Math.round(concept.retrievability * 100)}%</small></span></Link>)}</div></section><aside className="focus-card"><div className="focus-top"><StatusPill tone="yellow">AI đề xuất hôm nay</StatusPill><span>{recommendation ? Math.round(recommendation.priorityScore * 100) : 0}/100 ưu tiên</span></div><Asset type="illustration" name="illustration-personalized-path" alt="Minh họa lộ trình học cá nhân" width={260} height={160}/><h3>{recommendation?.conceptTitle ?? dashboard.focus?.conceptCode ?? "Chờ bài làm đầu tiên"}</h3><p>{recommendation?.reasons[0] ?? dashboard.focus?.reason ?? "Hãy làm bài đánh giá đầu vào để hệ thống có đủ bằng chứng."}</p><ProgressBar value={(dashboard.focus?.mastery ?? average) * 100}/><Link className="button dark full" href={recommendation ? "/student/reviews" : "/student/diagnostic"}>{recommendation ? "Mở đề xuất" : "Làm bài đầu vào"} →</Link></aside></div>
+    {product.analysis && <section className="evidence-banner"><Asset type="icon" name="ai-evidence" alt="" width={40} height={40}/><div><StatusPill tone={product.analysis.mode === "AI_SERVICE" ? "green" : "yellow"}>{product.analysis.mode === "AI_SERVICE" ? "AI service" : "Chế độ dự phòng"}</StatusPill><h3>{product.analysis.diagnosis.misconception_code ?? product.analysis.diagnosis.status}</h3><p>{product.analysis.explanations.join(" · ")}</p></div></section>}
+  </div>;
 }

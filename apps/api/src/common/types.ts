@@ -1,5 +1,6 @@
-export type DemoRole = "STUDENT" | "TEACHER";
+export type AppRole = "STUDENT" | "TEACHER" | "ADMIN";
 export type ContentStatus =
+  | "GENERATING"
   | "DRAFT"
   | "IN_REVIEW"
   | "REVISION_REQUIRED"
@@ -12,7 +13,7 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   displayName: string;
-  role: DemoRole;
+  role: AppRole;
 }
 
 export interface AnalysisResult {
@@ -52,7 +53,7 @@ export interface AnalysisResult {
   mode: "AI_SERVICE" | "DETERMINISTIC_FALLBACK";
 }
 
-export interface DemoAttempt {
+export interface LearningAttempt {
   id: string;
   idempotencyKey: string;
   studentId: string;
@@ -61,12 +62,12 @@ export interface DemoAttempt {
   lessonPhase?: "THEORY" | "PRACTICE" | "CHECKPOINT";
   isCorrect: boolean;
   usedHint: boolean;
-  status: "PENDING_ANALYSIS" | "ANALYZED" | "FALLBACK_ANALYZED";
+  status: "PENDING_ANALYSIS" | "ANALYZED" | "FALLBACK_ANALYZED" | "FAILED";
   createdAt: string;
   analysis: AnalysisResult | null;
 }
 
-export interface DemoSlide {
+export interface ContentSlide {
   id: string;
   order: number;
   type: "CONCEPT" | "CODE_STEP" | "EXAMPLE" | "MISCONCEPTION" | "VISUAL" | "QUIZ" | "SUMMARY";
@@ -78,7 +79,7 @@ export interface DemoSlide {
   animationData: Record<string, string | number | string[]>;
 }
 
-export interface DemoContent {
+export interface GeneratedLearningContent {
   id: string;
   title: string;
   domainCode: string;
@@ -87,8 +88,9 @@ export interface DemoContent {
   level: string;
   objectives: string[];
   sourceReferences: string[];
-  slides: DemoSlide[];
+  slides: ContentSlide[];
   quiz: { question: string; options: string[]; correctIndex: number; explanation: string };
+  practiceQuestions?: Array<{ question: string; options: string[]; correctIndex: number; explanation: string }>;
   status: ContentStatus;
   provider: "LOCAL_TEMPLATE" | "EXTERNAL_LLM";
   reuseCount: number;

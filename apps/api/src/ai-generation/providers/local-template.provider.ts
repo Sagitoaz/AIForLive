@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { DemoSlide } from "../../common/types";
+import type { ContentSlide } from "../../common/types";
 import type { ContentGenerationInput, ContentProvider, ProviderOutput } from "./content-provider";
 
 @Injectable()
@@ -10,7 +10,7 @@ export class LocalTemplateProvider implements ContentProvider {
     const start = performance.now();
     const isRange = input.misconceptionCode === "RANGE_STOP_INCLUDED";
     const title = isRange ? "Dừng đúng lúc với range()" : `Gỡ rối ${input.conceptCode}`;
-    const slides: DemoSlide[] = isRange
+    const slides: ContentSlide[] = isRange
       ? [
           {
             id: "slide-concept",

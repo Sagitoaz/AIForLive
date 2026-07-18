@@ -1,4 +1,7 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+const responseCache = new Map<string, { expiresAt: number; value: unknown }>();
+const inFlightGets = new Map<string, Promise<unknown>>();
+const GET_CACHE_MS = 12_000;
 
 function authHeaders(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -7,15 +10,41 @@ function authHeaders(): Record<string, string> {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const token = typeof window === "undefined" ? "server" : window.localStorage.getItem("edurecall-access-token") ?? "anonymous";
+  const cacheKey = `${token}:${path}`;
+  if (method === "GET") {
+    const cached = responseCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.value as T;
+    const pending = inFlightGets.get(cacheKey);
+    if (pending) return pending as Promise<T>;
+  } else {
+    responseCache.clear();
+  }
+
+  const request = requestJson<T>(path, init).then((value) => {
+    if (method === "GET") responseCache.set(cacheKey, { expiresAt: Date.now() + GET_CACHE_MS, value });
+    return value;
+  }).finally(() => { if (method === "GET") inFlightGets.delete(cacheKey); });
+  if (method === "GET") inFlightGets.set(cacheKey, request);
+  return request;
+}
+
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 3_500);
+  const timeoutMs = path.startsWith("/ai/content/generate") || path.startsWith("/teacher/course-plans") ? 75_000 : 25_000;
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(`${API_URL}${path}`, {
       ...init,
       headers: { "content-type": "application/json", ...authHeaders(), ...init?.headers },
       signal: controller.signal
     });
-    if (!response.ok) throw new Error(`API ${response.status}`);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null) as { message?: string | string[] } | null;
+      const message = Array.isArray(payload?.message) ? payload.message.join(", ") : payload?.message;
+      throw new Error(message ?? `API ${response.status}`);
+    }
     return (await response.json()) as T;
   } finally {
     window.clearTimeout(timeout);
@@ -23,6 +52,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 }
 
 export async function apiFormRequest<T>(path: string, form: FormData): Promise<T> {
+  responseCache.clear();
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 15_000);
   try {

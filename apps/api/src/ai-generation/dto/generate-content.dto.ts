@@ -34,10 +34,10 @@ export class GenerateContentDto {
 
   @IsOptional()
   @IsString()
-  sourceId = "source-python-handbook-01";
+  sourceId!: string;
 
   @IsOptional()
-  @IsIn(["LOCAL_TEMPLATE", "EXTERNAL_LLM", "MOCK_DEVELOPMENT"])
-  provider: "LOCAL_TEMPLATE" | "EXTERNAL_LLM" | "MOCK_DEVELOPMENT" =
+  @IsIn(["LOCAL_TEMPLATE", "EXTERNAL_LLM"])
+  provider: "LOCAL_TEMPLATE" | "EXTERNAL_LLM" =
     process.env.AI_PROVIDER === "external-llm" ? "EXTERNAL_LLM" : "LOCAL_TEMPLATE";
 }

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { AnalysisResult, DemoAttempt } from "../common/types";
+import type { AnalysisResult, LearningAttempt } from "../common/types";
 import type { SubmitAttemptDto } from "../learning-events/dto/submit-attempt.dto";
 
 function isAnalysis(value: unknown): value is AnalysisResult {
@@ -21,7 +21,7 @@ export class AiClientService {
     eventId: string,
     dto: SubmitAttemptDto,
     mastery: number,
-    recentAttempts: DemoAttempt[]
+    recentAttempts: LearningAttempt[]
   ): Promise<AnalysisResult> {
     const endpoint = `${process.env.AI_SERVICE_URL ?? "http://localhost:8001"}/v1/personalization/analyze-event`;
     const recent = recentAttempts.slice(-10);

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { AuthenticatedRequest } from "../auth/auth.guard";
 import { AuthGuard } from "../auth/auth.guard";
@@ -16,7 +16,7 @@ export class LearningController {
   constructor(private readonly learning: LearningService) {}
 
   @Post("learning-events")
-  event(@Req() request: AuthenticatedRequest, @Body() body: LearningEventDto): Record<string, unknown> {
+  event(@Req() request: AuthenticatedRequest, @Body() body: LearningEventDto): Promise<Record<string, unknown>> {
     body.studentId = request.user.id;
     return this.learning.recordEvent(body);
   }
@@ -29,8 +29,6 @@ export class LearningController {
 
   @Get("attempts/:id/analysis")
   analysis(@Req() request: AuthenticatedRequest, @Param("id") id: string) {
-    const attempt = this.learning.analysis(id);
-    if (attempt.studentId !== request.user.id) throw new NotFoundException("Attempt not found");
-    return attempt;
+    return this.learning.analysis(id, request.user.id);
   }
 }

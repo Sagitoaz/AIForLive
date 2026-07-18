@@ -1,91 +1,177 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { createHash, randomUUID } from "node:crypto";
-
-export type SourceStatus = "PENDING_EXTRACTION" | "NEEDS_REVIEW" | "VERIFIED";
+import { ContentSourceStatus, ContentSourceType, Prisma } from "@prisma/client";
+import { createHash } from "node:crypto";
+import { PrismaService } from "../database/prisma.service";
 
 export interface ContentSourceRecord {
   id: string;
+  courseId: string;
   name: string;
   mimeType: string;
   sizeBytes: number;
   checksum: string;
-  status: SourceStatus;
+  status: ContentSourceStatus;
   extractedPreview: string;
   createdAt: string;
   verifiedAt?: string;
   verifiedBy?: string;
 }
 
-const handbookExcerpt = [
-  "range(start, stop, step) tạo một dãy số. Giá trị start được lấy, còn stop không thuộc dãy.",
-  "Khi step dương, giá trị tiếp theo phải nhỏ hơn stop. Khi step âm, giá trị tiếp theo phải lớn hơn stop.",
-  "Ví dụ list(range(1, 5)) là [1, 2, 3, 4]. Muốn lấy cả 5, dùng range(1, 6).",
-  "Khi dạy học sinh mới bắt đầu, nên cho các em dự đoán dãy, chạy code và giải thích lỗi lệch một đơn vị."
-].join("\n");
-
 @Injectable()
 export class ContentSourceService {
-  private readonly sources = new Map<string, ContentSourceRecord>();
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor() {
-    const now = new Date().toISOString();
-    this.sources.set("source-python-handbook-01", {
-      id: "source-python-handbook-01",
-      name: "Python handbook nội bộ · bản 1.3.txt",
-      mimeType: "text/plain",
-      sizeBytes: Buffer.byteLength(handbookExcerpt),
-      checksum: createHash("sha256").update(handbookExcerpt).digest("hex"),
-      status: "VERIFIED",
-      extractedPreview: handbookExcerpt,
-      createdAt: now,
-      verifiedAt: now,
-      verifiedBy: "teacher-mai"
-    });
-  }
-
-  add(file: Express.Multer.File): ContentSourceRecord {
+  async add(file: Express.Multer.File, teacherUserId: string): Promise<ContentSourceRecord> {
     const isPlainText = file.mimetype === "text/plain";
-    const preview = isPlainText
-      ? file.buffer.toString("utf8").replace(/\0/g, "").trim().slice(0, 12_000)
-      : "Tài liệu nhị phân đã qua kiểm tra MIME và checksum; cần worker tách văn bản trước khi dùng để sinh bài.";
-    if (isPlainText && preview.length < 40) throw new BadRequestException("Tài liệu văn bản quá ngắn để làm nguồn bài học");
-    const source: ContentSourceRecord = {
-      id: randomUUID(),
-      name: file.originalname.replace(/[<>:"/\\|?*]/g, "_"),
-      mimeType: file.mimetype,
-      sizeBytes: file.size,
-      checksum: createHash("sha256").update(file.buffer).digest("hex"),
-      status: isPlainText ? "NEEDS_REVIEW" : "PENDING_EXTRACTION",
-      extractedPreview: preview,
-      createdAt: new Date().toISOString()
+    if (!isPlainText) {
+      throw new BadRequestException(
+        "Pilot hiện nhận TXT để lưu và kiểm duyệt trực tiếp trên Supabase. PDF/DOCX/PPTX cần cấu hình Supabase Storage và worker trích xuất trước khi bật."
+      );
+    }
+    const extractedText = file.buffer.toString("utf8").replace(/\0/g, "").trim().slice(0, 200_000);
+    if (extractedText.length < 40) throw new BadRequestException("Tài liệu văn bản quá ngắn để làm nguồn bài học");
+    const course = await this.teacherCourse(teacherUserId);
+    const checksum = createHash("sha256").update(file.buffer).digest("hex");
+    const existing = await this.prisma.contentSource.findUnique({
+      where: { courseId_checksum: { courseId: course.id, checksum } }
+    });
+    if (existing) return this.toRecord(existing);
+    const source = await this.prisma.contentSource.create({
+      data: {
+        courseId: course.id,
+        uploadedById: teacherUserId,
+        name: file.originalname.replace(/[<>:"/\\|?*]/g, "_"),
+        type: ContentSourceType.TXT,
+        mimeType: file.mimetype,
+        sizeBytes: file.size,
+        checksum,
+        extractedText,
+        status: ContentSourceStatus.NEEDS_REVIEW,
+        metadataJson: { extraction: "DIRECT_UTF8", locale: "vi-VN" },
+        chunks: {
+          create: this.chunk(extractedText).map((text, chunkIndex) => ({
+            chunkIndex,
+            text,
+            tokenCount: Math.ceil(text.length / 4),
+            metadataJson: { strategy: "paragraph-window-v1" }
+          }))
+        }
+      }
+    });
+    return this.toRecord(source);
+  }
+
+  async list(teacherUserId: string): Promise<ContentSourceRecord[]> {
+    const course = await this.teacherCourse(teacherUserId);
+    const rows = await this.prisma.contentSource.findMany({
+      where: { courseId: course.id, deletedAt: null },
+      orderBy: { createdAt: "desc" }
+    });
+    return rows.map((row) => this.toRecord(row));
+  }
+
+  async get(id: string, teacherUserId?: string): Promise<ContentSourceRecord> {
+    const row = await this.sourceRow(id, teacherUserId);
+    return this.toRecord(row);
+  }
+
+  async verify(id: string, teacherUserId: string): Promise<ContentSourceRecord> {
+    const source = await this.sourceRow(id, teacherUserId);
+    if (source.status === ContentSourceStatus.PENDING_EXTRACTION) {
+      throw new BadRequestException("Source text has not been extracted yet");
+    }
+    const metadata = this.objectJson(source.metadataJson);
+    const updated = await this.prisma.contentSource.update({
+      where: { id },
+      data: {
+        status: ContentSourceStatus.VERIFIED,
+        verifiedAt: new Date(),
+        metadataJson: { ...metadata, verifiedBy: teacherUserId }
+      }
+    });
+    return this.toRecord(updated);
+  }
+
+  async verifiedExcerpt(id: string, teacherUserId: string): Promise<{ source: ContentSourceRecord; text: string }> {
+    const row = await this.sourceRow(id, teacherUserId);
+    if (row.status !== ContentSourceStatus.VERIFIED || !row.extractedText) {
+      throw new BadRequestException("Source must be reviewed before AI generation");
+    }
+    return { source: this.toRecord(row), text: row.extractedText.slice(0, 24_000) };
+  }
+
+  private async sourceRow(id: string, teacherUserId?: string) {
+    const row = await this.prisma.contentSource.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+        ...(teacherUserId ? { course: { enrollments: { some: { class: { teacher: { userId: teacherUserId } } } } } } : {})
+      }
+    });
+    if (!row) throw new NotFoundException("Content source not found");
+    return row;
+  }
+
+  private async teacherCourse(teacherUserId: string) {
+    const course = await this.prisma.course.findFirst({
+      where: {
+        status: "ACTIVE",
+        deletedAt: null,
+        enrollments: { some: { class: { teacher: { userId: teacherUserId }, status: "ACTIVE", deletedAt: null } } }
+      },
+      orderBy: { createdAt: "asc" }
+    });
+    if (!course) throw new NotFoundException("Giảng viên chưa được phân công khóa học đang hoạt động");
+    return course;
+  }
+
+  private toRecord(source: {
+    id: string;
+    courseId: string;
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
+    checksum: string;
+    status: ContentSourceStatus;
+    extractedText: string | null;
+    createdAt: Date;
+    verifiedAt: Date | null;
+    metadataJson: Prisma.JsonValue;
+  }): ContentSourceRecord {
+    const metadata = this.objectJson(source.metadataJson);
+    return {
+      id: source.id,
+      courseId: source.courseId,
+      name: source.name,
+      mimeType: source.mimeType,
+      sizeBytes: source.sizeBytes,
+      checksum: source.checksum,
+      status: source.status,
+      extractedPreview: source.extractedText?.slice(0, 12_000) ?? "",
+      createdAt: source.createdAt.toISOString(),
+      ...(source.verifiedAt ? { verifiedAt: source.verifiedAt.toISOString() } : {}),
+      ...(typeof metadata.verifiedBy === "string" ? { verifiedBy: metadata.verifiedBy } : {})
     };
-    this.sources.set(source.id, source);
-    return source;
   }
 
-  list(): ContentSourceRecord[] {
-    return [...this.sources.values()].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  private chunk(text: string): string[] {
+    const paragraphs = text.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
+    const chunks: string[] = [];
+    let current = "";
+    for (const paragraph of paragraphs) {
+      if (current && current.length + paragraph.length > 2_000) {
+        chunks.push(current);
+        current = "";
+      }
+      current = current ? `${current}\n\n${paragraph}` : paragraph;
+    }
+    if (current) chunks.push(current);
+    return chunks.length ? chunks : [text.slice(0, 2_000)];
   }
 
-  get(id: string): ContentSourceRecord {
-    const source = this.sources.get(id);
-    if (!source) throw new NotFoundException("Content source not found");
-    return source;
-  }
-
-  verify(id: string, teacherId = "teacher-mai"): ContentSourceRecord {
-    const source = this.get(id);
-    if (source.status === "PENDING_EXTRACTION") throw new BadRequestException("Source text has not been extracted yet");
-    source.status = "VERIFIED";
-    source.verifiedAt = new Date().toISOString();
-    source.verifiedBy = teacherId;
-    this.sources.set(id, source);
-    return source;
-  }
-
-  verifiedExcerpt(id: string): string {
-    const source = this.get(id);
-    if (source.status !== "VERIFIED") throw new BadRequestException("Source must be reviewed before AI generation");
-    return source.extractedPreview;
+  private objectJson(value: Prisma.JsonValue): Record<string, Prisma.JsonValue> {
+    return value && !Array.isArray(value) && typeof value === "object"
+      ? (value as Record<string, Prisma.JsonValue>)
+      : {};
   }
 }

@@ -1,81 +1,63 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
-
-export interface DomainConcept {
-  code: string;
-  title: string;
-  description: string;
-  icon: string;
-  order: number;
-}
-
-export interface DomainMisconception {
-  code: string;
-  conceptCode: string;
-  title: string;
-  description: string;
-  severity: string;
-}
-
-export interface RegisteredDomain {
-  code: string;
-  name: string;
-  locale: string;
-  version: string;
-  supportedMedia: string[];
-  concepts: DomainConcept[];
-  misconceptions: DomainMisconception[];
-  prerequisites: Array<{ from: string; to: string; weight: number }>;
-  diagnosisRules: Array<Record<string, unknown>>;
-  animationTemplates: Array<Record<string, unknown>>;
-}
+import { PrismaService } from "../database/prisma.service";
 
 @Injectable()
 export class DomainRegistryService {
-  private readonly registry = new Map<string, RegisteredDomain>();
-  private readonly domainsRoot = [
-    path.join(process.cwd(), "domains"),
-    path.resolve(process.cwd(), "..", "..", "domains"),
-    path.resolve(__dirname, "..", "..", "..", "..", "domains")
-  ].find((candidate) => existsSync(candidate)) ?? path.join(process.cwd(), "domains");
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor() {
-    this.load("python-foundations");
-  }
-
-  private json<T>(domainCode: string, file: string): T {
-    const filename = path.join(this.domainsRoot, domainCode, file);
-    return JSON.parse(readFileSync(filename, "utf8")) as T;
-  }
-
-  private load(code: string): void {
-    const metadata = this.json<Omit<RegisteredDomain, "concepts" | "misconceptions" | "prerequisites" | "diagnosisRules" | "animationTemplates">>(code, "domain.json");
-    this.registry.set(code, {
-      ...metadata,
-      concepts: this.json<DomainConcept[]>(code, "concepts.json"),
-      misconceptions: this.json<DomainMisconception[]>(code, "misconceptions.json"),
-      prerequisites: this.json<Array<{ from: string; to: string; weight: number }>>(code, "prerequisites.json"),
-      diagnosisRules: this.json<Array<Record<string, unknown>>>(code, "diagnosis-rules.json"),
-      animationTemplates: this.json<Array<Record<string, unknown>>>(code, "animation-templates.json")
+  async list(): Promise<Record<string, unknown>[]> {
+    const rows = await this.prisma.learningDomain.findMany({
+      where: { status: "ACTIVE", deletedAt: null },
+      include: {
+        concepts: { where: { status: "ACTIVE", deletedAt: null }, orderBy: { order: "asc" } },
+        misconceptions: { where: { status: "ACTIVE", deletedAt: null } },
+        diagnosisRules: { where: { status: "ACTIVE", deletedAt: null } }
+      },
+      orderBy: { createdAt: "asc" }
     });
+    return rows.map((row) => ({
+      code: row.code,
+      name: row.name,
+      locale: row.locale,
+      version: row.version,
+      definition: row.definitionJson,
+      concepts: row.concepts,
+      misconceptions: row.misconceptions,
+      diagnosisRules: row.diagnosisRules
+    }));
   }
 
-  list(): RegisteredDomain[] {
-    return [...this.registry.values()];
+  async get(code: string): Promise<Record<string, unknown>> {
+    const row = await this.prisma.learningDomain.findFirst({
+      where: { code, status: "ACTIVE", deletedAt: null },
+      include: {
+        concepts: {
+          where: { status: "ACTIVE", deletedAt: null },
+          include: { dependsOn: { include: { prerequisite: true } } },
+          orderBy: { order: "asc" }
+        },
+        misconceptions: { where: { status: "ACTIVE", deletedAt: null } },
+        diagnosisRules: { where: { status: "ACTIVE", deletedAt: null } }
+      }
+    });
+    if (!row) throw new NotFoundException(`Domain ${code} is not registered in Supabase`);
+    return {
+      code: row.code,
+      name: row.name,
+      locale: row.locale,
+      version: row.version,
+      definition: row.definitionJson,
+      concepts: row.concepts,
+      misconceptions: row.misconceptions,
+      diagnosisRules: row.diagnosisRules
+    };
   }
 
-  get(code: string): RegisteredDomain {
-    const domain = this.registry.get(code);
-    if (!domain) throw new NotFoundException(`Domain ${code} is not registered`);
-    return domain;
+  async hasConcept(domainCode: string, conceptCode: string): Promise<boolean> {
+    return Boolean(await this.prisma.learningConcept.findFirst({ where: { code: conceptCode, domain: { code: domainCode } } }));
   }
 
-  hasConcept(domainCode: string, conceptCode: string): boolean {
-    return this.get(domainCode).concepts.some((concept) => concept.code === conceptCode);
-  }
-
-  hasMisconception(domainCode: string, misconceptionCode: string): boolean {
-    return this.get(domainCode).misconceptions.some((item) => item.code === misconceptionCode);
+  async hasMisconception(domainCode: string, misconceptionCode: string): Promise<boolean> {
+    return Boolean(await this.prisma.misconception.findFirst({ where: { code: misconceptionCode, domain: { code: domainCode } } }));
   }
 }

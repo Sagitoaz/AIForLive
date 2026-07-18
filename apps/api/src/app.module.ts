@@ -3,7 +3,7 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
 import { AuthModule } from "./auth/auth.module";
 import { ContentModule } from "./generated-content/content.module";
-import { DemoStoreModule } from "./shared/demo-store.module";
+import { PrismaModule } from "./database/prisma.module";
 import { DomainRegistryModule } from "./domains/domain-registry.module";
 import { GamesModule } from "./games/games.module";
 import { HealthModule } from "./health/health.module";
@@ -15,7 +15,7 @@ import { TtsModule } from "./tts/tts.module";
 @Module({
   imports: [
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
-    DemoStoreModule,
+    PrismaModule,
     DomainRegistryModule,
     AuthModule,
     LearningModule,

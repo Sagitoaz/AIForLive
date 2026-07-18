@@ -1,0 +1,544 @@
+.skeletonPage {
+  display: grid;
+  gap: 20px;
+}
+
+.skeletonHero,
+.skeletonCard {
+  animation: studentShimmer 1.35s linear infinite;
+  background: linear-gradient(90deg, #e8f0ea 25%, #f8fbf9 50%, #e8f0ea 75%);
+  background-size: 200% 100%;
+  border-radius: 24px;
+}
+
+.skeletonHero {
+  min-height: 210px;
+}
+
+.skeletonGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.skeletonCard {
+  min-height: 170px;
+}
+
+@keyframes studentShimmer {
+  to { background-position: -200% 0; }
+}
+
+.courseLesson {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
+  margin-top: 10px;
+  padding: 16px;
+}
+
+.courseLessonCurrent {
+  background: #fffaf0;
+  border-color: #e8c65f;
+  box-shadow: 0 0 0 3px rgba(232, 198, 95, .13);
+}
+
+.courseLessonCompleted {
+  background: #f5fbf6;
+  border-color: var(--primary-200);
+}
+
+.lessonOrder,
+.phaseNumber {
+  align-items: center;
+  background: var(--primary-100);
+  border-radius: 12px;
+  color: var(--primary-800);
+  display: flex;
+  font-size: 12px;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.courseLessonCurrent .lessonOrder {
+  background: #ffe8a6;
+  color: #6c5100;
+}
+
+.courseLessonCompleted .lessonOrder {
+  background: var(--primary-600);
+  color: #fff;
+}
+
+.lessonCopy {
+  min-width: 0;
+}
+
+.lessonCopy strong,
+.lessonCopy p,
+.lessonCopy small {
+  display: block;
+}
+
+.lessonCopy p {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 4px 0;
+}
+
+.lessonCopy small,
+.resourceMeta,
+.helperText {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.lessonActions,
+.inlineActions,
+.resultActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.breadcrumb {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  gap: 7px;
+}
+
+.breadcrumb a {
+  color: var(--primary-700);
+  font-weight: 800;
+}
+
+.phaseGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.phaseCard {
+  align-items: start;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  padding: 17px;
+}
+
+.phaseCard h3 {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+
+.phaseCard p {
+  color: var(--muted);
+  font-size: 10px;
+  margin: 0;
+}
+
+.phaseCard .inlineActions {
+  grid-column: 1 / -1;
+}
+
+.resourceList {
+  display: grid;
+  gap: 13px;
+}
+
+.resourceCard {
+  align-items: start;
+  background: #f9fcfa;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  padding: 16px;
+}
+
+.resourceIcon {
+  align-items: center;
+  background: var(--primary-100);
+  border-radius: 13px;
+  display: flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.resourceBody {
+  min-width: 0;
+}
+
+.resourceBody strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.resourceContent {
+  color: #34483a;
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+}
+
+.animationWrap {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.phaseSection {
+  scroll-margin-top: 94px;
+}
+
+.practiceHeader {
+  align-items: start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.practiceHeader h1 {
+  margin: 7px 0;
+}
+
+.questionCounter {
+  color: var(--muted);
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.questionCard {
+  display: grid;
+  gap: 18px;
+}
+
+.questionCard h2 {
+  font-size: 25px;
+  margin: 0;
+}
+
+.textAnswer {
+  background: #fbfdfb;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  font: inherit;
+  min-height: 48px;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+.answerFeedback,
+.completionCard,
+.saveNote {
+  border-radius: 16px;
+  padding: 15px;
+}
+
+.answerCorrect {
+  background: #e8f7ec;
+  border: 1px solid #b9dfc2;
+}
+
+.answerIncorrect {
+  background: #fff1e9;
+  border: 1px solid #f1c9b1;
+}
+
+.answerFeedback h3,
+.completionCard h2 {
+  margin: 0 0 5px;
+}
+
+.answerFeedback p,
+.completionCard p {
+  font-size: 11px;
+  margin: 0;
+}
+
+.completionCard {
+  background: var(--forest);
+  color: #fff;
+}
+
+.completionCard p {
+  color: #c9dccc;
+}
+
+.completionCard .resultActions {
+  margin-top: 14px;
+}
+
+.profileGrid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.4fr);
+}
+
+.profileSummary {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.avatar {
+  border: 7px solid var(--primary-100);
+  border-radius: 50%;
+}
+
+.profileSummary h2 {
+  margin: 11px 0 2px;
+}
+
+.profileSummary p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.statsGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 20px;
+  width: 100%;
+}
+
+.statsGrid div {
+  background: #f5faf6;
+  border-radius: 13px;
+  padding: 12px 8px;
+}
+
+.statsGrid strong,
+.statsGrid span {
+  display: block;
+}
+
+.statsGrid strong {
+  color: var(--primary-700);
+  font-size: 21px;
+}
+
+.statsGrid span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.goalForm {
+  display: grid;
+  gap: 15px;
+}
+
+.formRow {
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.field input,
+.field select,
+.field textarea {
+  background: #fbfdfb;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font: inherit;
+  padding: 11px 12px;
+  width: 100%;
+}
+
+.field textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.saveNote {
+  background: #edf7ef;
+  color: var(--primary-800);
+  font-size: 10px;
+}
+
+.badgeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.badgeItem {
+  align-items: center;
+  background: #f8fbf9;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  flex: 1 1 180px;
+  gap: 10px;
+  padding: 12px;
+}
+
+.chartWrap {
+  height: 320px;
+  min-width: 0;
+}
+
+.emptyChart {
+  align-items: center;
+  background: #f8fbf9;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  color: var(--muted);
+  display: flex;
+  min-height: 220px;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.activityWeek {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(7, 1fr);
+  min-height: 190px;
+}
+
+.activityDay {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.activityBarTrack {
+  align-items: end;
+  background: #edf3ef;
+  border-radius: 10px;
+  display: flex;
+  height: 130px;
+  overflow: hidden;
+  width: min(34px, 100%);
+}
+
+.activityBar {
+  background: var(--primary-500);
+  border-radius: 10px;
+  min-height: 3px;
+  width: 100%;
+}
+
+.activityDay strong {
+  font-size: 10px;
+}
+
+.activityDay span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.leaderboardList {
+  display: grid;
+  gap: 9px;
+}
+
+.leaderboardRow {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 34px minmax(0, 1fr) repeat(3, auto);
+  padding: 12px 15px;
+}
+
+.leaderboardRow > span:first-child {
+  align-items: center;
+  background: var(--primary-100);
+  border-radius: 50%;
+  display: flex;
+  font-size: 10px;
+  font-weight: 900;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.leaderboardRow small {
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .skeletonGrid,
+  .phaseGrid,
+  .profileGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .courseLesson {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+  }
+
+  .lessonActions {
+    grid-column: 2 / -1;
+  }
+
+  .resourceCard {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .resourceCard > :last-child:not(.animationWrap) {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 620px) {
+  .courseLesson,
+  .leaderboardRow {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .courseLesson > :nth-child(3),
+  .leaderboardRow > :nth-child(n + 3) {
+    grid-column: 2;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .practiceHeader {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonHero,
+  .skeletonCard {
+    animation: none;
+  }
+}

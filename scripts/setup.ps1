@@ -14,7 +14,6 @@ Require-Command "npm" "npm is included with Node.js."
 if (-not (Get-Command "py" -ErrorAction SilentlyContinue) -and -not (Get-Command "python" -ErrorAction SilentlyContinue)) {
   throw "Python was not found. Install Python 3.11 or newer."
 }
-Require-Command "docker" "Install Docker Desktop and start it."
 
 if (-not (Test-Path ".env")) { Copy-Item ".env.example" ".env" }
 
@@ -22,18 +21,13 @@ Write-Host "[EduRecall] Installing Node dependencies..." -ForegroundColor Green
 npm install
 Write-Host "[EduRecall] Installing Python dependencies..." -ForegroundColor Green
 npm run ai:install
-Write-Host "[EduRecall] Starting PostgreSQL..." -ForegroundColor Green
-docker compose up -d postgres
-Write-Host "[EduRecall] Applying database migrations..." -ForegroundColor Green
-npm run db:setup
-Write-Host "[EduRecall] Generating deterministic synthetic data..." -ForegroundColor Green
-npm run ai:data
+Write-Host "[EduRecall] Checking Supabase PostgreSQL..." -ForegroundColor Green
+npm run db:check
 
 if (-not (Test-Path "apps/ai-service/ml/artifacts/next_attempt_model.joblib")) {
-  npm run ai:train
+  throw "AI model artifact is missing. Restore the reviewed artifact before starting the product."
 }
 
-npm run db:seed
 npm run validate:assets
 
 Write-Host ""

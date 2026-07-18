@@ -172,6 +172,7 @@ model User {
   attempts              Attempt[]
   contentSources        ContentSource[]   @relation("SourceUploader")
   generationJobs        AiGenerationJob[] @relation("GenerationRequester")
+  coursePlanDrafts      CoursePlanDraft[]  @relation("CoursePlanRequester")
   contentReviews        ContentReview[]   @relation("ContentReviewer")
   auditLogs             AuditLog[]        @relation("AuditActor")
   xpEvents              XpEvent[]
@@ -261,6 +262,7 @@ model LearningClass {
   teacher            TeacherProfile     @relation(fields: [teacherId], references: [id], onDelete: Restrict)
   enrollments        Enrollment[]
   leaderboardEntries LeaderboardEntry[]
+  coursePlanDrafts   CoursePlanDraft[]
 
   @@unique([organizationId, code])
   @@index([teacherId, status])
@@ -331,6 +333,7 @@ model Course {
   learningEvents LearningEvent[]
   contentSources ContentSource[]
   generationJobs AiGenerationJob[]
+  coursePlanDrafts CoursePlanDraft[]
   games          Game[]
 
   @@unique([organizationId, code])
@@ -796,6 +799,40 @@ model GeneratedContent {
 
   @@index([status, createdAt])
   @@index([provider, reuseCount])
+}
+
+model CoursePlanDraft {
+  id                    String        @id @default(uuid())
+  courseId              String
+  classId               String?
+  requestedById         String
+  title                 String
+  gradeBand             String
+  goalsJson             Json
+  durationWeeks         Int
+  status                ContentStatus @default(DRAFT)
+  provider              String        @default("LOCAL_CATALOG_PLANNER")
+  modelVersion          String        @default("course-plan-v1")
+  inputJson             Json
+  catalogSnapshotJson   Json
+  aiDraftJson           Json
+  planJson              Json
+  reviewHistoryJson     Json          @default("[]")
+  teacherEditingSeconds Int           @default(0)
+  version               Int           @default(1)
+  submittedAt           DateTime?
+  approvedAt            DateTime?
+  publishedAt           DateTime?
+  metadataJson          Json          @default("{}")
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  course                Course        @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  learningClass         LearningClass? @relation(fields: [classId], references: [id], onDelete: SetNull)
+  requestedBy           User          @relation("CoursePlanRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+
+  @@index([requestedById, status, updatedAt])
+  @@index([courseId, status])
+  @@index([classId, status])
 }
 
 model MicroLesson {

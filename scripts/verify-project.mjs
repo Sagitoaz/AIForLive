@@ -13,7 +13,9 @@ const venvPython = process.platform === "win32"
   ? path.join(root, ".venv", "Scripts", "python.exe")
   : path.join(root, ".venv", "bin", "python");
 const python = existsSync(venvPython) ? venvPython : process.platform === "win32" ? "python" : "python3";
-process.env.DATABASE_URL ??= "postgresql://edurecall:edurecall_dev@localhost:5432/edurecall?schema=public";
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is required; verification does not use a local or in-memory database fallback.");
+}
 const started = new Date();
 const results = [];
 
@@ -56,17 +58,8 @@ const version = (binary, args) => {
 };
 const failed = results.filter((result) => !result.ok);
 const table = results.map((result) => `| ${result.label} | ${result.ok ? "PASS" : "FAIL"} | ${result.durationMs} ms |`).join("\n");
-const report = `# Build verification\n\n- Date: ${new Date().toISOString()}\n- Node: ${process.version}\n- npm: ${version(npm, [...npmPrefix, "--version"])}\n- Python: ${version(python, ["--version"])}\n- Total source/artifact files (dependencies excluded): ${countFiles(root)}\n- Total custom icons: ${manifest.filter((item) => item.category === "icons").length}\n- Total SVG assets: ${manifest.length}\n- Model artifact: ${results.find((item) => item.label === "Model artifact")?.output}\n- ZIP size: pending package verification\n- Overall: ${failed.length ? "FAILED" : "PASSED"}\n\n## Verification matrix\n\n| Check | Result | Duration |\n| --- | --- | ---: |\n${table}\n\n## Model result\n\nThe next-attempt artifact uses a student-group split on synthetic data. See \`apps/ai-service/ml/artifacts/evaluation.json\` and \`docs/model-card.md\`.\n\n## Known limitations\n\n- Docker/PostgreSQL runtime was not exercised when Docker is unavailable; Prisma schema validation and migration generation remain part of the source gate.\n- Model metrics are from synthetic data and do not establish real educational effectiveness.\n- External LLM/TTS adapters need deployment-specific credentials; the verified demo uses LocalTemplateProvider and browser speech.\n\nVerification started at ${started.toISOString()} and finished at ${new Date().toISOString()}.\n`;
-const accurateReport = report
-  .replace(
-    "Docker/PostgreSQL runtime was not exercised when Docker is unavailable; Prisma schema validation and migration generation remain part of the source gate.",
-    "The source gate validates Prisma and the production build but does not exercise the full Docker/PostgreSQL runtime."
-  )
-  .replace(
-    "External LLM/TTS adapters need deployment-specific credentials; the verified demo uses LocalTemplateProvider and browser speech.",
-    "FPT LLM live calls require deployment credentials and quota; automated verification covers the adapter with mocked provider responses and keeps LocalTemplateProvider as fallback."
-  );
-writeFileSync(path.join(root, "docs", "build-verification.md"), accurateReport, "utf8");
+const report = `# Build verification\n\n- Date: ${new Date().toISOString()}\n- Node: ${process.version}\n- npm: ${version(npm, [...npmPrefix, "--version"])}\n- Python: ${version(python, ["--version"])}\n- Total source/artifact files (dependencies excluded): ${countFiles(root)}\n- Total custom icons: ${manifest.filter((item) => item.category === "icons").length}\n- Total SVG assets: ${manifest.length}\n- Model artifact: ${results.find((item) => item.label === "Model artifact")?.output}\n- ZIP size: pending package verification\n- Overall: ${failed.length ? "FAILED" : "PASSED"}\n\n## Verification matrix\n\n| Check | Result | Duration |\n| --- | --- | ---: |\n${table}\n\n## Model result\n\nThe next-attempt artifact uses a student-group split on synthetic data. See \`apps/ai-service/ml/artifacts/evaluation.json\` and \`docs/model-card.md\`.\n\n## Known limitations\n\n- The source gate validates Prisma and the production build; use smoke-product.ps1 to exercise the live Supabase runtime.\n- Model metrics are from synthetic data and do not establish real educational effectiveness.\n- Live LLM/TTS calls require deployment credentials and quota; LocalTemplateProvider keeps the reviewed authoring workflow available without a paid dependency.\n\nVerification started at ${started.toISOString()} and finished at ${new Date().toISOString()}.\n`;
+writeFileSync(path.join(root, "docs", "build-verification.md"), report, "utf8");
 if (failed.length) {
   console.error(`\nVerification failed: ${failed.map((item) => item.label).join(", ")}`);
   process.exit(1);

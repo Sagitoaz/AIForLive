@@ -1,204 +1,123 @@
-# Cơ chế AI trong EduRecall AI / EduOne prototype
+# Cơ chế AI và dữ liệu của EduRecall
 
-Ngày cập nhật: 18/07/2026. Tài liệu này mô tả đúng những gì source code hiện thực thi, phân biệt rõ AI runtime, fallback, dữ liệu synthetic và các phần mới chỉ là kiến trúc đích.
+Ngày cập nhật: 18/07/2026. Tài liệu mô tả code runtime hiện tại, không mô tả mockup.
 
-## 1. AI giải quyết hai bài toán nào?
+## 1. Phân chia trách nhiệm
 
-Sản phẩm có hai động cơ AI độc lập nhưng liên kết với nhau:
+- Next.js chỉ hiển thị dữ liệu API và gửi hành động của người dùng. Không tự tạo mastery, recommendation hoặc AI draft.
+- NestJS xác thực JWT, kiểm tra quyền, chấm bằng answer key đã duyệt, quản lý transaction và human-review state machine.
+- FastAPI là lõi AI cá nhân hóa: knowledge tracing, forgetting, misconception diagnosis, dự đoán lần làm tiếp theo và chọn hoạt động.
+- Supabase PostgreSQL là nguồn dữ liệu duy nhất cho user, course, attempt, concept state, recommendation, content và audit.
+- Provider nội dung tạo structured JSON tiếng Việt từ nguồn VERIFIED. Giáo viên phải duyệt trước khi publish.
 
-1. **Personalization engine:** đọc learning event của từng học sinh, cập nhật mức hiểu, phát hiện nguy cơ quên hoặc misconception, sau đó chọn đúng bài/hoạt động tiếp theo và ghi lý do.
-2. **Content authoring engine:** dùng tài liệu đã được xác minh để tạo bản nháp bài học tiếng Việt gồm Lý thuyết – Thực hành – Kiểm tra. Giáo viên luôn sửa, duyệt và xuất bản; AI không tự đưa nội dung mới tới học sinh.
+## 2. Đánh giá đầu vào và tạo lộ trình
 
-AI Voice và AI animation là hai phương thức trình bày nội dung của động cơ thứ hai, không phải hai hệ thống ra quyết định riêng.
+1. API lấy 5 exercise có `metadataJson.placement = true` từ khóa học trên Supabase.
+2. Học sinh trả lời; response được ghi trong một `LearningEvent` loại `DIAGNOSTIC`.
+3. Server so đáp án với `answerJson.acceptedAnswers`; client không được gửi cờ đúng/sai có hiệu lực.
+4. Mỗi concept nhận mastery khởi điểm có điều chỉnh theo độ khó; kết quả được lưu vào `StudentConceptState` và `ConceptStateHistory`.
+5. `PersonalizationRun` lưu input/output và version `placement-v1`; lộ trình dùng state này để chọn trọng tâm.
 
-## 2. Ranh giới giữa Web, NestJS và Python service
+Placement dùng quy tắc có thể giải thích để tránh cho LLM tự chấm kiến thức. Sau khi có lịch sử, FastAPI tiếp quản cập nhật thời gian thực.
 
-```text
-Next.js Web
-  ├─ giao diện học sinh/giảng viên
-  ├─ HTML/CSS animation renderer từ template an toàn
-  └─ phát audio FPT TTS hoặc Browser Speech fallback
-          │ REST + JWT
-          ▼
-NestJS Core API
-  ├─ xác thực và RBAC
-  ├─ chấm activity đã đăng ký ở server
-  ├─ điều phối attempt, content workflow, source và audit
-  ├─ gọi LLM/TTS provider bằng secret phía server
-  └─ deterministic fallback nếu Python tạm lỗi
-          │ bounded JSON contract
-          ▼
-FastAPI Personalization Service
-  ├─ Bayesian Knowledge Tracing
-  ├─ forgetting/retrievability
-  ├─ misconception rule engine
-  ├─ next-attempt predictor
-  └─ recommendation ranking + evidence
-```
+## 3. Cá nhân hóa sau mỗi attempt
 
-Python service **là lõi AI của cá nhân hóa**. NestJS vẫn là lõi nghiệp vụ: nó xác minh actor, chấm câu trả lời, quản lý trạng thái và quyết định có chấp nhận output AI hay không. Việc tách này có chủ đích: model không được ghi thẳng vào business database và khi model lỗi, học sinh vẫn tiếp tục học bằng fallback có nhãn.
-
-## 3. Luồng personalization sau mỗi attempt
-
-### Bước 1 — ghi và chấm learning event
-
-Học sinh gửi `activityId`, đáp án, thời gian phản hồi, hint và phase. Với activity đã đăng ký, NestJS tự lấy đáp án chuẩn, concept, phase và difficulty; trường `isCorrect` từ browser không được tin cậy. `studentId` cũng được lấy lại từ JWT.
-
-`idempotencyKey` ngăn cùng một event bị phân tích hai lần khi mạng chập chờn hoặc client retry.
-
-### Bước 2 — Knowledge Tracing
-
-FastAPI dùng Bayesian Knowledge Tracing để cập nhật `mastery_before → mastery_after`. Quan sát được giảm trọng số khi học sinh dùng gợi ý, trả lời lại nhiều lần, bỏ qua, phản hồi quá nhanh hoặc quá chậm. Vì vậy một đáp án đúng không mặc định đồng nghĩa đã nắm chắc, và một lỗi đơn lẻ không lập tức gắn nhãn misconception.
-
-Thông số prototype hiện tại:
-
-- prior knowledge `p_l0 = 0.28`;
-- learning transition `p_transit = 0.08`;
-- guess `p_guess = 0.20`;
-- slip `p_slip = 0.10`.
-
-Đây là thông số demo có thể thay thế sau pilot; không phải tham số đã hiệu chỉnh từ học sinh EduOne thật.
-
-### Bước 3 — Forgetting và lịch ôn
-
-Mô hình quên dạng exponential dùng thời gian từ lần học gần nhất, stability, chất lượng nhớ lại, chuỗi trả lời đúng và lỗi gần đây. Output gồm:
-
-- `retrievability`: khả năng nhớ lại tại thời điểm hiện tại;
-- `forgetting_risk = 1 - retrievability`;
-- `recommended_interval_days`: thời điểm nên ôn lại, giới hạn 1–90 ngày.
-
-Interface được tách riêng để có thể thay bằng FSRS hoặc mô hình đã hiệu chỉnh sau pilot.
-
-### Bước 4 — phát hiện misconception
-
-Rule engine tải rule theo domain. Ví dụ `RANGE_STOP_INCLUDED` chỉ match khi dãy học sinh gửi có chứa `stop`, trong khi đáp án chuẩn không chứa nó. Kết quả luôn kèm `rule_id`, confidence và evidence có thể đọc lại; hệ thống không yêu cầu LLM suy đoán lỗi sai một cách mơ hồ.
-
-### Bước 5 — dự đoán next attempt
-
-Logistic regression nhỏ dùng mastery, recent accuracy, difficulty, hint rate, response time, attempt count, forgetting risk, misconception repetition, prerequisite mastery, consistency và engagement. Artifact được huấn luyện trên synthetic data với split theo học sinh để giảm row leakage.
-
-Kết quả model hiện chỉ là một signal. Chỉ số từ synthetic data không chứng minh hiệu quả giáo dục và không được dùng cho xếp loại, kỷ luật hoặc quyết định high-stakes.
-
-### Bước 6 — chọn recommendation cụ thể
-
-Priority score hiện kết hợp:
+Luồng transaction:
 
 ```text
-0.35 × knowledge gap
-+ 0.25 × forgetting risk
-+ 0.20 × recent error rate
-+ 0.10 × prerequisite gap
-+ 0.10 × course relevance
+JWT student
+  → lấy Exercise + answer key + Enrollment từ Supabase
+  → server chấm đáp án
+  → ghi LearningEvent(PENDING_ANALYSIS) + Attempt
+  → gọi FastAPI với mastery, history, difficulty, hint, response time
+  → ghi Diagnosis + Recommendation + Evidence
+  → cập nhật StudentConceptState + History + ReviewSchedule
+  → ghi PersonalizationRun và ANALYZED/FALLBACK_ANALYZED
 ```
 
-Misconception lặp lại được cộng ưu tiên. Engine chọn một action như prerequisite review, micro-lesson, flash review, guided practice, checkpoint hoặc tiếp tục lộ trình. Output không dừng ở tên action mà có target cụ thể: `type`, `id`, `title`, `phase`, thời lượng và difficulty.
+FastAPI kết hợp:
 
-Mỗi recommendation lưu/hiển thị các candidate signal, attempt ID, rule ID, model version và danh sách lý do. Đây là phần đáp ứng yêu cầu “explainable AI architecture” và recommendation log theo từng học sinh.
+- Bayesian Knowledge Tracing để cập nhật xác suất nắm vững;
+- exponential forgetting để ước tính retrievability/forgetting risk;
+- domain rule để nhận diện misconception có bằng chứng, ví dụ `RANGE_STOP_INCLUDED`;
+- logistic regression prototype để ước tính xác suất đúng ở lần tiếp theo;
+- ranker có trọng số cho knowledge gap, forgetting risk, lỗi gần đây, prerequisite, mục tiêu và quỹ thời gian.
 
-### Bước 7 — fallback có kiểm soát
+Output luôn có `reasons`, `candidateScores`, model/rule version và target cụ thể. Nếu FastAPI tạm lỗi, deterministic fallback chạy ở NestJS, được gắn nhãn `DETERMINISTIC_FALLBACK` và vẫn lưu Supabase; UI không giả nó là model result.
 
-NestJS gọi FastAPI với timeout 2,5 giây và retry tối đa hai lần. Nếu FastAPI không phản hồi, deterministic fallback vẫn trả mastery, evidence và target, đồng thời gắn `mode = DETERMINISTIC_FALLBACK`. UI và log không được phép trình bày fallback như kết quả model thật.
+AI tự điều chỉnh thứ tự/target trong lộ trình từng học sinh bằng `Recommendation` và `ReviewSchedule`; hệ thống không nhân bản toàn bộ course. Nếu cần bài mới, AI tạo một `GeneratedContent` dùng lại theo concept/misconception, giáo viên duyệt rồi mới gắn cho người phù hợp.
 
-## 4. Luồng AI hỗ trợ giảng viên tạo bài
+## 4. AI hỗ trợ giảng viên tạo khóa học và bài học
 
-### Nguồn và grounding
+Đây là luồng riêng với personalization và có hai nhánh trong cùng Teacher Studio.
 
-- Nguồn nội bộ seed sẵn có trạng thái `VERIFIED`.
-- TXT upload được trích xuất thật, tính checksum và vào `NEEDS_REVIEW`; giáo viên phải xác minh trước khi dùng.
-- PDF/DOCX/PPTX hiện chỉ vào `PENDING_EXTRACTION`. Prototype không giả vờ đã đọc binary khi chưa có extraction/OCR worker.
-- LLM prompt nhận excerpt của nguồn đã xác minh và bị yêu cầu không thêm fact ngoài excerpt.
+### 4.1. Tổ hợp lộ trình khóa học từ nhu cầu lớp
 
-### Provider
+1. Giảng viên chọn lớp pilot, khóa nguồn, khối lớp, số tuần và mục tiêu.
+2. `LOCAL_CATALOG_PLANNER` đọc catalog đang hoạt động trên Supabase: module, lesson, concept, prerequisite, resource và exercise.
+3. Mỗi lesson nhận `selectionScore` từ mức khớp mục tiêu, prerequisite, thứ tự module và độ phủ ba pha.
+4. Planner bổ sung bài tiên quyết, giữ thứ tự kiến thức, chia các đoạn lesson liên tiếp theo tuần và lưu `candidateLog`.
+5. Kết quả được lưu vào `CoursePlanDraft` ở trạng thái `DRAFT`, không ghi đè course gốc.
+6. Giảng viên có thể đổi brief, chuyển/bỏ bài giữa các tuần và lưu version. Sửa bản `APPROVED` tự động đưa về `REVISION_REQUIRED`.
+7. Workflow bắt buộc là `DRAFT → IN_REVIEW → APPROVED → PUBLISHED`; mọi chuyển trạng thái có review history và audit log.
 
-- `ExternalLlmProvider`: gọi endpoint OpenAI-compatible của FPT AI Marketplace, model cấu hình mặc định `DeepSeek-V4-Flash`.
-- `LocalTemplateProvider`: tạo structured draft không cần API trả phí, dùng được cho demo offline.
-- Provider được chọn bằng biến `AI_PROVIDER`; secret chỉ tồn tại ở NestJS, không đưa sang `NEXT_PUBLIC_*`.
+Planner catalog là thuật toán chi phí 0, xác định và giải thích được; không được trình bày như LLM. Nhánh `EXTERNAL_LLM` dành cho việc soạn nội dung ngôn ngữ khi có credential, còn quyết định publish luôn thuộc giáo viên.
 
-### Output contract
+### 4.2. Soạn bài học từ tài liệu đã xác minh
 
-AI trả JSON có title, objective, slide, narration, animation template/data, quiz và ba section:
+1. Giảng viên tải TXT; API lưu `ContentSource` và `SourceChunk` trên Supabase.
+2. Giảng viên xác minh nguồn; chỉ `VERIFIED` được dùng.
+3. API tạo `AiGenerationJob` chứa provider, prompt version, checksum, thời gian và cost.
+4. Provider sinh JSON: mục tiêu, 3 pha, slides, narration, animation template và quiz.
+5. Validator chặn output sai schema, raw JavaScript/HTML nguy hiểm và quiz không hợp lệ.
+6. Draft được lưu vào `GeneratedContent`, `MicroLesson`, `MicroLessonSlide`, `GeneratedQuiz`, `ContentVersion` với trạng thái `DRAFT`.
+7. Giáo viên sửa → gửi review → `APPROVED` → `PUBLISHED`; sửa một bản đã approve sẽ tạo vòng `REVISION_REQUIRED` mới.
+8. Student endpoint chỉ trả content `PUBLISHED`.
 
-1. `THEORY`: lecture, animation/tài liệu;
-2. `PRACTICE`: code, trắc nghiệm, debug;
-3. `CHECKPOINT`: câu mới để củng cố và cập nhật lộ trình.
+`LocalTemplateProvider` là provider không tốn paid API và vẫn tạo nội dung thật có cấu trúc. `ExternalLlmProvider` có thể dùng FPT AI khi có khóa. Không có mock development provider.
 
-Normalizer và validator từ chối output thiếu pha, thời lượng sai, quiz không có đúng một đáp án, nguồn chưa xác minh, animation template ngoài allowlist, raw HTML, JavaScript, iframe hoặc remote URL.
+## 5. Animation và AI Voice
 
-### Human review
+Model không được chạy raw HTML/JavaScript. Nó chọn template an toàn như `NUMBER_SEQUENCE`, `CODE_HIGHLIGHT`, `LOOP_TIMELINE` cùng `animationData`; web render bằng component React/HTML/CSS đã đăng ký. Cách này vẫn cho trải nghiệm sinh động nhưng giảm XSS và nội dung ngoài kiểm soát. Cả 12 bài trong khóa Python hiện có một animation spec riêng trên Supabase; bài bổ trợ `range()` có bốn slide animation và ba câu củng cố.
 
-State machine chính:
+Narration đã duyệt được gửi tới endpoint TTS. Server ưu tiên FPT.AI-VITs khi có cấu hình; Web Speech `vi-VN` là phương án đọc cuối. Voice không thay đổi nội dung hay kết quả học tập.
 
-```text
-DRAFT → APPROVED → PUBLISHED
-          └──────→ REJECTED / REVISION khi cần
-```
+## 6. Supabase đang lưu gì
 
-Chỉ endpoint học sinh đọc được `PUBLISHED`; generate, edit, review và publish yêu cầu JWT vai trò `TEACHER`. Việc edit tạo version mới và chạy validation lại.
+- danh tính, role, profile, lớp và enrollment;
+- 4 module, 12 bài, 36 resource và 60 exercise có answer key đã duyệt;
+- 20 hồ sơ pilot không đồng đều, có missing/sparse history và kết nối không ổn định;
+- learning event, attempt, diagnosis, mastery/current history;
+- recommendation, evidence, lịch ôn và personalization run;
+- source, AI job, draft, phiên bản giáo viên, review và publish audit;
+- course-plan draft, catalog snapshot, AI draft, teacher plan, candidate log và review history;
+- game session, XP, badge và leaderboard setting.
 
-## 5. AI animation thay video như thế nào?
+API fail-fast nếu `DATABASE_URL` thiếu hoặc Supabase không sẵn sàng. Không có `DemoStore`, localStorage business state, seed hoặc reset endpoint.
 
-Có thể dùng animation thay phần lớn video minh họa ngắn, đặc biệt với Python cơ bản: dòng thực thi, giá trị biến, vòng lặp, nhánh điều kiện, index list và luồng gọi hàm.
+## 7. Hiệu năng và tính nhất quán UI
 
-Không nên cho model sinh một file HTML/JavaScript bất kỳ rồi chạy trực tiếp. Thiết kế hiện tại an toàn hơn:
+- GET trùng nhau trong cùng thời điểm được hợp nhất; cache bộ nhớ 12 giây chỉ giảm request lặp, không thay Supabase làm business truth.
+- Dashboard tối thiểu được tải trước; course, lesson, chart và heatmap đồng bộ nền với skeleton rõ ràng.
+- Mutation/AI operation khóa nút điều hướng và submit bằng một operation overlay để không gửi nhiều attempt/draft trùng nhau.
+- Attempt dùng idempotency key và unique constraint. Đọc state/history và ghi attempt chạy song song; bảy bản ghi kết quả AI được commit trong một batch transaction.
+- Sau khi server trả kết quả chấm, các dashboard signal được refresh nền nên học sinh thấy phản hồi trước, không phải đợi tải lại toàn bộ trang.
 
-1. AI chọn một template đã đăng ký như `NUMBER_SEQUENCE`, `LOOP_TIMELINE`, `CODE_HIGHLIGHT`, `FLOW_BRANCH` hoặc `BUG_REVEAL`.
-2. AI chỉ sinh `animationData` phẳng đã validate.
-3. Next.js render HTML/CSS/React từ template do đội phát triển kiểm soát.
-4. Giáo viên xem preview và duyệt trước publish.
-5. `prefers-reduced-motion` tắt chuyển động không cần thiết cho học sinh nhạy cảm với animation.
+## 8. Vai trò của Python service
 
-Ưu điểm so với video: tạo nhanh, nhẹ băng thông, sửa được từng dữ kiện, hỗ trợ tương tác và phù hợp thiết bị yếu. Video vẫn hữu ích cho lời giảng dài, thí nghiệm thật hoặc biểu cảm của giáo viên; khi dùng video, production cần upload lên Storage/CDN, metadata, phụ đề, quyền truy cập và quét file. Prototype hiện chưa có pipeline upload video.
+Python service là lõi của vấn đề cá nhân hóa trong brief. NestJS vẫn giữ quyền quyết định nghiệp vụ vì model không được ghi thẳng database hoặc tự publish nội dung. Đây là phân lớp an toàn, không làm AI kém “cốt lõi”.
 
-## 6. AI Voice
+Hạn chế còn lại trước pilot thật: model đang được đánh giá bằng synthetic training artifact; cần consent, calibration từ dữ liệu pilot, fairness review, latency/load test 20 học sinh, teacher override/reject metrics và không retrain tự động từ dữ liệu trẻ em khi chưa có governance.
 
-Nút AI Voice gọi `POST /api/tts/speech`. NestJS dùng `FPT.AI-VITs`, voice mặc định `std_kimngan`, trả WAV và cache tối đa 64 clip theo model + voice + format + nội dung.
+## 9. File code chính
 
-Thứ tự fallback:
-
-1. FPT.AI-VITs phía server;
-2. Web Speech API với voice `vi-VN` phù hợp nhất trên máy;
-3. thông báo rõ nếu cả hai không khả dụng.
-
-Các biến liên quan: `TTS_BASE_URL`, `TTS_MODEL`, `TTS_VOICE`, `TTS_RESPONSE_FORMAT`, `TTS_TIMEOUT_MS`, `TTS_API_KEY`. Nếu `TTS_API_KEY` trống, server dùng `EXTERNAL_LLM_API_KEY`. TTS endpoint không làm thay đổi nội dung bài; nó chỉ đọc narration đã được giáo viên duyệt.
-
-## 7. Supabase hiện được dùng đến đâu?
-
-Điền `DATABASE_URL` và `DIRECT_URL` trong `.env` chỉ cung cấp connection string. Hiện tại:
-
-- Prisma CLI dùng Supabase khi chạy migration/validate/seed;
-- `prisma/seed/index.ts` dùng `PrismaClient` để tạo dataset mẫu;
-- NestJS runtime **chưa có Prisma module/repository**, nên attempt, mastery, recommendation và generated content vẫn nằm trong `DemoStoreService` memory;
-- Web còn có localStorage fallback để demo khi API tắt.
-
-Do đó `.env` có thể kết nối Supabase thành công nhưng `npm run dev` vẫn không đọc/ghi business state ở đó. Muốn gọi là Supabase-integrated cần thay `DemoStoreService` bằng repository Prisma, transaction hóa luồng attempt/content, thêm tenant authorization/RLS và integration test chống lẫn dữ liệu giữa hai học sinh.
-
-## 8. Python service đã là cốt lõi chưa?
-
-**Có, đối với personalization runtime:** BKT, forgetting, misconception diagnosis, next-attempt prediction và recommendation đều chạy trong FastAPI sau mỗi attempt.
-
-**Chưa phải toàn bộ AI của sản phẩm:** content generation và TTS được điều phối trong NestJS vì chúng gắn với secret, source verification và human-review state machine. Đây là phân chia hợp lý, không phải thiếu sót.
-
-Khoảng trống trước pilot thật:
-
-- nối state với PostgreSQL/Supabase thay vì process memory;
-- hiệu chỉnh BKT/threshold bằng dữ liệu pilot có consent;
-- đo latency và fallback rate với 20 học sinh đồng thời;
-- đo teacher override/reject rate và chất lượng bài theo rubric;
-- thêm monitoring drift, model registry và rollback;
-- không retrain tự động từ dữ liệu trẻ em nếu chưa có governance/consent rõ ràng.
-
-## 9. File code chính để kiểm tra
-
-- Personalization orchestrator: `apps/ai-service/app/services/personalization.py`
-- BKT: `apps/ai-service/app/services/knowledge_tracing.py`
-- Forgetting: `apps/ai-service/app/services/forgetting.py`
-- Rule diagnosis: `apps/ai-service/app/services/diagnosis.py`
-- Recommendation: `apps/ai-service/app/services/recommendation.py`
-- NestJS AI client/fallback: `apps/api/src/personalization/`
-- Learning event và server-side scoring: `apps/api/src/learning-events/learning.service.ts`
-- Content providers: `apps/api/src/ai-generation/providers/`
-- Source/review workflow: `apps/api/src/generated-content/`
-- TTS: `apps/api/src/tts/`
-- Safe animation registry: `packages/lesson-schema/` và `apps/api/domains/python-foundations/animation-templates.json`
-- Synthetic data/model scripts: `apps/ai-service/scripts/` và `apps/ai-service/ml/`
-
+- Supabase/Prisma: `apps/api/src/database/`, `prisma/schema.prisma`
+- Attempt transaction: `apps/api/src/learning-events/learning.service.ts`
+- Placement: `apps/api/src/learning-events/diagnostics.controller.ts`
+- Python AI client: `apps/api/src/personalization/`
+- AI service: `apps/ai-service/app/`
+- Content workflow: `apps/api/src/generated-content/`
+- Course planner: `apps/api/src/teacher/course-plan.service.ts`
+- Trạng thái bài học: `apps/api/src/students/lesson-progress.service.ts`
+- Animation renderer an toàn: `apps/web/components/learning-animation.tsx`
+- Product state API-only: `apps/web/features/product/product-context.tsx`

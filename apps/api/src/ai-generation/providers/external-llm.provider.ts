@@ -1,8 +1,8 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
-import type { DemoSlide } from "../../common/types";
+import type { ContentSlide } from "../../common/types";
 import type { ContentGenerationInput, ContentProvider, ProviderOutput } from "./content-provider";
 
-const slideTypes = new Set<DemoSlide["type"]>([
+const slideTypes = new Set<ContentSlide["type"]>([
   "CONCEPT",
   "CODE_STEP",
   "EXAMPLE",
@@ -53,7 +53,7 @@ function integer(value: unknown, label: string): number {
   return value;
 }
 
-function defaultAnimationTemplate(type: DemoSlide["type"], conceptCode: string): string {
+function defaultAnimationTemplate(type: ContentSlide["type"], conceptCode: string): string {
   if (type === "MISCONCEPTION") return "BUG_REVEAL";
   if (type === "EXAMPLE" && ["PYTHON_FOR", "PYTHON_WHILE", "PYTHON_RANGE"].includes(conceptCode)) return "LOOP_TIMELINE";
   if (conceptCode === "PYTHON_RANGE") return "NUMBER_SEQUENCE";
@@ -72,9 +72,9 @@ function parseJsonContent(content: string): JsonRecord {
   return record(JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)), "lesson");
 }
 
-function parseAnimationData(value: unknown, label: string): DemoSlide["animationData"] {
+function parseAnimationData(value: unknown, label: string): ContentSlide["animationData"] {
   const source = record(value, label);
-  const result: DemoSlide["animationData"] = {};
+  const result: ContentSlide["animationData"] = {};
   const assign = (key: string, item: unknown): void => {
     if (typeof item === "string" || typeof item === "number") {
       result[key] = item;
@@ -105,13 +105,13 @@ function parseLesson(payload: JsonRecord, input: ContentGenerationInput): Omit<P
   if (!Array.isArray(rawSlides) || rawSlides.length < 3 || rawSlides.length > 5) {
     throw new Error("slides must contain 3 to 5 items");
   }
-  const slides = rawSlides.map((rawSlide, index): DemoSlide => {
+  const slides = rawSlides.map((rawSlide, index): ContentSlide => {
     const slide = record(rawSlide, `slides[${index}]`);
     const type = text(slide.type, `slides[${index}].type`);
-    if (!slideTypes.has(type as DemoSlide["type"])) throw new Error(`slides[${index}].type is not allowed`);
+    if (!slideTypes.has(type as ContentSlide["type"])) throw new Error(`slides[${index}].type is not allowed`);
     const animationTemplate = typeof slide.animationTemplate === "string" && slide.animationTemplate.trim()
       ? slide.animationTemplate.trim()
-      : defaultAnimationTemplate(type as DemoSlide["type"], input.conceptCode);
+      : defaultAnimationTemplate(type as ContentSlide["type"], input.conceptCode);
     if (!animationTemplates.has(animationTemplate)) throw new Error(`slides[${index}].animationTemplate is not allowed`);
     const code = typeof slide.code === "string" && slide.code.trim()
       ? slide.code.trim()
@@ -119,7 +119,7 @@ function parseLesson(payload: JsonRecord, input: ContentGenerationInput): Omit<P
     return {
       id: `slide-${index + 1}`,
       order: index + 1,
-      type: type as DemoSlide["type"],
+      type: type as ContentSlide["type"],
       title: text(slide.title, `slides[${index}].title`),
       body: text(slide.body, `slides[${index}].body`),
       ...(code ? { code } : {}),
@@ -169,7 +169,7 @@ export class ExternalLlmProvider implements ContentProvider {
   async generate(input: ContentGenerationInput): Promise<ProviderOutput> {
     const apiKey = process.env.EXTERNAL_LLM_API_KEY;
     if (!apiKey) {
-      throw new ServiceUnavailableException("External provider key is not configured; choose Local demo provider");
+      throw new ServiceUnavailableException("External provider key is not configured; choose the Local Template provider");
     }
     const baseUrl = (process.env.EXTERNAL_LLM_BASE_URL ?? "https://mkp-api.fptcloud.com").replace(/\/+$/, "");
     const model = process.env.EXTERNAL_LLM_MODEL ?? "DeepSeek-V4-Flash";

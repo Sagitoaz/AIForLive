@@ -1,18 +1,21 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Patch, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { readFileSync, existsSync } from "node:fs";
-import path from "node:path";
-import { DemoStoreService } from "../shared/demo-store.service";
+import { Prisma } from "@prisma/client";
+import type { AuthenticatedRequest } from "../auth/auth.guard";
 import { AuthGuard } from "../auth/auth.guard";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
+import { PrismaService } from "../database/prisma.service";
 
-const conceptCodes = [
-  "PYTHON_VARIABLES", "PYTHON_OPERATORS", "PYTHON_IF_ELSE", "PYTHON_FOR",
-  "PYTHON_RANGE", "PYTHON_WHILE", "PYTHON_LISTS", "PYTHON_FUNCTIONS"
-];
+function average(values: number[]): number {
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+}
 
-const demoStudentId = "student-minh";
+function objectJson(value: Prisma.JsonValue): Record<string, Prisma.JsonValue> {
+  return value && !Array.isArray(value) && typeof value === "object"
+    ? (value as Record<string, Prisma.JsonValue>)
+    : {};
+}
 
 @ApiTags("teacher")
 @ApiBearerAuth()
@@ -20,146 +23,428 @@ const demoStudentId = "student-minh";
 @UseGuards(AuthGuard, RolesGuard)
 @Controller("teacher")
 export class TeacherController {
-  private leaderboardEnabled = true;
-
-  constructor(private readonly store: DemoStoreService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   @Get("dashboard")
-  dashboard(): Record<string, unknown> {
-    const attempts = [...this.store.attempts.values()];
+  async dashboard(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
+    const context = await this.teacherContext(request.user.id);
+    const learningClass = context.classes[0]!;
+    const enrollmentIds = learningClass.enrollments.map((item) => item.studentProfileId);
+    const userIds = learningClass.enrollments.map((item) => item.student.userId);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [states, activeToday, fallbackAnalyses, dueReviews, diagnoses, reviewQueue] = await Promise.all([
+      this.prisma.studentConceptState.findMany({
+        where: { studentProfileId: { in: enrollmentIds }, concept: { domainId: learningClass.enrollments[0]?.course.domainId } },
+        include: { concept: true }
+      }),
+      this.prisma.learningEvent.groupBy({
+        by: ["userId"],
+        where: { userId: { in: userIds }, occurredAt: { gte: today } }
+      }),
+      this.prisma.personalizationRun.count({
+        where: { studentProfileId: { in: enrollmentIds }, mode: "DETERMINISTIC_FALLBACK" }
+      }),
+      this.prisma.reviewSchedule.count({
+        where: { studentProfileId: { in: enrollmentIds }, status: { in: ["DUE", "SCHEDULED"] }, dueAt: { lte: new Date() } }
+      }),
+      this.prisma.attemptDiagnosis.findMany({
+        where: { attempt: { userId: { in: userIds } }, misconceptionId: { not: null } },
+        include: { misconception: true, attempt: true }
+      }),
+      this.prisma.generatedContent.count({
+        where: {
+          generationJob: { requestedById: request.user.id },
+          status: { in: ["DRAFT", "IN_REVIEW", "REVISION_REQUIRED", "APPROVED"] }
+        }
+      })
+    ]);
+    const byConcept = new Map<string, { code: string; title: string; values: number[] }>();
+    const byStudent = new Map<string, number[]>();
+    for (const state of states) {
+      const bucket = byConcept.get(state.conceptId) ?? { code: state.concept.code, title: state.concept.title, values: [] };
+      bucket.values.push(state.mastery);
+      byConcept.set(state.conceptId, bucket);
+      byStudent.set(state.studentProfileId, [...(byStudent.get(state.studentProfileId) ?? []), state.mastery]);
+    }
+    const studentAverages = enrollmentIds.map((studentId) => average(byStudent.get(studentId) ?? []));
+    const misconceptionMap = new Map<string, { code: string; studentIds: Set<string>; attempts: number }>();
+    for (const diagnosis of diagnoses) {
+      if (!diagnosis.misconception) continue;
+      const bucket = misconceptionMap.get(diagnosis.misconception.id) ?? {
+        code: diagnosis.misconception.code,
+        studentIds: new Set<string>(),
+        attempts: 0
+      };
+      bucket.studentIds.add(diagnosis.attempt.userId);
+      bucket.attempts += 1;
+      misconceptionMap.set(diagnosis.misconception.id, bucket);
+    }
     return {
-      class: { id: "class-python-01", name: "Python Explorers", students: 20 },
-      averageMastery: 0.58,
-      activeToday: 17,
-      needsSupport: this.store.students.filter((student) => student.needsSupport).length,
-      dueReviews: 29,
-      fallbackAnalyses: attempts.filter((attempt) => attempt.analysis?.mode === "DETERMINISTIC_FALLBACK").length,
-      topGaps: [
-        { conceptCode: "PYTHON_WHILE", mastery: 0.39, students: 9 },
-        { conceptCode: "PYTHON_RANGE", mastery: this.store.getConceptMastery(demoStudentId, "PYTHON_RANGE", 0.42), students: 7 },
-        { conceptCode: "PYTHON_FUNCTIONS", mastery: 0.46, students: 6 }
-      ],
-      misconceptions: [
-        { code: "RANGE_STOP_INCLUDED", students: 7, attempts: 18, trend: "+3" },
-        { code: "WHILE_VARIABLE_NOT_UPDATED", students: 5, attempts: 12, trend: "-1" },
-        { code: "LIST_INDEX_STARTS_AT_ONE", students: 4, attempts: 8, trend: "0" }
-      ],
-      reviewQueue: [...this.store.contents.values()].filter((content) => content.status !== "PUBLISHED").length
+      class: { id: learningClass.id, name: learningClass.name, students: learningClass.enrollments.length },
+      averageMastery: average(states.map((item) => item.mastery)),
+      activeToday: activeToday.length,
+      needsSupport: studentAverages.filter((value) => value < 0.45).length,
+      dueReviews,
+      fallbackAnalyses,
+      topGaps: [...byConcept.values()]
+        .map((item) => ({ conceptCode: item.code, title: item.title, mastery: average(item.values), students: item.values.filter((value) => value < 0.5).length }))
+        .sort((a, b) => a.mastery - b.mastery)
+        .slice(0, 5),
+      misconceptions: [...misconceptionMap.values()]
+        .map((item) => ({ code: item.code, students: item.studentIds.size, attempts: item.attempts }))
+        .sort((a, b) => b.students - a.students),
+      reviewQueue
     };
   }
 
   @Get("classes")
-  classes(): Record<string, unknown>[] {
-    return [{ id: "class-python-01", name: "Python Explorers", course: "Python cơ bản cho học sinh", students: 20, averageMastery: 0.58, activeToday: 17 }];
+  async classes(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>[]> {
+    const context = await this.teacherContext(request.user.id);
+    return Promise.all(context.classes.map(async (learningClass) => {
+      const studentIds = learningClass.enrollments.map((item) => item.studentProfileId);
+      const states = await this.prisma.studentConceptState.findMany({ where: { studentProfileId: { in: studentIds } } });
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const active = await this.prisma.learningEvent.groupBy({
+        by: ["userId"],
+        where: { userId: { in: learningClass.enrollments.map((item) => item.student.userId) }, occurredAt: { gte: today } }
+      });
+      return {
+        id: learningClass.id,
+        code: learningClass.code,
+        name: learningClass.name,
+        course: learningClass.enrollments[0]?.course.title ?? null,
+        students: learningClass.enrollments.length,
+        averageMastery: average(states.map((item) => item.mastery)),
+        activeToday: active.length
+      };
+    }));
   }
 
   @Get("classes/:id")
-  classDetail(@Param("id") id: string): Record<string, unknown> {
-    return { id, name: "Python Explorers", students: this.store.students, courseProgress: 0.46, leaderboardEnabled: this.leaderboardEnabled };
+  async classDetail(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
+    const learningClass = await this.ownedClass(id, request.user.id);
+    const states = await this.prisma.studentConceptState.findMany({
+      where: { studentProfileId: { in: learningClass.enrollments.map((item) => item.studentProfileId) } }
+    });
+    return {
+      id: learningClass.id,
+      name: learningClass.name,
+      leaderboardEnabled: learningClass.leaderboardEnabled,
+      course: learningClass.enrollments[0]?.course
+        ? {
+            id: learningClass.enrollments[0].course.id,
+            code: learningClass.enrollments[0].course.code,
+            title: learningClass.enrollments[0].course.title
+          }
+        : null,
+      students: learningClass.enrollments.map((item) => {
+        const studentStates = states.filter((state) => state.studentProfileId === item.studentProfileId);
+        return {
+          id: item.student.userId,
+          profileId: item.student.id,
+          name: item.student.user.displayName,
+          nickname: item.student.user.nickname,
+          avatar: item.student.user.avatarKey,
+          xp: item.student.xp,
+          streak: item.student.streakDays,
+          progress: item.progress,
+          mastery: average(studentStates.map((state) => state.mastery)),
+          needsSupport: average(studentStates.map((state) => state.mastery)) < 0.45,
+          goal: item.student.learningGoal,
+          dataQualityFlags: objectJson(item.student.metadataJson).dataQualityFlags ?? []
+        };
+      })
+    };
   }
 
   @Get("classes/:id/heatmap")
-  heatmap(@Param("id") id: string): Record<string, unknown> {
+  async heatmap(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
+    const learningClass = await this.ownedClass(id, request.user.id);
+    const domainId = learningClass.enrollments[0]?.course.domainId;
+    const concepts = await this.prisma.learningConcept.findMany({
+      where: { domainId, status: "ACTIVE", deletedAt: null },
+      orderBy: { order: "asc" }
+    });
+    const states = await this.prisma.studentConceptState.findMany({
+      where: { studentProfileId: { in: learningClass.enrollments.map((item) => item.studentProfileId) }, conceptId: { in: concepts.map((item) => item.id) } }
+    });
     return {
-      classId: id,
-      concepts: conceptCodes,
-      rows: this.store.students.map((student, studentIndex) => ({
-        studentId: student.id,
-        name: student.name,
-        values: conceptCodes.map((code, conceptIndex) => ({
-          conceptCode: code,
-          mastery: this.store.getConceptMastery(
-            student.id,
-            code,
-            Number((0.24 + ((studentIndex * 7 + conceptIndex * 11) % 62) / 100).toFixed(2))
-          )
-        }))
+      classId: learningClass.id,
+      concepts: concepts.map((item) => ({ id: item.id, code: item.code, title: item.title })),
+      rows: learningClass.enrollments.map((item) => ({
+        studentId: item.student.userId,
+        name: item.student.user.displayName,
+        values: concepts.map((concept) => {
+          const state = states.find((candidate) => candidate.studentProfileId === item.studentProfileId && candidate.conceptId === concept.id);
+          return { conceptCode: concept.code, mastery: state?.mastery ?? null, dataAvailable: Boolean(state) };
+        })
       }))
     };
   }
 
   @Get("classes/:id/gaps")
-  gaps(@Param("id") id: string): Record<string, unknown> {
+  async gaps(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
+    const heatmap = await this.heatmap(request, id) as { classId: string; concepts: Array<{ code: string; title: string }>; rows: Array<{ values: Array<{ conceptCode: string; mastery: number | null }> }> };
     return {
-      classId: id,
-      concepts: [
-        { code: "PYTHON_WHILE", averageMastery: 0.39, affectedStudents: 9, prerequisiteImpact: 0.82 },
-        { code: "PYTHON_RANGE", averageMastery: 0.42, affectedStudents: 7, prerequisiteImpact: 0.76 },
-        { code: "PYTHON_FUNCTIONS", averageMastery: 0.46, affectedStudents: 6, prerequisiteImpact: 0.9 }
-      ]
+      classId: heatmap.classId,
+      concepts: heatmap.concepts.map((concept) => {
+        const values = heatmap.rows.flatMap((row) => row.values.filter((item) => item.conceptCode === concept.code && item.mastery !== null).map((item) => item.mastery as number));
+        return {
+          code: concept.code,
+          title: concept.title,
+          averageMastery: average(values),
+          affectedStudents: values.filter((value) => value < 0.5).length
+        };
+      }).sort((a, b) => a.averageMastery - b.averageMastery)
     };
   }
 
   @Get("students/:id")
-  student(@Param("id") id: string): Record<string, unknown> {
-    const student = this.store.students.find((item) => item.id === id) ?? this.store.students[0];
-    const studentId = student?.id ?? demoStudentId;
+  async student(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
+    const profile = await this.ownedStudent(id, request.user.id);
+    const conceptStates = await this.prisma.studentConceptState.findMany({
+      where: { studentProfileId: profile.id },
+      include: { concept: true },
+      orderBy: { concept: { order: "asc" } }
+    });
+    const timeline = await this.prisma.attempt.findMany({
+      where: { userId: profile.userId },
+      include: { exercise: true, diagnoses: { include: { misconception: true } }, event: { include: { personalizationRun: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 50
+    });
+    const rangeHistory = await this.prisma.conceptStateHistory.findMany({
+      where: { studentProfileId: profile.id, concept: { code: "PYTHON_RANGE" } },
+      orderBy: { recordedAt: "asc" }
+    });
     return {
-      ...student,
-      goal: "Tự viết một mini game Python sau 4 tuần",
-      conceptStates: conceptCodes.map((code, index) => {
-        const mastery = this.store.getConceptMastery(studentId, code, Number((0.36 + (index % 5) * 0.09).toFixed(2)));
-        return { code, mastery, retrievability: Math.max(0.12, Number((mastery - 0.08).toFixed(2))) };
-      }),
-      timeline: [...this.store.attempts.values()].filter((attempt) => attempt.studentId === studentId),
-      beforeAfter: { beforeReview: 0.42, afterReview: this.store.getConceptMastery(studentId, "PYTHON_RANGE", 0.42) }
+      id: profile.userId,
+      profileId: profile.id,
+      name: profile.user.displayName,
+      nickname: profile.user.nickname,
+      avatar: profile.user.avatarKey,
+      xp: profile.xp,
+      level: profile.level,
+      streak: profile.streakDays,
+      goal: profile.learningGoal,
+      weeklyAvailabilityMinutes: profile.weeklyAvailabilityMinutes,
+      conceptStates: conceptStates.map((state) => ({
+        code: state.concept.code,
+        title: state.concept.title,
+        mastery: state.mastery,
+        retrievability: state.retrievability,
+        forgettingRisk: state.forgettingRisk,
+        updatedAt: state.updatedAt.toISOString()
+      })),
+      timeline: timeline.map((attempt) => ({
+        id: attempt.id,
+        exerciseCode: attempt.exercise.code,
+        isCorrect: attempt.isCorrect,
+        usedHint: attempt.usedHint,
+        score: attempt.score,
+        diagnosis: attempt.diagnoses[0] ?? null,
+        analysis: attempt.event.personalizationRun?.outputJson ?? null,
+        createdAt: attempt.createdAt.toISOString()
+      })),
+      beforeAfter: {
+        beforeReview: rangeHistory[0]?.mastery ?? null,
+        afterReview: rangeHistory.at(-1)?.mastery ?? null
+      }
     };
   }
 
   @Get("students/:id/recommendations")
-  recommendations(@Param("id") id: string): Record<string, unknown>[] {
-    return [...this.store.attempts.values()]
-      .filter((attempt) => attempt.studentId === id && attempt.analysis)
-      .map((attempt) => ({ attemptId: attempt.id, ...attempt.analysis?.recommendation, diagnosis: attempt.analysis?.diagnosis, explanations: attempt.analysis?.explanations }));
+  async recommendations(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>[]> {
+    const profile = await this.ownedStudent(id, request.user.id);
+    const rows = await this.prisma.recommendation.findMany({
+      where: { studentProfileId: profile.id },
+      include: { concept: true, evidence: { include: { attempt: true } } },
+      orderBy: { createdAt: "desc" }
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      studentId: profile.userId,
+      conceptCode: row.concept.code,
+      action: row.action,
+      priorityScore: row.priorityScore,
+      target: { type: row.targetType, id: row.targetId, phase: row.targetPhase, estimatedMinutes: row.estimatedMinutes },
+      reasons: row.reasonsJson,
+      candidateLog: row.candidateLogJson,
+      evidence: row.evidence,
+      status: row.status,
+      modelVersion: row.modelVersion,
+      createdAt: row.createdAt.toISOString()
+    }));
   }
 
   @Get("recommendations/:id")
-  recommendation(@Param("id") id: string): Record<string, unknown> {
-    const attempt = [...this.store.attempts.values()].find((item) => `rec-${item.id}` === id || item.id === id) ?? [...this.store.attempts.values()].at(-1);
-    return attempt?.analysis
-      ? { id, studentId: attempt.studentId, conceptCode: attempt.conceptCode, recommendation: attempt.analysis.recommendation, diagnosis: attempt.analysis.diagnosis, explanations: attempt.analysis.explanations }
-      : { id, status: "NO_EVIDENCE", message: "Submit a demo attempt to create recommendation evidence." };
+  async recommendation(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
+    const row = await this.prisma.recommendation.findFirst({
+      where: {
+        id,
+        student: { enrollments: { some: { class: { teacher: { userId: request.user.id } } } } }
+      },
+      include: { concept: true, student: { include: { user: true } }, evidence: { include: { attempt: { include: { diagnoses: true } } } } }
+    });
+    if (!row) throw new NotFoundException("Recommendation not found");
+    return {
+      id: row.id,
+      student: { id: row.student.userId, name: row.student.user.displayName },
+      conceptCode: row.concept.code,
+      action: row.action,
+      priorityScore: row.priorityScore,
+      reasons: row.reasonsJson,
+      candidateLog: row.candidateLogJson,
+      target: { type: row.targetType, id: row.targetId, phase: row.targetPhase, estimatedMinutes: row.estimatedMinutes },
+      evidence: row.evidence,
+      modelVersion: row.modelVersion,
+      status: row.status
+    };
   }
 
   @Get("analytics/mastery")
-  mastery(): Record<string, unknown> {
-    return { series: [0.31, 0.37, 0.43, 0.49, 0.58], labels: ["W0", "W1", "W2", "W3", "W4"], change: 0.27 };
+  async mastery(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
+    const context = await this.teacherContext(request.user.id);
+    const ids = context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.studentProfileId));
+    const history = await this.prisma.conceptStateHistory.findMany({ where: { studentProfileId: { in: ids } }, orderBy: { recordedAt: "asc" } });
+    const grouped = new Map<string, number[]>();
+    for (const item of history) {
+      const key = item.recordedAt.toISOString().slice(0, 10);
+      grouped.set(key, [...(grouped.get(key) ?? []), item.mastery]);
+    }
+    const points = [...grouped.entries()].slice(-12).map(([label, values]) => ({ label, mastery: average(values) }));
+    return { series: points.map((item) => item.mastery), labels: points.map((item) => item.label), change: points.length > 1 ? points.at(-1)!.mastery - points[0]!.mastery : 0 };
   }
 
   @Get("analytics/misconceptions")
-  misconceptionAnalytics(): Record<string, unknown> {
-    return { grouped: [{ code: "RANGE_STOP_INCLUDED", students: 7, contentReuse: 4 }, { code: "WHILE_VARIABLE_NOT_UPDATED", students: 5, contentReuse: 2 }] };
+  async misconceptionAnalytics(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
+    const context = await this.teacherContext(request.user.id);
+    const userIds = context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.student.userId));
+    const rows = await this.prisma.attemptDiagnosis.findMany({
+      where: { attempt: { userId: { in: userIds } }, misconceptionId: { not: null } },
+      include: { misconception: true, attempt: true }
+    });
+    const grouped = new Map<string, Set<string>>();
+    for (const row of rows) {
+      if (!row.misconception) continue;
+      const users = grouped.get(row.misconception.code) ?? new Set<string>();
+      users.add(row.attempt.userId);
+      grouped.set(row.misconception.code, users);
+    }
+    return { grouped: [...grouped.entries()].map(([code, users]) => ({ code, students: users.size, attempts: rows.filter((row) => row.misconception?.code === code).length })) };
   }
 
   @Get("analytics/content-production")
-  production(): Record<string, unknown> {
-    const contents = [...this.store.contents.values()];
+  async production(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
+    const rows = await this.prisma.generatedContent.findMany({
+      where: { generationJob: { requestedById: request.user.id } },
+      include: { generationJob: true }
+    });
     return {
-      generated: contents.length,
-      published: contents.filter((item) => item.status === "PUBLISHED").length,
-      averageGenerationMs: contents.length ? Math.round(contents.reduce((sum, item) => sum + item.generationMs, 0) / contents.length) : 0,
-      reuseCount: contents.reduce((sum, item) => sum + item.reuseCount, 0),
-      estimatedCostUsd: contents.reduce((sum, item) => sum + item.estimatedCostUsd, 0),
-      provider: "Local demo provider"
+      generated: rows.length,
+      published: rows.filter((item) => item.status === "PUBLISHED").length,
+      averageGenerationMs: average(rows.map((item) => item.generationJob.durationMs ?? 0)),
+      averageTeacherEditingSeconds: average(rows.map((item) => item.teacherEditingSeconds)),
+      reuseCount: rows.reduce((sum, item) => sum + item.reuseCount, 0),
+      estimatedCostUsd: rows.reduce((sum, item) => sum + item.generationJob.estimatedCostUsd, 0),
+      providers: [...new Set(rows.map((item) => item.provider))]
     };
   }
 
   @Get("analytics/retention")
-  retention(): Record<string, unknown> {
-    return { averageRetrievability: 0.64, dueIn24Hours: 29, successfulReviews: 0.76, intervals: { oneDay: 8, threeDays: 13, sevenDays: 11 } };
+  async retention(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
+    const context = await this.teacherContext(request.user.id);
+    const ids = context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.studentProfileId));
+    const states = await this.prisma.studentConceptState.findMany({ where: { studentProfileId: { in: ids } } });
+    const schedules = await this.prisma.reviewSchedule.findMany({ where: { studentProfileId: { in: ids } } });
+    return {
+      averageRetrievability: average(states.map((item) => item.retrievability)),
+      dueIn24Hours: schedules.filter((item) => item.dueAt <= new Date(Date.now() + 86_400_000) && item.status !== "COMPLETED").length,
+      successfulReviews: schedules.length ? schedules.filter((item) => item.status === "COMPLETED").length / schedules.length : 0,
+      intervals: {
+        oneDay: schedules.filter((item) => item.intervalDays <= 1).length,
+        threeDays: schedules.filter((item) => item.intervalDays > 1 && item.intervalDays <= 3).length,
+        sevenDays: schedules.filter((item) => item.intervalDays > 3).length
+      }
+    };
   }
 
   @Get("analytics/models")
-  modelStatus(): Record<string, unknown> {
-    const artifact = path.join(process.cwd(), "apps", "ai-service", "ml", "artifacts", "next_attempt_model.joblib");
-    const metricsPath = path.join(process.cwd(), "apps", "ai-service", "ml", "artifacts", "evaluation.json");
-    const metrics: unknown = existsSync(metricsPath) ? JSON.parse(readFileSync(metricsPath, "utf8")) : null;
-    return { bkt: { version: "bkt-v1", status: "ACTIVE" }, nextAttempt: { version: "next-attempt-logreg-v1", artifactPresent: existsSync(artifact), metrics }, dataNotice: "SYNTHETIC DATA — NOT REAL EDUONE DATA" };
+  async modelStatus(): Promise<Record<string, unknown>> {
+    const models = await this.prisma.modelVersion.findMany({
+      include: { evaluations: { orderBy: { evaluatedAt: "desc" }, take: 1 } },
+      orderBy: { activatedAt: "desc" }
+    });
+    return {
+      models: models.map((model) => ({
+        code: model.code,
+        version: model.version,
+        status: model.status,
+        algorithm: model.algorithm,
+        trainedAt: model.trainedAt.toISOString(),
+        evaluation: model.evaluations[0] ?? null
+      }))
+    };
   }
 
   @Patch("leaderboard/settings")
-  settings(@Body("enabled") enabled: boolean): Record<string, unknown> {
-    this.leaderboardEnabled = Boolean(enabled);
-    return { enabled: this.leaderboardEnabled, updatedAt: new Date().toISOString() };
+  async settings(@Req() request: AuthenticatedRequest, @Body("enabled") enabled: boolean): Promise<Record<string, unknown>> {
+    const context = await this.teacherContext(request.user.id);
+    const updated = await this.prisma.learningClass.update({
+      where: { id: context.classes[0]!.id },
+      data: { leaderboardEnabled: Boolean(enabled) }
+    });
+    return { enabled: updated.leaderboardEnabled, updatedAt: updated.updatedAt.toISOString() };
+  }
+
+  private async teacherContext(userId: string) {
+    const profile = await this.prisma.teacherProfile.findFirst({
+      where: { userId, status: "ACTIVE", deletedAt: null },
+      include: {
+        user: true,
+        classes: {
+          where: { status: "ACTIVE", deletedAt: null },
+          include: {
+            enrollments: {
+              where: { status: "ACTIVE", deletedAt: null },
+              include: { student: { include: { user: true } }, course: true }
+            }
+          },
+          orderBy: { createdAt: "asc" }
+        }
+      }
+    });
+    if (!profile || !profile.classes[0]) throw new NotFoundException("Không tìm thấy lớp đang hoạt động của giảng viên");
+    return profile;
+  }
+
+  private async ownedClass(id: string, teacherUserId: string) {
+    const row = await this.prisma.learningClass.findFirst({
+      where: { OR: [{ id }, { code: id }], teacher: { userId: teacherUserId }, status: "ACTIVE", deletedAt: null },
+      include: {
+        enrollments: {
+          where: { status: "ACTIVE", deletedAt: null },
+          include: { student: { include: { user: true } }, course: true }
+        }
+      }
+    });
+    if (!row) throw new NotFoundException("Class not found");
+    return row;
+  }
+
+  private async ownedStudent(id: string, teacherUserId: string) {
+    const profile = await this.prisma.studentProfile.findFirst({
+      where: {
+        OR: [{ id }, { userId: id }],
+        enrollments: { some: { status: "ACTIVE", class: { teacher: { userId: teacherUserId } } } },
+        status: "ACTIVE",
+        deletedAt: null
+      },
+      include: { user: true }
+    });
+    if (!profile) throw new NotFoundException("Student not found");
+    return profile;
   }
 }

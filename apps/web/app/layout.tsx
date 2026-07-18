@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { DemoProvider } from "@/features/demo/demo-context";
+import { ProductProvider } from "@/features/product/product-context";
 
 export const metadata: Metadata = {
   title: { default: "EduRecall AI", template: "%s · EduRecall AI" },
@@ -14,7 +14,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="vi">
       <body>
         <a className="skip-link" href="#main-content">Bỏ qua điều hướng</a>
-        <DemoProvider>{children}</DemoProvider>
+        <ProductProvider>{children}</ProductProvider>
       </body>
     </html>
   );

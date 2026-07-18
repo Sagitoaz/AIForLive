@@ -1,42 +1,47 @@
 # Build verification
 
-- Date: 2026-07-18T17:56:00+07:00
+- Ngày kiểm chứng: 2026-07-18
 - Node: v24.13.0
-- npm: 11.6.2
-- Python: Python 3.12.0
-- Total source/artifact files (dependencies excluded): 488
-- Total custom icons: 80
-- Total SVG assets: 254
-- Model artifact: 1997 bytes
-- ZIP size: pending package verification
-- Overall: PASSED
+- Python: 3.12.0
+- Kết quả: **PASSED**
 
-## Verification matrix
+## Ma trận kiểm chứng
 
-| Check | Result | Final evidence |
+| Hạng mục | Kết quả | Bằng chứng |
 | --- | --- | --- |
-| Node lint | PASS | Web + API ESLint |
-| TypeScript typecheck | PASS | Web + API strict `tsc --noEmit` |
-| Prisma schema validation | PASS | Schema valid after phase/source/recommendation migration |
-| Prisma seed typecheck | PASS | Standalone strict compile of `prisma/seed/index.ts` |
-| Node unit tests | PASS | Web 12/12; API 17/17, including AI Voice/animation visibility, completed-lesson review, server-side scoring and role-guard behavior |
-| End-to-end workflow tests | PASS | 1/1 after adding verified source registry to the harness |
-| Python lint | PASS | Ruff |
-| Python unit tests | PASS | 17/17 |
-| Synthetic data validation | PASS | 20 profiles, 48 exercises, 400 matching attempts/events |
-| Model evaluation check | PASS | Artifact readable; metrics remain prototype-only |
-| Asset validation | PASS | 254 SVG files, 80 custom icons |
-| Production build | PASS | NestJS build + Next.js 8 routes/prerender after JWT/RBAC, AI Voice/animation and lesson-review wiring |
+| Node lint | PASS | Web và API ESLint |
+| TypeScript | PASS | Tất cả workspace strict typecheck |
+| API unit test | PASS | 4 suites, 7 tests |
+| Web unit test | PASS | 2 files, 5 tests |
+| Python AI lint/test | PASS | Ruff sạch, 17 pytest pass |
+| Production build | PASS | NestJS build và Next.js build, 9 route |
+| Supabase connectivity | PASS | Transaction pooler và session pooler đều `OK` |
+| Prisma migrations | PASS | 3/3 migration; `202607180003_course_plan_drafts` đã áp dụng trên Supabase |
+| Product smoke test | PASS | Progress → animation → attempt → recommendation → lesson review → course-plan revision/publish |
+| Idempotency | PASS | Gửi lại cùng key trả đúng cùng attempt, không nhân đôi dữ liệu |
+| AI attempt latency | PASS | Cùng flow range: 10,491 ms trước → 7,574 ms sau tối ưu transaction |
 
-## Model result
+## Dữ liệu Supabase sau kiểm thử
 
-The next-attempt artifact uses a student-group split on synthetic data. See `apps/ai-service/ml/artifacts/evaluation.json` and `docs/model-card.md`.
+| Nhóm | Số lượng |
+| --- | ---: |
+| Người dùng / lớp / khóa học | 21 / 1 / 1 |
+| Enrollment | 20 |
+| Bài học / học liệu / bài tập | 12 / 36 / 60 |
+| Game học tập | 4 |
+| Animation spec riêng theo bài | 12 |
+| Điểm lịch sử mastery | 444 |
+| Attempt / diagnosis / recommendation | 8 / 7 / 7 |
+| Nội dung AI / micro-lesson / lượt review | 2 / 2 / 4 |
+| Course-plan draft đã xuất bản | 1 |
 
-## Known limitations
+Các dòng phát sinh bởi smoke test nằm trong chính Supabase, chứng minh API không chỉ gọi database kiểm tra kết nối. Bộ pilot cố ý có học sinh học nhanh/chậm, thiếu dữ liệu, kết nối kém và lỗ hổng khác nhau; không phải dữ liệu sạch lý tưởng.
 
-- The source gate validates Prisma and the production build but does not exercise the full Docker/PostgreSQL runtime.
-- Model metrics are from synthetic data and do not establish real educational effectiveness.
-- FPT LLM live calls require deployment credentials and quota; automated verification covers the adapter with mocked provider responses and keeps LocalTemplateProvider as fallback.
-- The full gate first exposed an outdated E2E constructor after `ContentSourceService` became mandatory. The harness was fixed and the E2E test then passed independently; no product guard was bypassed.
+Tối ưu latency trên là phép đo cục bộ cùng ngày, cùng API/Supabase và cùng loại attempt; không phải SLA production. UI vẫn hiển thị operation state và chặn submit lặp vì độ trễ mạng đến region Supabase có thể dao động.
 
-Final verification completed on 18/07/2026. The production build and every gate item above passed; live FPT/Supabase calls were not part of this local verification.
+## Giới hạn chưa được che giấu
+
+- Kết quả mô hình hiện dựa trên dữ liệu mô phỏng; cần hiệu chỉnh lại bằng dữ liệu pilot có đồng thuận.
+- Live LLM/TTS phụ thuộc credential và quota của nhà cung cấp. `LocalTemplateProvider` bảo đảm quy trình soạn bài có cấu trúc vẫn chạy với chi phí thấp.
+- Tệp nhị phân chưa được nhận giả là đã xử lý; PDF/DOCX/PPTX cần Storage và worker extraction/OCR.
+- Trước khi dùng dữ liệu trẻ em thật cần hoàn thiện RLS, tenant isolation, retention và privacy review.

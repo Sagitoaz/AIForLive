@@ -78,8 +78,9 @@ export interface MicroLesson {
   sourceReferences: string[];
   slides: MicroLessonSlide[];
   quiz: GeneratedQuiz;
+  practiceQuestions?: GeneratedQuiz[];
   status: ContentStatus;
-  provider: "LOCAL_TEMPLATE" | "EXTERNAL_LLM" | "MOCK_DEVELOPMENT";
+  provider: "LOCAL_TEMPLATE" | "EXTERNAL_LLM";
   reuseCount: number;
   version: number;
   generationMs?: number;

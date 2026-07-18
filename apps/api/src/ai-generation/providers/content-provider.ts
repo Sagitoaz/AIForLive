@@ -1,4 +1,4 @@
-import type { DemoSlide } from "../../common/types";
+import type { ContentSlide } from "../../common/types";
 import type { GenerateContentDto } from "../dto/generate-content.dto";
 
 export type LessonActivityType = "LECTURE" | "VIDEO" | "ANIMATION" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT";
@@ -19,7 +19,7 @@ export interface ProviderOutput {
   title: string;
   objectives: string[];
   sourceReferences: string[];
-  slides: DemoSlide[];
+  slides: ContentSlide[];
   quiz: { question: string; options: string[]; correctIndex: number; explanation: string };
   provider: "LOCAL_TEMPLATE" | "EXTERNAL_LLM";
   generationMs: number;
