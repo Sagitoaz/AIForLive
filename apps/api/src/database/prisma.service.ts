@@ -13,9 +13,25 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit(): Promise<void> {
-    await this.$connect();
-    await this.$queryRaw`SELECT 1`;
-    this.logger.log("Supabase PostgreSQL connection is ready");
+    const attempts = Number(process.env.DATABASE_CONNECT_ATTEMPTS ?? 6);
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        await this.$connect();
+        await this.$queryRaw`SELECT 1`;
+        this.logger.log("Supabase PostgreSQL connection is ready");
+        return;
+      } catch (error) {
+        await this.$disconnect().catch(() => undefined);
+        const message = error instanceof Error ? error.message.split("\n")[0] : "Unknown database error";
+        if (attempt >= attempts) {
+          this.logger.error(`Supabase connection failed after ${attempts} attempts: ${message}`);
+          throw error;
+        }
+        const delayMs = Math.min(2_000 * attempt, 10_000);
+        this.logger.warn(`Supabase is not ready (attempt ${attempt}/${attempts}): ${message}; retrying in ${delayMs}ms`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
