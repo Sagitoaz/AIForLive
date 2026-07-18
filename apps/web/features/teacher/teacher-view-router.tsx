@@ -7,6 +7,7 @@ import { Asset } from "@/components/asset";
 import { EmptyState, Metric, ProgressBar, SectionHeading, StatusPill } from "@/components/ui";
 import { useDemo } from "@/features/demo/demo-context";
 import { concepts, genericTeacherPages, learners } from "@/lib/demo-data";
+import { speakVietnamese, vietnameseSpeechMessage } from "@/lib/vietnamese-speech";
 
 export function TeacherViewRouter({ path }: { path: string }) {
   if (path === "studio" || path === "editor") return <ContentStudio />;
@@ -58,6 +59,8 @@ function ContentStudio() {
   const demo = useDemo();
   const [activeSlide, setActiveSlide] = useState(0);
   const [draft, setDraft] = useState(demo.lesson);
+  const [speaking, setSpeaking] = useState(false);
+  const [speechNotice, setSpeechNotice] = useState("");
   useEffect(() => setDraft(demo.lesson), [demo.lesson]);
   const slide = draft?.slides[activeSlide];
 
@@ -81,13 +84,13 @@ function ContentStudio() {
     setDraft((current) => current ? { ...current, slides: current.slides.map((item, index) => index === activeSlide ? { ...item, [field]: value } : item) } : current);
   };
   const save = async () => { if (draft) await demo.updateLesson(draft); };
-  const speak = () => {
-    if (slide && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(slide.narration);
-      utterance.lang = "vi-VN";
-      window.speechSynthesis.speak(utterance);
-    }
+  const speak = async () => {
+    if (!slide) return;
+    setSpeaking(true);
+    setSpeechNotice("Đang đọc bằng giọng tiếng Việt...");
+    const result = await speakVietnamese(slide.narration);
+    setSpeechNotice(vietnameseSpeechMessage(result));
+    setSpeaking(false);
   };
   return (
     <div className="studio-editor">
@@ -95,7 +98,7 @@ function ContentStudio() {
       <div className="editor-grid">
         <aside className="slide-list"><div className="slide-list-head"><strong>Slides</strong><span>{draft.slides.length}/5</span></div>{draft.slides.map((item, index) => <button className={index === activeSlide ? "active" : ""} onClick={() => setActiveSlide(index)} key={item.id}><span>{index + 1}</span><div><small>{item.type}</small><strong>{item.title}</strong></div></button>)}<button className={activeSlide === draft.slides.length ? "active quiz" : "quiz"} onClick={() => setActiveSlide(draft.slides.length)}><span>Q</span><div><small>QUIZ</small><strong>Knowledge check</strong></div></button></aside>
         <section className="editor-canvas">
-          {slide ? <><div className="canvas-preview"><div className="preview-stage"><Asset type="mascot" name={slide.type === "MISCONCEPTION" ? "mam-error" : "mam-code"} alt="" width={150} height={140}/><div className="preview-numbers">{((slide.animationData.values as string[] | undefined) ?? ["1", "2", "3", "4", "STOP"]).map((value) => <span key={value}>{value}</span>)}</div></div><div><StatusPill tone="purple">{slide.animationTemplate}</StatusPill><h2>{slide.title}</h2><p>{slide.body}</p>{slide.code && <pre><code>{slide.code}</code></pre>}</div></div><div className="editor-fields"><label><span>Slide title</span><input value={slide.title} onChange={(event) => patchSlide("title", event.target.value)}/></label><label><span>Body</span><textarea value={slide.body} onChange={(event) => patchSlide("body", event.target.value)}/></label><label><span>Narration</span><textarea value={slide.narration} onChange={(event) => patchSlide("narration", event.target.value)}/></label><button className="narration-button" onClick={speak}><Asset type="icon" name="media-audio" alt="" width={20} height={20}/> Nghe slide này</button></div></> : <QuizEditor lesson={draft} update={setDraft}/>}
+          {slide ? <><div className="canvas-preview"><div className="preview-stage"><Asset type="mascot" name={slide.type === "MISCONCEPTION" ? "mam-error" : "mam-code"} alt="" width={150} height={140}/><div className="preview-numbers">{((slide.animationData.values as string[] | undefined) ?? ["1", "2", "3", "4", "STOP"]).map((value) => <span key={value}>{value}</span>)}</div></div><div><StatusPill tone="purple">{slide.animationTemplate}</StatusPill><h2>{slide.title}</h2><p>{slide.body}</p>{slide.code && <pre><code>{slide.code}</code></pre>}</div></div><div className="editor-fields"><label><span>Slide title</span><input value={slide.title} onChange={(event) => patchSlide("title", event.target.value)}/></label><label><span>Body</span><textarea value={slide.body} onChange={(event) => patchSlide("body", event.target.value)}/></label><label><span>Narration</span><textarea value={slide.narration} onChange={(event) => patchSlide("narration", event.target.value)}/></label><button className="narration-button" disabled={speaking} onClick={speak}><Asset type="icon" name="media-audio" alt="" width={20} height={20}/> {speaking ? "Đang đọc..." : "Nghe slide này"}</button>{speechNotice && <small className="speech-notice" role="status">{speechNotice}</small>}</div></> : <QuizEditor lesson={draft} update={setDraft}/>}
         </section>
         <aside className="validation-panel"><SectionHeading eyebrow="Validation" title="Sẵn sàng để duyệt"/>{["3–5 slides", "Có objective", "Có ví dụ", "Có misconception", "Quiz có 1 answer", "Không raw HTML", "Không remote URL", "Source tồn tại"].map((item) => <div className="validation-row" key={item}><Asset type="icon" name="ui-check" alt="" width={18} height={18}/><span>{item}</span></div>)}<div className="cost-box"><span>Generation</span><strong>{draft.provider === "EXTERNAL_LLM" ? "FPT AI · theo billing" : "Local fallback · 0 USD"}</strong><small>{formatMeasuredDuration(draft.generationMs)} · đo tại trình duyệt · prompt v1</small></div><div className="diff-box"><span>Teacher diff</span><strong>{draft.version > 1 ? `${draft.version - 1} version edit` : "Chưa chỉnh"}</strong><small>{draft.teacherEditingSeconds ? `${formatMeasuredDuration(draft.teacherEditingSeconds * 1_000)} giáo viên xử lý` : "Bắt đầu đo khi tạo draft"}</small></div></aside>
       </div>

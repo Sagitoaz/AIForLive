@@ -112,7 +112,7 @@ The browser retains the demo workflow in local storage, and uses the API when it
 
 ## AI provider and TTS
 
-Set `AI_PROVIDER=external-llm`, `EXTERNAL_LLM_BASE_URL=https://mkp-api.fptcloud.com`, `EXTERNAL_LLM_MODEL=DeepSeek-V4-Flash` and an FPT API key to enable real structured drafting. The adapter calls the OpenAI-compatible `/chat/completions` endpoint, normalizes model output, validates the lesson contract and always leaves new content in `DRAFT`. `LocalTemplateProvider` remains the zero-key fallback. Narration uses browser `SpeechSynthesis` by default; generated audio can later be cached behind `ExternalTtsProvider`.
+Set `AI_PROVIDER=external-llm`, `EXTERNAL_LLM_BASE_URL=https://mkp-api.fptcloud.com`, `EXTERNAL_LLM_MODEL=DeepSeek-V4-Flash` and an FPT API key to enable real structured drafting. The adapter calls the OpenAI-compatible `/chat/completions` endpoint, normalizes model output, validates the lesson contract and always leaves new content in `DRAFT`. `LocalTemplateProvider` remains the zero-key fallback. Vietnamese narration is generated through the server-only `/api/tts/speech` proxy using `FPT.AI-VITs` and voice `std_kimngan`; WAV responses are cached in API memory and browser speech is only a final fallback.
 
 ## Model lifecycle
 

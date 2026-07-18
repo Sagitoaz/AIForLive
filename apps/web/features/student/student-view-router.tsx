@@ -7,6 +7,7 @@ import { Asset } from "@/components/asset";
 import { EmptyState, Metric, ProgressBar, SectionHeading, StatusPill } from "@/components/ui";
 import { useDemo } from "@/features/demo/demo-context";
 import { concepts, games, genericStudentPages, learners } from "@/lib/demo-data";
+import { speakVietnamese, vietnameseSpeechMessage } from "@/lib/vietnamese-speech";
 import { GamePlayer } from "./game-player";
 
 export function StudentViewRouter({ path }: { path: string }) {
@@ -221,17 +222,19 @@ function MicroLessonPlayer() {
   const [slide, setSlide] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [result, setResult] = useState<{ correct: boolean; masteryAfter: number } | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [speechNotice, setSpeechNotice] = useState("");
   if (!demo.lesson || demo.lesson.status !== "PUBLISHED") {
     return <EmptyState illustration="review" title="Bài ôn chưa được xuất bản" description="Học sinh chỉ thấy nội dung PUBLISHED. Hãy chuyển sang teacher, tạo, chỉnh sửa, approve và publish." href="/teacher/studio" action="Mở Teacher studio" />;
   }
   const current = demo.lesson.slides[slide];
-  const speak = () => {
-    if (current && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(current.narration);
-      utterance.lang = "vi-VN";
-      window.speechSynthesis.speak(utterance);
-    }
+  const speak = async () => {
+    if (!current) return;
+    setSpeaking(true);
+    setSpeechNotice("Đang đọc bằng giọng tiếng Việt...");
+    const speechResult = await speakVietnamese(current.narration);
+    setSpeechNotice(vietnameseSpeechMessage(speechResult));
+    setSpeaking(false);
   };
   const answer = async () => {
     if (selected === null) return;
@@ -243,7 +246,7 @@ function MicroLessonPlayer() {
       <div className="micro-progress">{demo.lesson.slides.map((item, index) => <button aria-label={`Mở slide ${index + 1}`} className={index <= slide ? "active" : ""} onClick={() => setSlide(index)} key={item.id} />)}</div>
       <section className="micro-stage">
         <div className="micro-visual"><Asset type="mascot" name={slide === 2 ? "mam-error" : slide === 3 ? "mam-celebrate" : "mam-code"} alt="Robot Mầm" width={210} height={190} />{current && <NumberSequence values={(current.animationData.values as string[] | undefined) ?? ["1", "2", "3", "4", "stop"]} />}</div>
-        <article className="micro-copy">{current && <><span className="eyebrow">{current.type} · {current.animationTemplate}</span><h1>{current.title}</h1><p>{current.body}</p>{current.code && <pre><code>{current.code}</code></pre>}<button className="narration-button" onClick={speak}><Asset type="icon" name="media-audio" alt="" width={22} height={22} /> Nghe narration</button></>}</article>
+        <article className="micro-copy">{current && <><span className="eyebrow">{current.type} · {current.animationTemplate}</span><h1>{current.title}</h1><p>{current.body}</p>{current.code && <pre><code>{current.code}</code></pre>}<button className="narration-button" disabled={speaking} onClick={speak}><Asset type="icon" name="media-audio" alt="" width={22} height={22} /> {speaking ? "Đang đọc..." : "Nghe tiếng Việt"}</button>{speechNotice && <small className="speech-notice" role="status">{speechNotice}</small>}</>}</article>
       </section>
       <div className="micro-actions"><button className="button ghost" disabled={slide === 0} onClick={() => setSlide((value) => value - 1)}>← Trước</button>{slide < demo.lesson.slides.length - 1 ? <button className="button primary" onClick={() => setSlide((value) => value + 1)}>Tiếp tục →</button> : <a className="button primary" href="#quiz">Làm quiz →</a>}</div>
       <section id="quiz" className="micro-quiz"><span className="eyebrow">Checkpoint</span><h2>{demo.lesson.quiz.question}</h2><div className="answer-list">{demo.lesson.quiz.options.map((option, index) => <button className={selected === index ? "selected" : ""} disabled={Boolean(result)} onClick={() => setSelected(index)} key={option}><span>{String.fromCharCode(65 + index)}</span><code>{option}</code></button>)}</div>{!result ? <button className="button primary" disabled={selected === null || demo.busy} onClick={answer}>Kiểm tra & cập nhật mastery</button> : <div className={result.correct ? "quiz-result correct" : "quiz-result incorrect"}><Asset type="mascot" name={result.correct ? "mam-celebrate" : "mam-thinking"} alt="" width={110} height={100} /><div><h3>{result.correct ? "Chính xác! +40 XP" : "Chưa đúng, hẹn ôn lại ngày mai"}</h3><p>{demo.lesson.quiz.explanation}</p><strong>Mastery {Math.round(demo.masteryBeforeReview * 100)}% → {Math.round(result.masteryAfter * 100)}%</strong></div><Link href="/student/progress" className="button ghost">Xem tiến bộ →</Link></div>}</section>
