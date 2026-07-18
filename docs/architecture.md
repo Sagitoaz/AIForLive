@@ -29,7 +29,7 @@ PostgreSQL is represented by the Prisma schema and migration. Foreign keys, comp
 
 ## LLM and TTS
 
-`ExternalLlmProvider` connects to FPT AI Marketplace and uses `DeepSeek-V4-Flash` when enabled by environment variables. Its output is normalized and checked by the same structured-content validator before entering `DRAFT`; a teacher must approve and publish it. `LocalTemplateProvider` remains the zero-key fallback. Browser SpeechSynthesis is the default narration provider; production TTS can cache by content/slide/version.
+`ExternalLlmProvider` connects to FPT AI Marketplace and uses `DeepSeek-V4-Flash` when enabled by environment variables. Its output is normalized and checked by the same structured-content validator before entering `DRAFT`; a teacher must approve and publish it. `LocalTemplateProvider` remains the zero-key fallback. Narration is generated server-side by `FPT.AI-VITs`, returned as WAV and cached by model, voice and text; Browser SpeechSynthesis is only the final fallback.
 
 ## Attempt flow
 

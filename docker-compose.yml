@@ -50,6 +50,12 @@ services:
       EXTERNAL_LLM_MODEL: ${EXTERNAL_LLM_MODEL:-DeepSeek-V4-Flash}
       EXTERNAL_LLM_TIMEOUT_MS: ${EXTERNAL_LLM_TIMEOUT_MS:-60000}
       EXTERNAL_LLM_API_KEY: ${EXTERNAL_LLM_API_KEY:-}
+      TTS_BASE_URL: ${TTS_BASE_URL:-https://mkp-api.fptcloud.com}
+      TTS_MODEL: ${TTS_MODEL:-FPT.AI-VITs}
+      TTS_VOICE: ${TTS_VOICE:-std_kimngan}
+      TTS_RESPONSE_FORMAT: ${TTS_RESPONSE_FORMAT:-wav}
+      TTS_TIMEOUT_MS: ${TTS_TIMEOUT_MS:-90000}
+      TTS_API_KEY: ${TTS_API_KEY:-}
 
   web:
     build:

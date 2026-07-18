@@ -10,6 +10,7 @@ import { HealthModule } from "./health/health.module";
 import { LearningModule } from "./learning-events/learning.module";
 import { StudentsModule } from "./students/students.module";
 import { TeacherModule } from "./teacher/teacher.module";
+import { TtsModule } from "./tts/tts.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TeacherModule } from "./teacher/teacher.module";
     StudentsModule,
     TeacherModule,
     ContentModule,
+    TtsModule,
     GamesModule,
     HealthModule
   ],

@@ -388,6 +388,8 @@ pre { background: var(--code); border-radius: 16px; color: #c6f3d0; font-size: 1
 .micro-copy h1 { font-size: 35px; line-height: 1.1; margin: 9px 0; }
 .micro-copy > p { color: var(--muted); }
 .narration-button { align-items: center; background: #edf6fd; border: 1px solid #cde5f7; border-radius: 12px; color: #2b6f9e; display: inline-flex; font-size: 10px; font-weight: 850; gap: 7px; padding: 8px 12px; }
+.narration-button:disabled { cursor: wait; opacity: .68; }
+.speech-notice { color: var(--muted); display: block; font-size: 9px; line-height: 1.45; margin-top: 7px; }
 .micro-actions { display: flex; justify-content: space-between; margin: 16px 0 35px; }
 .micro-quiz { background: #fff; border: 1px solid var(--border); border-radius: 27px; padding: 34px; scroll-margin-top: 90px; }
 .micro-quiz h2 { font-size: 27px; margin: 10px 0; }
