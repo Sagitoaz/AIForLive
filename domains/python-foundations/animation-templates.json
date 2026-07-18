@@ -1,0 +1,10 @@
+[
+  { "code": "NUMBER_SEQUENCE", "allowedKeys": ["start", "stop", "step", "values"], "concepts": ["PYTHON_RANGE"] },
+  { "code": "VARIABLE_CHANGE", "allowedKeys": ["variable", "before", "after"], "concepts": ["PYTHON_VARIABLES", "PYTHON_WHILE"] },
+  { "code": "CODE_HIGHLIGHT", "allowedKeys": ["lines", "activeLine"], "concepts": ["PYTHON_IF_ELSE", "PYTHON_FOR"] },
+  { "code": "FLOW_BRANCH", "allowedKeys": ["condition", "truePath", "falsePath"], "concepts": ["PYTHON_IF_ELSE"] },
+  { "code": "LOOP_TIMELINE", "allowedKeys": ["iterations", "values"], "concepts": ["PYTHON_FOR", "PYTHON_WHILE"] },
+  { "code": "LIST_INDEX", "allowedKeys": ["items", "activeIndex"], "concepts": ["PYTHON_LISTS"] },
+  { "code": "FUNCTION_FLOW", "allowedKeys": ["input", "steps", "output"], "concepts": ["PYTHON_FUNCTIONS"] },
+  { "code": "BUG_REVEAL", "allowedKeys": ["wrongLine", "fixedLine", "message"], "concepts": ["PYTHON_RANGE", "PYTHON_WHILE", "PYTHON_IF_ELSE"] }
+]

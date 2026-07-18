@@ -1,0 +1,12 @@
+[
+  { "code": "RANGE_STOP_INCLUDED", "conceptCode": "PYTHON_RANGE", "title": "Điểm dừng thuộc range", "description": "Học viên nghĩ stop được đưa vào dãy.", "severity": "HIGH" },
+  { "code": "ASSIGNMENT_VS_COMPARISON", "conceptCode": "PYTHON_IF_ELSE", "title": "Gán và so sánh", "description": "Nhầm = với ==.", "severity": "HIGH" },
+  { "code": "WHILE_VARIABLE_NOT_UPDATED", "conceptCode": "PYTHON_WHILE", "title": "Không cập nhật biến lặp", "description": "Vòng while không tiến về điều kiện dừng.", "severity": "HIGH" },
+  { "code": "LIST_INDEX_STARTS_AT_ONE", "conceptCode": "PYTHON_LISTS", "title": "Index bắt đầu từ 1", "description": "Truy cập phần tử đầu tiên bằng index 1.", "severity": "HIGH" },
+  { "code": "STRING_NUMBER_CONFUSION", "conceptCode": "PYTHON_VARIABLES", "title": "Chuỗi và số", "description": "Nhầm phép nối chuỗi với cộng số.", "severity": "MEDIUM" },
+  { "code": "IF_INDENTATION_ERROR", "conceptCode": "PYTHON_IF_ELSE", "title": "Thụt lề điều kiện", "description": "Không hiểu block được xác định bởi thụt lề.", "severity": "MEDIUM" },
+  { "code": "FOR_ITERATION_COUNT", "conceptCode": "PYTHON_FOR", "title": "Số lượt lặp", "description": "Đếm sai số lần thực thi vòng for.", "severity": "MEDIUM" },
+  { "code": "BOOLEAN_LOGIC_CONFUSION", "conceptCode": "PYTHON_OPERATORS", "title": "Logic boolean", "description": "Nhầm and, or và not.", "severity": "MEDIUM" },
+  { "code": "FUNCTION_RETURN_VS_PRINT", "conceptCode": "PYTHON_FUNCTIONS", "title": "Return và print", "description": "Nghĩ print trả giá trị cho nơi gọi.", "severity": "HIGH" },
+  { "code": "VARIABLE_UPDATE_ORDER", "conceptCode": "PYTHON_VARIABLES", "title": "Thứ tự cập nhật", "description": "Đọc sai giá trị trước và sau phép gán.", "severity": "MEDIUM" }
+]

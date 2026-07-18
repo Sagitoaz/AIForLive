@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-edurecall}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-edurecall_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-edurecall}
+    ports:
+      - "5432:5432"
+    volumes:
+      - edurecall_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-edurecall} -d ${POSTGRES_DB:-edurecall}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: apps/ai-service/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      MODEL_ARTIFACT_PATH: /app/apps/ai-service/ml/artifacts/next_attempt_model.joblib
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgresql://edurecall:edurecall_dev@postgres:5432/edurecall?schema=public
+      AI_SERVICE_URL: http://ai-service:8001
+      JWT_ACCESS_SECRET: docker-demo-access
+      JWT_REFRESH_SECRET: docker-demo-refresh
+      AI_PROVIDER: ${AI_PROVIDER:-local-template}
+      EXTERNAL_LLM_BASE_URL: ${EXTERNAL_LLM_BASE_URL:-https://mkp-api.fptcloud.com}
+      EXTERNAL_LLM_MODEL: ${EXTERNAL_LLM_MODEL:-DeepSeek-V4-Flash}
+      EXTERNAL_LLM_TIMEOUT_MS: ${EXTERNAL_LLM_TIMEOUT_MS:-60000}
+      EXTERNAL_LLM_API_KEY: ${EXTERNAL_LLM_API_KEY:-}
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+
+volumes:
+  edurecall_postgres:

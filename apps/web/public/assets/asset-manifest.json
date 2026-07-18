@@ -1,0 +1,2946 @@
+[
+  {
+    "name": "nav-home",
+    "category": "icons",
+    "path": "/assets/icons/nav-home.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav home icon"
+  },
+  {
+    "name": "nav-roadmap",
+    "category": "icons",
+    "path": "/assets/icons/nav-roadmap.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav roadmap icon"
+  },
+  {
+    "name": "nav-review",
+    "category": "icons",
+    "path": "/assets/icons/nav-review.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav review icon"
+  },
+  {
+    "name": "nav-game",
+    "category": "icons",
+    "path": "/assets/icons/nav-game.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav game icon"
+  },
+  {
+    "name": "nav-chart",
+    "category": "icons",
+    "path": "/assets/icons/nav-chart.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav chart icon"
+  },
+  {
+    "name": "nav-trophy",
+    "category": "icons",
+    "path": "/assets/icons/nav-trophy.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav trophy icon"
+  },
+  {
+    "name": "nav-badge",
+    "category": "icons",
+    "path": "/assets/icons/nav-badge.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav badge icon"
+  },
+  {
+    "name": "nav-class",
+    "category": "icons",
+    "path": "/assets/icons/nav-class.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav class icon"
+  },
+  {
+    "name": "nav-grid",
+    "category": "icons",
+    "path": "/assets/icons/nav-grid.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav grid icon"
+  },
+  {
+    "name": "nav-alert",
+    "category": "icons",
+    "path": "/assets/icons/nav-alert.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav alert icon"
+  },
+  {
+    "name": "nav-spark",
+    "category": "icons",
+    "path": "/assets/icons/nav-spark.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav spark icon"
+  },
+  {
+    "name": "nav-model",
+    "category": "icons",
+    "path": "/assets/icons/nav-model.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom nav model icon"
+  },
+  {
+    "name": "gamify-xp",
+    "category": "icons",
+    "path": "/assets/icons/gamify-xp.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom gamify xp icon"
+  },
+  {
+    "name": "gamify-streak",
+    "category": "icons",
+    "path": "/assets/icons/gamify-streak.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom gamify streak icon"
+  },
+  {
+    "name": "ai-spark",
+    "category": "icons",
+    "path": "/assets/icons/ai-spark.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ai spark icon"
+  },
+  {
+    "name": "ai-evidence",
+    "category": "icons",
+    "path": "/assets/icons/ai-evidence.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ai evidence icon"
+  },
+  {
+    "name": "ai-reuse",
+    "category": "icons",
+    "path": "/assets/icons/ai-reuse.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ai reuse icon"
+  },
+  {
+    "name": "ai-cost",
+    "category": "icons",
+    "path": "/assets/icons/ai-cost.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ai cost icon"
+  },
+  {
+    "name": "ai-bkt",
+    "category": "icons",
+    "path": "/assets/icons/ai-bkt.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ai bkt icon"
+  },
+  {
+    "name": "ai-model",
+    "category": "icons",
+    "path": "/assets/icons/ai-model.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ai model icon"
+  },
+  {
+    "name": "learning-observe",
+    "category": "icons",
+    "path": "/assets/icons/learning-observe.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom learning observe icon"
+  },
+  {
+    "name": "learning-brain",
+    "category": "icons",
+    "path": "/assets/icons/learning-brain.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom learning brain icon"
+  },
+  {
+    "name": "learning-path",
+    "category": "icons",
+    "path": "/assets/icons/learning-path.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom learning path icon"
+  },
+  {
+    "name": "learning-recall",
+    "category": "icons",
+    "path": "/assets/icons/learning-recall.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom learning recall icon"
+  },
+  {
+    "name": "teacher-review",
+    "category": "icons",
+    "path": "/assets/icons/teacher-review.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Teacher workspace"
+    ],
+    "description": "Custom teacher review icon"
+  },
+  {
+    "name": "teacher-support",
+    "category": "icons",
+    "path": "/assets/icons/teacher-support.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Teacher workspace"
+    ],
+    "description": "Custom teacher support icon"
+  },
+  {
+    "name": "student-group",
+    "category": "icons",
+    "path": "/assets/icons/student-group.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom student group icon"
+  },
+  {
+    "name": "concept-variable",
+    "category": "icons",
+    "path": "/assets/icons/concept-variable.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Roadmap and concept cards"
+    ],
+    "description": "Custom concept variable icon"
+  },
+  {
+    "name": "concept-operator",
+    "category": "icons",
+    "path": "/assets/icons/concept-operator.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Roadmap and concept cards"
+    ],
+    "description": "Custom concept operator icon"
+  },
+  {
+    "name": "concept-branch",
+    "category": "icons",
+    "path": "/assets/icons/concept-branch.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Roadmap and concept cards"
+    ],
+    "description": "Custom concept branch icon"
+  },
+  {
+    "name": "concept-loop",
+    "category": "icons",
+    "path": "/assets/icons/concept-loop.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Roadmap and concept cards"
+    ],
+    "description": "Custom concept loop icon"
+  },
+  {
+    "name": "concept-range",
+    "category": "icons",
+    "path": "/assets/icons/concept-range.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Roadmap and concept cards"
+    ],
+    "description": "Custom concept range icon"
+  },
+  {
+    "name": "concept-while",
+    "category": "icons",
+    "path": "/assets/icons/concept-while.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Roadmap and concept cards"
+    ],
+    "description": "Custom concept while icon"
+  },
+  {
+    "name": "concept-list",
+    "category": "icons",
+    "path": "/assets/icons/concept-list.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Roadmap and concept cards"
+    ],
+    "description": "Custom concept list icon"
+  },
+  {
+    "name": "concept-function",
+    "category": "icons",
+    "path": "/assets/icons/concept-function.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Roadmap and concept cards"
+    ],
+    "description": "Custom concept function icon"
+  },
+  {
+    "name": "ui-shield",
+    "category": "icons",
+    "path": "/assets/icons/ui-shield.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui shield icon"
+  },
+  {
+    "name": "ui-check",
+    "category": "icons",
+    "path": "/assets/icons/ui-check.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui check icon"
+  },
+  {
+    "name": "ui-alert",
+    "category": "icons",
+    "path": "/assets/icons/ui-alert.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui alert icon"
+  },
+  {
+    "name": "ui-info",
+    "category": "icons",
+    "path": "/assets/icons/ui-info.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui info icon"
+  },
+  {
+    "name": "ui-clock",
+    "category": "icons",
+    "path": "/assets/icons/ui-clock.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui clock icon"
+  },
+  {
+    "name": "ui-search",
+    "category": "icons",
+    "path": "/assets/icons/ui-search.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui search icon"
+  },
+  {
+    "name": "ui-filter",
+    "category": "icons",
+    "path": "/assets/icons/ui-filter.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui filter icon"
+  },
+  {
+    "name": "ui-lock",
+    "category": "icons",
+    "path": "/assets/icons/ui-lock.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui lock icon"
+  },
+  {
+    "name": "ui-unlock",
+    "category": "icons",
+    "path": "/assets/icons/ui-unlock.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui unlock icon"
+  },
+  {
+    "name": "ui-settings",
+    "category": "icons",
+    "path": "/assets/icons/ui-settings.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui settings icon"
+  },
+  {
+    "name": "ui-upload",
+    "category": "icons",
+    "path": "/assets/icons/ui-upload.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui upload icon"
+  },
+  {
+    "name": "ui-download",
+    "category": "icons",
+    "path": "/assets/icons/ui-download.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui download icon"
+  },
+  {
+    "name": "ui-edit",
+    "category": "icons",
+    "path": "/assets/icons/ui-edit.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui edit icon"
+  },
+  {
+    "name": "ui-trash",
+    "category": "icons",
+    "path": "/assets/icons/ui-trash.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui trash icon"
+  },
+  {
+    "name": "ui-close",
+    "category": "icons",
+    "path": "/assets/icons/ui-close.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom ui close icon"
+  },
+  {
+    "name": "media-audio",
+    "category": "icons",
+    "path": "/assets/icons/media-audio.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media audio icon"
+  },
+  {
+    "name": "media-txt",
+    "category": "icons",
+    "path": "/assets/icons/media-txt.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media txt icon"
+  },
+  {
+    "name": "media-pdf",
+    "category": "icons",
+    "path": "/assets/icons/media-pdf.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media pdf icon"
+  },
+  {
+    "name": "media-docx",
+    "category": "icons",
+    "path": "/assets/icons/media-docx.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media docx icon"
+  },
+  {
+    "name": "media-pptx",
+    "category": "icons",
+    "path": "/assets/icons/media-pptx.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media pptx icon"
+  },
+  {
+    "name": "media-play",
+    "category": "icons",
+    "path": "/assets/icons/media-play.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media play icon"
+  },
+  {
+    "name": "media-pause",
+    "category": "icons",
+    "path": "/assets/icons/media-pause.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media pause icon"
+  },
+  {
+    "name": "media-volume",
+    "category": "icons",
+    "path": "/assets/icons/media-volume.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media volume icon"
+  },
+  {
+    "name": "media-image",
+    "category": "icons",
+    "path": "/assets/icons/media-image.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media image icon"
+  },
+  {
+    "name": "media-video",
+    "category": "icons",
+    "path": "/assets/icons/media-video.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom media video icon"
+  },
+  {
+    "name": "domain-python",
+    "category": "icons",
+    "path": "/assets/icons/domain-python.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom domain python icon"
+  },
+  {
+    "name": "domain-english",
+    "category": "icons",
+    "path": "/assets/icons/domain-english.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom domain english icon"
+  },
+  {
+    "name": "domain-math",
+    "category": "icons",
+    "path": "/assets/icons/domain-math.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom domain math icon"
+  },
+  {
+    "name": "domain-science",
+    "category": "icons",
+    "path": "/assets/icons/domain-science.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom domain science icon"
+  },
+  {
+    "name": "domain-physics",
+    "category": "icons",
+    "path": "/assets/icons/domain-physics.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom domain physics icon"
+  },
+  {
+    "name": "domain-chemistry",
+    "category": "icons",
+    "path": "/assets/icons/domain-chemistry.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom domain chemistry icon"
+  },
+  {
+    "name": "domain-stem",
+    "category": "icons",
+    "path": "/assets/icons/domain-stem.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom domain stem icon"
+  },
+  {
+    "name": "domain-career",
+    "category": "icons",
+    "path": "/assets/icons/domain-career.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom domain career icon"
+  },
+  {
+    "name": "game-code-order",
+    "category": "icons",
+    "path": "/assets/icons/game-code-order.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom game code order icon"
+  },
+  {
+    "name": "game-predict",
+    "category": "icons",
+    "path": "/assets/icons/game-predict.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom game predict icon"
+  },
+  {
+    "name": "game-bug",
+    "category": "icons",
+    "path": "/assets/icons/game-bug.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom game bug icon"
+  },
+  {
+    "name": "game-range",
+    "category": "icons",
+    "path": "/assets/icons/game-range.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom game range icon"
+  },
+  {
+    "name": "game-reward",
+    "category": "icons",
+    "path": "/assets/icons/game-reward.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom game reward icon"
+  },
+  {
+    "name": "game-level",
+    "category": "icons",
+    "path": "/assets/icons/game-level.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom game level icon"
+  },
+  {
+    "name": "game-heart",
+    "category": "icons",
+    "path": "/assets/icons/game-heart.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom game heart icon"
+  },
+  {
+    "name": "game-flag",
+    "category": "icons",
+    "path": "/assets/icons/game-flag.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Navigation and interface"
+    ],
+    "description": "Custom game flag icon"
+  },
+  {
+    "name": "teacher-course",
+    "category": "icons",
+    "path": "/assets/icons/teacher-course.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Teacher workspace"
+    ],
+    "description": "Custom teacher course icon"
+  },
+  {
+    "name": "teacher-source",
+    "category": "icons",
+    "path": "/assets/icons/teacher-source.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Teacher workspace"
+    ],
+    "description": "Custom teacher source icon"
+  },
+  {
+    "name": "teacher-student",
+    "category": "icons",
+    "path": "/assets/icons/teacher-student.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Teacher workspace"
+    ],
+    "description": "Custom teacher student icon"
+  },
+  {
+    "name": "teacher-analytics",
+    "category": "icons",
+    "path": "/assets/icons/teacher-analytics.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Teacher workspace"
+    ],
+    "description": "Custom teacher analytics icon"
+  },
+  {
+    "name": "mam-wave",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-wave.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: wave"
+  },
+  {
+    "name": "mam-study",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-study.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: study"
+  },
+  {
+    "name": "mam-thinking",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-thinking.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: thinking"
+  },
+  {
+    "name": "mam-celebrate",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-celebrate.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: celebrate"
+  },
+  {
+    "name": "mam-guide",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-guide.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: guide"
+  },
+  {
+    "name": "mam-trophy",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-trophy.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: trophy"
+  },
+  {
+    "name": "mam-book",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-book.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: book"
+  },
+  {
+    "name": "mam-code",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-code.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: code"
+  },
+  {
+    "name": "mam-error",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-error.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: error"
+  },
+  {
+    "name": "mam-remind",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-remind.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: remind"
+  },
+  {
+    "name": "mam-audio",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-audio.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: audio"
+  },
+  {
+    "name": "mam-teacher-review",
+    "category": "mascot",
+    "path": "/assets/mascot/mam-teacher-review.svg",
+    "format": "SVG",
+    "dimensions": "320x310",
+    "usedIn": [
+      "Student feedback",
+      "Teacher guidance",
+      "Empty states"
+    ],
+    "description": "Mầm mascot pose: teacher-review"
+  },
+  {
+    "name": "illustration-hero",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-hero.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: hero"
+  },
+  {
+    "name": "illustration-personalized-path",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-personalized-path.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: personalized path"
+  },
+  {
+    "name": "illustration-ai-generation",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-ai-generation.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: ai generation"
+  },
+  {
+    "name": "illustration-teacher-review",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-teacher-review.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Teacher workspace"
+    ],
+    "description": "EduRecall scene: teacher review"
+  },
+  {
+    "name": "illustration-diagnostic",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-diagnostic.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: diagnostic"
+  },
+  {
+    "name": "illustration-micro-lesson",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-micro-lesson.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: micro lesson"
+  },
+  {
+    "name": "illustration-knowledge-graph",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-knowledge-graph.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: knowledge graph"
+  },
+  {
+    "name": "illustration-spaced-review",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-spaced-review.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: spaced review"
+  },
+  {
+    "name": "illustration-skill-mastery",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-skill-mastery.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: skill mastery"
+  },
+  {
+    "name": "illustration-progress",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-progress.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: progress"
+  },
+  {
+    "name": "illustration-class-dashboard",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-class-dashboard.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Teacher workspace"
+    ],
+    "description": "EduRecall scene: class dashboard"
+  },
+  {
+    "name": "illustration-leaderboard",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-leaderboard.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: leaderboard"
+  },
+  {
+    "name": "illustration-game-center",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-game-center.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: game center"
+  },
+  {
+    "name": "illustration-code-challenge",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-code-challenge.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: code challenge"
+  },
+  {
+    "name": "illustration-bug-hunter",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-bug-hunter.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: bug hunter"
+  },
+  {
+    "name": "illustration-empty-review",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-empty-review.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: empty review"
+  },
+  {
+    "name": "illustration-empty-course",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-empty-course.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: empty course"
+  },
+  {
+    "name": "illustration-empty-activity",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-empty-activity.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: empty activity"
+  },
+  {
+    "name": "illustration-upload",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-upload.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: upload"
+  },
+  {
+    "name": "illustration-loading",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-loading.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: loading"
+  },
+  {
+    "name": "illustration-success",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-success.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: success"
+  },
+  {
+    "name": "illustration-error",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-error.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: error"
+  },
+  {
+    "name": "illustration-offline",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-offline.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Student workspace"
+    ],
+    "description": "EduRecall scene: offline"
+  },
+  {
+    "name": "illustration-pilot-classroom",
+    "category": "illustrations",
+    "path": "/assets/illustrations/illustration-pilot-classroom.svg",
+    "format": "SVG",
+    "dimensions": "700x460",
+    "usedIn": [
+      "Landing",
+      "Teacher workspace"
+    ],
+    "description": "EduRecall scene: pilot classroom"
+  },
+  {
+    "name": "illustration-review",
+    "category": "empty-states",
+    "path": "/assets/empty-states/illustration-review.svg",
+    "format": "SVG",
+    "dimensions": "500x350",
+    "usedIn": [
+      "Empty and error states"
+    ],
+    "description": "Empty state: review"
+  },
+  {
+    "name": "illustration-activity",
+    "category": "empty-states",
+    "path": "/assets/empty-states/illustration-activity.svg",
+    "format": "SVG",
+    "dimensions": "500x350",
+    "usedIn": [
+      "Empty and error states"
+    ],
+    "description": "Empty state: activity"
+  },
+  {
+    "name": "illustration-course-not-found",
+    "category": "empty-states",
+    "path": "/assets/empty-states/illustration-course-not-found.svg",
+    "format": "SVG",
+    "dimensions": "500x350",
+    "usedIn": [
+      "Empty and error states"
+    ],
+    "description": "Empty state: course not found"
+  },
+  {
+    "name": "illustration-system-error",
+    "category": "empty-states",
+    "path": "/assets/empty-states/illustration-system-error.svg",
+    "format": "SVG",
+    "dimensions": "500x350",
+    "usedIn": [
+      "Empty and error states"
+    ],
+    "description": "Empty state: system error"
+  },
+  {
+    "name": "course-cover-01",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-01.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 1"
+  },
+  {
+    "name": "course-cover-02",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-02.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 2"
+  },
+  {
+    "name": "course-cover-03",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-03.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 3"
+  },
+  {
+    "name": "course-cover-04",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-04.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 4"
+  },
+  {
+    "name": "course-cover-05",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-05.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 5"
+  },
+  {
+    "name": "course-cover-06",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-06.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 6"
+  },
+  {
+    "name": "course-cover-07",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-07.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 7"
+  },
+  {
+    "name": "course-cover-08",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-08.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 8"
+  },
+  {
+    "name": "course-cover-09",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-09.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 9"
+  },
+  {
+    "name": "course-cover-10",
+    "category": "course-covers",
+    "path": "/assets/course-covers/course-cover-10.svg",
+    "format": "SVG",
+    "dimensions": "560x340",
+    "usedIn": [
+      "Course cards",
+      "Student dashboard"
+    ],
+    "description": "Course or module cover 10"
+  },
+  {
+    "name": "badge-seed",
+    "category": "badges",
+    "path": "/assets/badges/badge-seed.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Dashboard achievements"
+    ],
+    "description": "Achievement badge: seed"
+  },
+  {
+    "name": "badge-streak",
+    "category": "badges",
+    "path": "/assets/badges/badge-streak.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Dashboard achievements"
+    ],
+    "description": "Achievement badge: streak"
+  },
+  {
+    "name": "badge-debugger",
+    "category": "badges",
+    "path": "/assets/badges/badge-debugger.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Dashboard achievements"
+    ],
+    "description": "Achievement badge: debugger"
+  },
+  {
+    "name": "badge-range",
+    "category": "badges",
+    "path": "/assets/badges/badge-range.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Dashboard achievements"
+    ],
+    "description": "Achievement badge: range"
+  },
+  {
+    "name": "badge-recall",
+    "category": "badges",
+    "path": "/assets/badges/badge-recall.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Dashboard achievements"
+    ],
+    "description": "Achievement badge: recall"
+  },
+  {
+    "name": "badge-helper",
+    "category": "badges",
+    "path": "/assets/badges/badge-helper.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Dashboard achievements"
+    ],
+    "description": "Achievement badge: helper"
+  },
+  {
+    "name": "badge-01",
+    "category": "badges",
+    "path": "/assets/badges/badge-01.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 1"
+  },
+  {
+    "name": "badge-02",
+    "category": "badges",
+    "path": "/assets/badges/badge-02.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 2"
+  },
+  {
+    "name": "badge-03",
+    "category": "badges",
+    "path": "/assets/badges/badge-03.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 3"
+  },
+  {
+    "name": "badge-04",
+    "category": "badges",
+    "path": "/assets/badges/badge-04.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 4"
+  },
+  {
+    "name": "badge-05",
+    "category": "badges",
+    "path": "/assets/badges/badge-05.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 5"
+  },
+  {
+    "name": "badge-06",
+    "category": "badges",
+    "path": "/assets/badges/badge-06.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 6"
+  },
+  {
+    "name": "badge-07",
+    "category": "badges",
+    "path": "/assets/badges/badge-07.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 7"
+  },
+  {
+    "name": "badge-08",
+    "category": "badges",
+    "path": "/assets/badges/badge-08.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 8"
+  },
+  {
+    "name": "badge-09",
+    "category": "badges",
+    "path": "/assets/badges/badge-09.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 9"
+  },
+  {
+    "name": "badge-10",
+    "category": "badges",
+    "path": "/assets/badges/badge-10.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 10"
+  },
+  {
+    "name": "badge-11",
+    "category": "badges",
+    "path": "/assets/badges/badge-11.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 11"
+  },
+  {
+    "name": "badge-12",
+    "category": "badges",
+    "path": "/assets/badges/badge-12.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 12"
+  },
+  {
+    "name": "badge-13",
+    "category": "badges",
+    "path": "/assets/badges/badge-13.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 13"
+  },
+  {
+    "name": "badge-14",
+    "category": "badges",
+    "path": "/assets/badges/badge-14.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 14"
+  },
+  {
+    "name": "badge-15",
+    "category": "badges",
+    "path": "/assets/badges/badge-15.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 15"
+  },
+  {
+    "name": "badge-16",
+    "category": "badges",
+    "path": "/assets/badges/badge-16.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 16"
+  },
+  {
+    "name": "badge-17",
+    "category": "badges",
+    "path": "/assets/badges/badge-17.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 17"
+  },
+  {
+    "name": "badge-18",
+    "category": "badges",
+    "path": "/assets/badges/badge-18.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 18"
+  },
+  {
+    "name": "badge-19",
+    "category": "badges",
+    "path": "/assets/badges/badge-19.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 19"
+  },
+  {
+    "name": "badge-20",
+    "category": "badges",
+    "path": "/assets/badges/badge-20.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 20"
+  },
+  {
+    "name": "badge-21",
+    "category": "badges",
+    "path": "/assets/badges/badge-21.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 21"
+  },
+  {
+    "name": "badge-22",
+    "category": "badges",
+    "path": "/assets/badges/badge-22.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 22"
+  },
+  {
+    "name": "badge-23",
+    "category": "badges",
+    "path": "/assets/badges/badge-23.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 23"
+  },
+  {
+    "name": "badge-24",
+    "category": "badges",
+    "path": "/assets/badges/badge-24.svg",
+    "format": "SVG",
+    "dimensions": "160x170",
+    "usedIn": [
+      "Achievement gallery"
+    ],
+    "description": "Achievement badge 24"
+  },
+  {
+    "name": "game-asset-01",
+    "category": "games",
+    "path": "/assets/games/game-asset-01.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 1"
+  },
+  {
+    "name": "game-asset-02",
+    "category": "games",
+    "path": "/assets/games/game-asset-02.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 2"
+  },
+  {
+    "name": "game-asset-03",
+    "category": "games",
+    "path": "/assets/games/game-asset-03.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 3"
+  },
+  {
+    "name": "game-asset-04",
+    "category": "games",
+    "path": "/assets/games/game-asset-04.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 4"
+  },
+  {
+    "name": "game-asset-05",
+    "category": "games",
+    "path": "/assets/games/game-asset-05.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 5"
+  },
+  {
+    "name": "game-asset-06",
+    "category": "games",
+    "path": "/assets/games/game-asset-06.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 6"
+  },
+  {
+    "name": "game-asset-07",
+    "category": "games",
+    "path": "/assets/games/game-asset-07.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 7"
+  },
+  {
+    "name": "game-asset-08",
+    "category": "games",
+    "path": "/assets/games/game-asset-08.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 8"
+  },
+  {
+    "name": "game-asset-09",
+    "category": "games",
+    "path": "/assets/games/game-asset-09.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 9"
+  },
+  {
+    "name": "game-asset-10",
+    "category": "games",
+    "path": "/assets/games/game-asset-10.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 10"
+  },
+  {
+    "name": "game-asset-11",
+    "category": "games",
+    "path": "/assets/games/game-asset-11.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 11"
+  },
+  {
+    "name": "game-asset-12",
+    "category": "games",
+    "path": "/assets/games/game-asset-12.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 12"
+  },
+  {
+    "name": "game-asset-13",
+    "category": "games",
+    "path": "/assets/games/game-asset-13.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 13"
+  },
+  {
+    "name": "game-asset-14",
+    "category": "games",
+    "path": "/assets/games/game-asset-14.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 14"
+  },
+  {
+    "name": "game-asset-15",
+    "category": "games",
+    "path": "/assets/games/game-asset-15.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 15"
+  },
+  {
+    "name": "game-asset-16",
+    "category": "games",
+    "path": "/assets/games/game-asset-16.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 16"
+  },
+  {
+    "name": "game-asset-17",
+    "category": "games",
+    "path": "/assets/games/game-asset-17.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 17"
+  },
+  {
+    "name": "game-asset-18",
+    "category": "games",
+    "path": "/assets/games/game-asset-18.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 18"
+  },
+  {
+    "name": "game-asset-19",
+    "category": "games",
+    "path": "/assets/games/game-asset-19.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 19"
+  },
+  {
+    "name": "game-asset-20",
+    "category": "games",
+    "path": "/assets/games/game-asset-20.svg",
+    "format": "SVG",
+    "dimensions": "480x300",
+    "usedIn": [
+      "Game center",
+      "Mini games"
+    ],
+    "description": "Original game asset 20"
+  },
+  {
+    "name": "avatar-01",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-01.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 1"
+  },
+  {
+    "name": "avatar-02",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-02.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 2"
+  },
+  {
+    "name": "avatar-03",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-03.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 3"
+  },
+  {
+    "name": "avatar-04",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-04.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 4"
+  },
+  {
+    "name": "avatar-05",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-05.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 5"
+  },
+  {
+    "name": "avatar-06",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-06.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 6"
+  },
+  {
+    "name": "avatar-07",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-07.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 7"
+  },
+  {
+    "name": "avatar-08",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-08.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 8"
+  },
+  {
+    "name": "avatar-09",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-09.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 9"
+  },
+  {
+    "name": "avatar-10",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-10.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 10"
+  },
+  {
+    "name": "avatar-11",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-11.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 11"
+  },
+  {
+    "name": "avatar-12",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-12.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 12"
+  },
+  {
+    "name": "avatar-13",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-13.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 13"
+  },
+  {
+    "name": "avatar-14",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-14.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 14"
+  },
+  {
+    "name": "avatar-15",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-15.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 15"
+  },
+  {
+    "name": "avatar-16",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-16.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 16"
+  },
+  {
+    "name": "avatar-17",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-17.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 17"
+  },
+  {
+    "name": "avatar-18",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-18.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 18"
+  },
+  {
+    "name": "avatar-19",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-19.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 19"
+  },
+  {
+    "name": "avatar-20",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-20.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 20"
+  },
+  {
+    "name": "avatar-21",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-21.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 21"
+  },
+  {
+    "name": "avatar-22",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-22.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 22"
+  },
+  {
+    "name": "avatar-23",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-23.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 23"
+  },
+  {
+    "name": "avatar-24",
+    "category": "avatars",
+    "path": "/assets/avatars/avatar-24.svg",
+    "format": "SVG",
+    "dimensions": "160x160",
+    "usedIn": [
+      "Class list",
+      "Leaderboard",
+      "Profile"
+    ],
+    "description": "Synthetic learner avatar 24"
+  },
+  {
+    "name": "background-roadmap",
+    "category": "backgrounds",
+    "path": "/assets/backgrounds/background-roadmap.svg",
+    "format": "SVG",
+    "dimensions": "1440x900",
+    "usedIn": [
+      "Page background"
+    ],
+    "description": "roadmap page background"
+  },
+  {
+    "name": "background-landing",
+    "category": "backgrounds",
+    "path": "/assets/backgrounds/background-landing.svg",
+    "format": "SVG",
+    "dimensions": "1440x900",
+    "usedIn": [
+      "Page background"
+    ],
+    "description": "landing page background"
+  },
+  {
+    "name": "background-student",
+    "category": "backgrounds",
+    "path": "/assets/backgrounds/background-student.svg",
+    "format": "SVG",
+    "dimensions": "1440x900",
+    "usedIn": [
+      "Page background"
+    ],
+    "description": "student page background"
+  },
+  {
+    "name": "background-teacher",
+    "category": "backgrounds",
+    "path": "/assets/backgrounds/background-teacher.svg",
+    "format": "SVG",
+    "dimensions": "1440x900",
+    "usedIn": [
+      "Page background"
+    ],
+    "description": "teacher page background"
+  },
+  {
+    "name": "background-game",
+    "category": "backgrounds",
+    "path": "/assets/backgrounds/background-game.svg",
+    "format": "SVG",
+    "dimensions": "1440x900",
+    "usedIn": [
+      "Page background"
+    ],
+    "description": "game page background"
+  },
+  {
+    "name": "background-lesson",
+    "category": "backgrounds",
+    "path": "/assets/backgrounds/background-lesson.svg",
+    "format": "SVG",
+    "dimensions": "1440x900",
+    "usedIn": [
+      "Page background"
+    ],
+    "description": "lesson page background"
+  },
+  {
+    "name": "background-celebration",
+    "category": "backgrounds",
+    "path": "/assets/backgrounds/background-celebration.svg",
+    "format": "SVG",
+    "dimensions": "1440x900",
+    "usedIn": [
+      "Page background"
+    ],
+    "description": "celebration page background"
+  },
+  {
+    "name": "background-login",
+    "category": "backgrounds",
+    "path": "/assets/backgrounds/background-login.svg",
+    "format": "SVG",
+    "dimensions": "1440x900",
+    "usedIn": [
+      "Page background"
+    ],
+    "description": "login page background"
+  },
+  {
+    "name": "pattern-orbit",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-orbit.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "orbit decorative pattern"
+  },
+  {
+    "name": "pattern-dots",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-dots.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "dots decorative pattern"
+  },
+  {
+    "name": "pattern-waves",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-waves.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "waves decorative pattern"
+  },
+  {
+    "name": "pattern-plus",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-plus.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "plus decorative pattern"
+  },
+  {
+    "name": "pattern-code",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-code.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "code decorative pattern"
+  },
+  {
+    "name": "pattern-leaves",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-leaves.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "leaves decorative pattern"
+  },
+  {
+    "name": "pattern-grid",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-grid.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "grid decorative pattern"
+  },
+  {
+    "name": "pattern-stars",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-stars.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "stars decorative pattern"
+  },
+  {
+    "name": "pattern-loops",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-loops.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "loops decorative pattern"
+  },
+  {
+    "name": "pattern-confetti",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-confetti.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "confetti decorative pattern"
+  },
+  {
+    "name": "pattern-numbers",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-numbers.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "numbers decorative pattern"
+  },
+  {
+    "name": "pattern-sprouts",
+    "category": "patterns",
+    "path": "/assets/patterns/pattern-sprouts.svg",
+    "format": "SVG",
+    "dimensions": "520x180",
+    "usedIn": [
+      "Landing",
+      "Cards",
+      "Headers"
+    ],
+    "description": "sprouts decorative pattern"
+  },
+  {
+    "name": "decoration-leaf-01",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-leaf-01.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 1"
+  },
+  {
+    "name": "decoration-02",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-02.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 2"
+  },
+  {
+    "name": "decoration-03",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-03.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 3"
+  },
+  {
+    "name": "decoration-04",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-04.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 4"
+  },
+  {
+    "name": "decoration-05",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-05.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 5"
+  },
+  {
+    "name": "decoration-06",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-06.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 6"
+  },
+  {
+    "name": "decoration-07",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-07.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 7"
+  },
+  {
+    "name": "decoration-08",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-08.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 8"
+  },
+  {
+    "name": "decoration-09",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-09.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 9"
+  },
+  {
+    "name": "decoration-10",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-10.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 10"
+  },
+  {
+    "name": "decoration-11",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-11.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 11"
+  },
+  {
+    "name": "decoration-12",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-12.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 12"
+  },
+  {
+    "name": "decoration-13",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-13.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 13"
+  },
+  {
+    "name": "decoration-14",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-14.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 14"
+  },
+  {
+    "name": "decoration-15",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-15.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 15"
+  },
+  {
+    "name": "decoration-16",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-16.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 16"
+  },
+  {
+    "name": "decoration-17",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-17.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 17"
+  },
+  {
+    "name": "decoration-18",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-18.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 18"
+  },
+  {
+    "name": "decoration-19",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-19.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 19"
+  },
+  {
+    "name": "decoration-20",
+    "category": "decorations",
+    "path": "/assets/decorations/decoration-20.svg",
+    "format": "SVG",
+    "dimensions": "300x260",
+    "usedIn": [
+      "Cards and hero sections"
+    ],
+    "description": "Decorative shape 20"
+  },
+  {
+    "name": "domain-asset-01",
+    "category": "domains",
+    "path": "/assets/domains/domain-asset-01.svg",
+    "format": "SVG",
+    "dimensions": "260x180",
+    "usedIn": [
+      "Future domain catalog"
+    ],
+    "description": "Domain package art 1"
+  },
+  {
+    "name": "domain-asset-02",
+    "category": "domains",
+    "path": "/assets/domains/domain-asset-02.svg",
+    "format": "SVG",
+    "dimensions": "260x180",
+    "usedIn": [
+      "Future domain catalog"
+    ],
+    "description": "Domain package art 2"
+  },
+  {
+    "name": "domain-asset-03",
+    "category": "domains",
+    "path": "/assets/domains/domain-asset-03.svg",
+    "format": "SVG",
+    "dimensions": "260x180",
+    "usedIn": [
+      "Future domain catalog"
+    ],
+    "description": "Domain package art 3"
+  },
+  {
+    "name": "domain-asset-04",
+    "category": "domains",
+    "path": "/assets/domains/domain-asset-04.svg",
+    "format": "SVG",
+    "dimensions": "260x180",
+    "usedIn": [
+      "Future domain catalog"
+    ],
+    "description": "Domain package art 4"
+  },
+  {
+    "name": "domain-asset-05",
+    "category": "domains",
+    "path": "/assets/domains/domain-asset-05.svg",
+    "format": "SVG",
+    "dimensions": "260x180",
+    "usedIn": [
+      "Future domain catalog"
+    ],
+    "description": "Domain package art 5"
+  },
+  {
+    "name": "domain-asset-06",
+    "category": "domains",
+    "path": "/assets/domains/domain-asset-06.svg",
+    "format": "SVG",
+    "dimensions": "260x180",
+    "usedIn": [
+      "Future domain catalog"
+    ],
+    "description": "Domain package art 6"
+  },
+  {
+    "name": "domain-asset-07",
+    "category": "domains",
+    "path": "/assets/domains/domain-asset-07.svg",
+    "format": "SVG",
+    "dimensions": "260x180",
+    "usedIn": [
+      "Future domain catalog"
+    ],
+    "description": "Domain package art 7"
+  },
+  {
+    "name": "domain-asset-08",
+    "category": "domains",
+    "path": "/assets/domains/domain-asset-08.svg",
+    "format": "SVG",
+    "dimensions": "260x180",
+    "usedIn": [
+      "Future domain catalog"
+    ],
+    "description": "Domain package art 8"
+  },
+  {
+    "name": "logo-mark",
+    "category": "brand",
+    "path": "/assets/brand/logo-mark.svg",
+    "format": "SVG",
+    "dimensions": "96x96",
+    "usedIn": [
+      "All navigation"
+    ],
+    "description": "EduRecall original sprout mark"
+  },
+  {
+    "name": "favicon",
+    "category": "brand",
+    "path": "/assets/brand/favicon.svg",
+    "format": "SVG",
+    "dimensions": "64x64",
+    "usedIn": [
+      "Browser tab"
+    ],
+    "description": "EduRecall favicon"
+  }
+]

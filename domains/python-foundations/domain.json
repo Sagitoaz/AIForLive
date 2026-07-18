@@ -1,0 +1,9 @@
+{
+  "code": "python-foundations",
+  "name": "Python cơ bản cho học sinh",
+  "locale": "vi-VN",
+  "version": "1.0.0",
+  "description": "Pilot domain teaching foundational programming concepts through short missions and games.",
+  "supportedMedia": ["TEXT", "CODE", "SVG_ANIMATION", "BROWSER_SPEECH"],
+  "exerciseTypes": ["MULTIPLE_CHOICE", "CODE_ORDER", "PREDICT_OUTPUT", "BUG_HUNTER", "RANGE_RUNNER"]
+}

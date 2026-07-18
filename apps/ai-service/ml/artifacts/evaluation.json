@@ -1,0 +1,82 @@
+{
+  "data_notice": "SYNTHETIC DATA — NOT REAL EDUONE DATA",
+  "split": "GroupShuffleSplit by student; no student appears in both sets",
+  "train_rows": 161,
+  "test_rows": 91,
+  "train_students": [
+    "student-01",
+    "student-02",
+    "student-03",
+    "student-04",
+    "student-05",
+    "student-07",
+    "student-09",
+    "student-12",
+    "student-13",
+    "student-14",
+    "student-15",
+    "student-16",
+    "student-17",
+    "student-18",
+    "student-19"
+  ],
+  "test_students": [
+    "student-06",
+    "student-08",
+    "student-10",
+    "student-11",
+    "student-20"
+  ],
+  "accuracy": 0.6703,
+  "precision": 0.7568,
+  "recall": 0.8235,
+  "f1": 0.7887,
+  "roc_auc": 0.5691,
+  "brier_score": 0.2169,
+  "confusion_matrix": [
+    [
+      5,
+      18
+    ],
+    [
+      12,
+      56
+    ]
+  ],
+  "calibration": [
+    {
+      "mean_predicted": 0.3898,
+      "fraction_positive": 0.6842
+    },
+    {
+      "mean_predicted": 0.6362,
+      "fraction_positive": 0.6111
+    },
+    {
+      "mean_predicted": 0.7461,
+      "fraction_positive": 0.8333
+    },
+    {
+      "mean_predicted": 0.7984,
+      "fraction_positive": 0.7778
+    },
+    {
+      "mean_predicted": 0.8873,
+      "fraction_positive": 0.8333
+    }
+  ],
+  "feature_importance": {
+    "mastery": 1.09912,
+    "recent_accuracy": -0.15338,
+    "difficulty": -0.34529,
+    "hint_usage_rate": -0.1897,
+    "average_response_time": 0.43595,
+    "attempt_count": -0.27072,
+    "days_since_last_practice": -0.06248,
+    "forgetting_risk": 0.20801,
+    "misconception_repetition_count": 0.05308,
+    "prerequisite_mastery": -0.06501,
+    "consistency": 0.04068,
+    "engagement": 0.46821
+  }
+}

@@ -1,0 +1,10 @@
+[
+  { "code": "PYTHON_VARIABLES", "title": "Biến và kiểu dữ liệu", "description": "Lưu và nhận biết dữ liệu cơ bản.", "icon": "concept-variable", "order": 1 },
+  { "code": "PYTHON_OPERATORS", "title": "Toán tử", "description": "Tính toán và so sánh giá trị.", "icon": "concept-operator", "order": 2 },
+  { "code": "PYTHON_IF_ELSE", "title": "Điều kiện if/else", "description": "Rẽ nhánh chương trình theo điều kiện.", "icon": "concept-branch", "order": 3 },
+  { "code": "PYTHON_FOR", "title": "Vòng lặp for", "description": "Lặp qua một dãy phần tử.", "icon": "concept-loop", "order": 4 },
+  { "code": "PYTHON_RANGE", "title": "Hàm range()", "description": "Tạo dãy số với điểm dừng không được lấy.", "icon": "concept-range", "order": 5 },
+  { "code": "PYTHON_WHILE", "title": "Vòng lặp while", "description": "Lặp khi điều kiện còn đúng.", "icon": "concept-while", "order": 6 },
+  { "code": "PYTHON_LISTS", "title": "List và index", "description": "Lưu dãy và truy cập từ chỉ số 0.", "icon": "concept-list", "order": 7 },
+  { "code": "PYTHON_FUNCTIONS", "title": "Hàm cơ bản", "description": "Đóng gói logic và trả kết quả.", "icon": "concept-function", "order": 8 }
+]

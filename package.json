@@ -1,0 +1,63 @@
+{
+  "name": "edurecall-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered personalization and human-reviewed content creation for self-paced learning.",
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.9.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "postinstall": "prisma generate --schema prisma/schema.prisma",
+    "dev": "concurrently --kill-others-on-fail --names WEB,API,AI --prefix-colors green,blue,magenta \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:ai\"",
+    "dev:web": "npm run dev --workspace @edurecall/web",
+    "dev:api": "npm run dev --workspace @edurecall/api",
+    "dev:ai": "node scripts/run-python.mjs -m uvicorn app.main:app --app-dir apps/ai-service --host 0.0.0.0 --port 8001 --reload",
+    "db:setup": "prisma migrate deploy --schema prisma/schema.prisma",
+    "db:seed": "node --import tsx prisma/seed/index.ts",
+    "db:check": "node scripts/check-database.mjs",
+    "demo:reset": "node --import tsx scripts/reset-demo.ts",
+    "ai:install": "node scripts/install-python.mjs",
+    "ai:data": "node scripts/run-python.mjs apps/ai-service/scripts/generate_synthetic_data.py",
+    "ai:train": "node scripts/run-python.mjs apps/ai-service/scripts/train_models.py",
+    "ai:evaluate": "node scripts/run-python.mjs apps/ai-service/scripts/evaluate_models.py",
+    "ai:lint": "node scripts/run-python.mjs -m ruff check apps/ai-service",
+    "ai:test": "node scripts/run-python.mjs -m pytest apps/ai-service/tests -q",
+    "assets:generate": "node scripts/generate-assets.mjs",
+    "validate:synthetic": "node scripts/validate-synthetic-data.mjs",
+    "validate:assets": "node --import tsx scripts/validate-assets.ts",
+    "lint:node": "npm run lint --workspaces --if-present",
+    "lint": "npm run lint:node && npm run ai:lint",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "vitest run tests/e2e",
+    "build": "npm run build --workspace @edurecall/api && npm run build --workspace @edurecall/web",
+    "verify": "node scripts/verify-project.mjs",
+    "package": "node scripts/package-project.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/archiver": "^6.0.3",
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^24.10.0",
+    "archiver": "^7.0.1",
+    "adm-zip": "^0.6.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.39.2",
+    "fast-xml-parser": "^5.3.2",
+    "prisma": "^6.19.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.49.0",
+    "vitest": "^4.0.18"
+  },
+  "prisma": {
+    "seed": "node --import tsx prisma/seed/index.ts"
+  }
+}

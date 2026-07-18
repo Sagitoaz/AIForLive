@@ -1,0 +1,12 @@
+[
+  { "from": "PYTHON_VARIABLES", "to": "PYTHON_OPERATORS", "weight": 0.8 },
+  { "from": "PYTHON_OPERATORS", "to": "PYTHON_IF_ELSE", "weight": 0.9 },
+  { "from": "PYTHON_VARIABLES", "to": "PYTHON_FOR", "weight": 0.7 },
+  { "from": "PYTHON_FOR", "to": "PYTHON_RANGE", "weight": 1.0 },
+  { "from": "PYTHON_OPERATORS", "to": "PYTHON_WHILE", "weight": 0.8 },
+  { "from": "PYTHON_IF_ELSE", "to": "PYTHON_WHILE", "weight": 0.7 },
+  { "from": "PYTHON_VARIABLES", "to": "PYTHON_LISTS", "weight": 0.8 },
+  { "from": "PYTHON_VARIABLES", "to": "PYTHON_FUNCTIONS", "weight": 0.6 },
+  { "from": "PYTHON_IF_ELSE", "to": "PYTHON_FUNCTIONS", "weight": 0.7 },
+  { "from": "PYTHON_FOR", "to": "PYTHON_FUNCTIONS", "weight": 0.7 }
+]

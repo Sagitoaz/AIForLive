@@ -1,0 +1,23 @@
+[
+  {
+    "id": "range-stop-rule-v1",
+    "misconceptionCode": "RANGE_STOP_INCLUDED",
+    "strategy": "SEQUENCE_CONTAINS_EXCLUSIVE_STOP",
+    "confidence": 0.95,
+    "evidenceTemplates": ["Submitted sequence contains the stop value", "Expected sequence excludes the stop value"]
+  },
+  {
+    "id": "assignment-comparison-rule-v1",
+    "misconceptionCode": "ASSIGNMENT_VS_COMPARISON",
+    "strategy": "TOKEN_SINGLE_EQUALS_IN_CONDITION",
+    "confidence": 0.96,
+    "evidenceTemplates": ["A single equals token appears inside a condition"]
+  },
+  {
+    "id": "list-index-rule-v1",
+    "misconceptionCode": "LIST_INDEX_STARTS_AT_ONE",
+    "strategy": "FIRST_ITEM_SELECTED_WITH_INDEX_ONE",
+    "confidence": 0.92,
+    "evidenceTemplates": ["The learner selected index 1 for the first list item"]
+  }
+]

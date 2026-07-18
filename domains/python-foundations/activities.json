@@ -1,0 +1,6 @@
+[
+  { "code": "RANGE_RUNNER_1", "conceptCode": "PYTHON_RANGE", "type": "RANGE_RUNNER", "difficulty": 0.45, "estimatedMinutes": 4 },
+  { "code": "CODE_ORDER_IF", "conceptCode": "PYTHON_IF_ELSE", "type": "CODE_ORDER", "difficulty": 0.5, "estimatedMinutes": 5 },
+  { "code": "BUG_HUNTER_WHILE", "conceptCode": "PYTHON_WHILE", "type": "BUG_HUNTER", "difficulty": 0.58, "estimatedMinutes": 6 },
+  { "code": "PREDICT_LIST", "conceptCode": "PYTHON_LISTS", "type": "PREDICT_OUTPUT", "difficulty": 0.52, "estimatedMinutes": 5 }
+]

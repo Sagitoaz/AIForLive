@@ -1,0 +1,1055 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  INVITED
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+}
+
+enum ActivityType {
+  LESSON
+  EXERCISE
+  DIAGNOSTIC
+  REVIEW
+  MICRO_LESSON
+  GAME
+  CHECKPOINT
+}
+
+enum LearningEventStatus {
+  PENDING_ANALYSIS
+  ANALYZED
+  FALLBACK_ANALYZED
+  FAILED
+}
+
+enum RecommendationAction {
+  FLASH_REVIEW
+  MICRO_LESSON
+  PRACTICE_SET
+  PREREQUISITE_REVIEW
+  CONTINUE_PATH
+  CHECKPOINT
+  GAME_PRACTICE
+  TEACHER_SUPPORT
+}
+
+enum RecommendationStatus {
+  ACTIVE
+  COMPLETED
+  DISMISSED
+  EXPIRED
+}
+
+enum ReviewScheduleStatus {
+  SCHEDULED
+  DUE
+  COMPLETED
+  SKIPPED
+}
+
+enum ContentSourceType {
+  DATABASE
+  TXT
+  PDF
+  DOCX
+  PPTX
+}
+
+enum AiJobStatus {
+  QUEUED
+  GENERATING
+  VALIDATING
+  COMPLETED
+  FAILED
+}
+
+enum ContentStatus {
+  GENERATING
+  DRAFT
+  IN_REVIEW
+  REVISION_REQUIRED
+  APPROVED
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum SlideType {
+  CONCEPT
+  CODE_STEP
+  EXAMPLE
+  MISCONCEPTION
+  VISUAL
+  QUIZ
+  SUMMARY
+}
+
+enum ReviewDecision {
+  APPROVE
+  REJECT
+  REQUEST_REVISION
+  PUBLISH
+  ARCHIVE
+}
+
+enum GameType {
+  CODE_ORDER
+  PREDICT_OUTPUT
+  BUG_HUNTER
+  RANGE_RUNNER
+}
+
+enum ModelStatus {
+  TRAINING
+  ACTIVE
+  RETIRED
+  FAILED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  APPROVE
+  REJECT
+  PUBLISH
+  ARCHIVE
+}
+
+model User {
+  id                    String            @id @default(uuid())
+  email                 String            @unique
+  passwordHash          String
+  role                  UserRole
+  displayName           String
+  nickname              String?
+  avatarKey             String?
+  status                RecordStatus      @default(ACTIVE)
+  lastLoginAt           DateTime?
+  metadataJson          Json              @default("{}")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  deletedAt             DateTime?
+  studentProfile        StudentProfile?
+  teacherProfile        TeacherProfile?
+  learningEvents        LearningEvent[]
+  attempts              Attempt[]
+  contentSources        ContentSource[]   @relation("SourceUploader")
+  generationJobs        AiGenerationJob[] @relation("GenerationRequester")
+  contentReviews        ContentReview[]   @relation("ContentReviewer")
+  auditLogs             AuditLog[]        @relation("AuditActor")
+  xpEvents              XpEvent[]
+  studentBadges         StudentBadge[]
+  gameSessions          GameSession[]
+  recommendationActions Recommendation[]  @relation("RecommendationAssignee")
+
+  @@index([role, status])
+  @@index([deletedAt])
+}
+
+model StudentProfile {
+  id                        String                @id @default(uuid())
+  userId                    String                @unique
+  gradeLevel                String?
+  learningGoal              String?
+  weeklyAvailabilityMinutes Int                   @default(120)
+  responseSpeed             Float                 @default(1)
+  hintUsageRate             Float                 @default(0)
+  forgettingRate            Float                 @default(0.15)
+  consistencyScore          Float                 @default(0.7)
+  engagementLevel           Float                 @default(0.7)
+  xp                        Int                   @default(0)
+  level                     Int                   @default(1)
+  streakDays                Int                   @default(0)
+  status                    RecordStatus          @default(ACTIVE)
+  metadataJson              Json                  @default("{}")
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  deletedAt                 DateTime?
+  user                      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments               Enrollment[]
+  conceptStates             StudentConceptState[]
+  conceptStateHistory       ConceptStateHistory[]
+  reviewSchedules           ReviewSchedule[]
+  recommendations           Recommendation[]
+  personalizationRuns       PersonalizationRun[]
+  leaderboardEntries        LeaderboardEntry[]
+
+  @@index([status])
+}
+
+model TeacherProfile {
+  id             String          @id @default(uuid())
+  userId         String          @unique
+  bio            String?
+  specialization String?
+  status         RecordStatus    @default(ACTIVE)
+  metadataJson   Json            @default("{}")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes        LearningClass[]
+
+  @@index([status])
+}
+
+model Organization {
+  id           String          @id @default(uuid())
+  code         String          @unique
+  name         String
+  status       RecordStatus    @default(ACTIVE)
+  metadataJson Json            @default("{}")
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+  classes      LearningClass[]
+  courses      Course[]
+
+  @@index([status])
+}
+
+model LearningClass {
+  id                 String             @id @default(uuid())
+  organizationId     String
+  teacherId          String
+  code               String
+  name               String
+  leaderboardEnabled Boolean            @default(true)
+  status             RecordStatus       @default(ACTIVE)
+  metadataJson       Json               @default("{}")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  teacher            TeacherProfile     @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  enrollments        Enrollment[]
+  leaderboardEntries LeaderboardEntry[]
+
+  @@unique([organizationId, code])
+  @@index([teacherId, status])
+  @@map("Class")
+}
+
+model Enrollment {
+  id               String           @id @default(uuid())
+  studentProfileId String
+  classId          String
+  courseId         String
+  status           EnrollmentStatus @default(ACTIVE)
+  progress         Float            @default(0)
+  enrolledAt       DateTime         @default(now())
+  completedAt      DateTime?
+  metadataJson     Json             @default("{}")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+  student          StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  class            LearningClass    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  course           Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentProfileId, classId, courseId])
+  @@index([classId, status])
+  @@index([courseId, status])
+}
+
+model LearningDomain {
+  id             String                @id @default(uuid())
+  code           String                @unique
+  name           String
+  locale         String                @default("vi-VN")
+  version        String
+  definitionJson Json
+  status         RecordStatus          @default(ACTIVE)
+  metadataJson   Json                  @default("{}")
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  deletedAt      DateTime?
+  courses        Course[]
+  concepts       LearningConcept[]
+  misconceptions Misconception[]
+  diagnosisRules DomainDiagnosisRule[]
+
+  @@index([status])
+}
+
+model Course {
+  id             String            @id @default(uuid())
+  organizationId String
+  domainId       String
+  code           String
+  title          String
+  description    String
+  coverAssetKey  String?
+  status         RecordStatus      @default(ACTIVE)
+  version        Int               @default(1)
+  estimatedHours Int               @default(12)
+  metadataJson   Json              @default("{}")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  domain         LearningDomain    @relation(fields: [domainId], references: [id], onDelete: Restrict)
+  modules        CourseModule[]
+  enrollments    Enrollment[]
+  learningEvents LearningEvent[]
+  contentSources ContentSource[]
+  generationJobs AiGenerationJob[]
+  games          Game[]
+
+  @@unique([organizationId, code])
+  @@index([domainId, status])
+}
+
+model CourseModule {
+  id           String       @id @default(uuid())
+  courseId     String
+  code         String
+  title        String
+  description  String?
+  order        Int
+  status       RecordStatus @default(ACTIVE)
+  metadataJson Json         @default("{}")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  course       Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons      Lesson[]
+
+  @@unique([courseId, code])
+  @@unique([courseId, order])
+}
+
+model LearningConcept {
+  id               String                @id @default(uuid())
+  domainId         String
+  code             String
+  title            String
+  description      String
+  iconAssetKey     String?
+  order            Int
+  status           RecordStatus          @default(ACTIVE)
+  metadataJson     Json                  @default("{}")
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  deletedAt        DateTime?
+  domain           LearningDomain        @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  prerequisiteFor  ConceptPrerequisite[] @relation("PrerequisiteConcept")
+  dependsOn        ConceptPrerequisite[] @relation("TargetConcept")
+  lessons          Lesson[]
+  exerciseConcepts ExerciseConcept[]
+  misconceptions   Misconception[]
+  studentStates    StudentConceptState[]
+  stateHistory     ConceptStateHistory[]
+  reviewSchedules  ReviewSchedule[]
+  recommendations  Recommendation[]
+  microLessons     MicroLesson[]
+
+  @@unique([domainId, code])
+  @@unique([domainId, order])
+  @@index([status])
+}
+
+model ConceptPrerequisite {
+  id                    String          @id @default(uuid())
+  prerequisiteConceptId String
+  targetConceptId       String
+  weight                Float           @default(1)
+  metadataJson          Json            @default("{}")
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  prerequisite          LearningConcept @relation("PrerequisiteConcept", fields: [prerequisiteConceptId], references: [id], onDelete: Cascade)
+  target                LearningConcept @relation("TargetConcept", fields: [targetConceptId], references: [id], onDelete: Cascade)
+
+  @@unique([prerequisiteConceptId, targetConceptId])
+  @@index([targetConceptId])
+}
+
+model Lesson {
+  id              String             @id @default(uuid())
+  moduleId        String
+  conceptId       String
+  code            String
+  title           String
+  summary         String
+  order           Int
+  durationMinutes Int                @default(12)
+  status          RecordStatus       @default(ACTIVE)
+  version         Int                @default(1)
+  metadataJson    Json               @default("{}")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  deletedAt       DateTime?
+  module          CourseModule       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  concept         LearningConcept    @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  resources       LearningResource[]
+  exercises       Exercise[]
+
+  @@unique([moduleId, code])
+  @@unique([moduleId, order])
+  @@index([conceptId, status])
+}
+
+model LearningResource {
+  id           String       @id @default(uuid())
+  lessonId     String
+  type         String
+  title        String
+  contentJson  Json
+  status       RecordStatus @default(ACTIVE)
+  metadataJson Json         @default("{}")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  lesson       Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, status])
+}
+
+model ContentSource {
+  id             String            @id @default(uuid())
+  courseId       String
+  uploadedById   String
+  name           String
+  type           ContentSourceType
+  mimeType       String
+  sizeBytes      Int
+  checksum       String
+  storageKey     String?
+  extractedText  String?
+  status         RecordStatus      @default(ACTIVE)
+  metadataJson   Json              @default("{}")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+  course         Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  uploadedBy     User              @relation("SourceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  chunks         SourceChunk[]
+  generationJobs AiGenerationJob[]
+
+  @@unique([courseId, checksum])
+  @@index([courseId, status])
+}
+
+model SourceChunk {
+  id           String        @id @default(uuid())
+  sourceId     String
+  chunkIndex   Int
+  text         String
+  tokenCount   Int
+  embeddingRef String?
+  metadataJson Json          @default("{}")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  source       ContentSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, chunkIndex])
+  @@index([sourceId])
+}
+
+model Exercise {
+  id           String            @id @default(uuid())
+  lessonId     String
+  code         String
+  type         String
+  prompt       String
+  difficulty   Float
+  contentJson  Json
+  answerJson   Json
+  status       RecordStatus      @default(ACTIVE)
+  version      Int               @default(1)
+  metadataJson Json              @default("{}")
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
+  lesson       Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  concepts     ExerciseConcept[]
+  attempts     Attempt[]
+
+  @@unique([lessonId, code])
+  @@index([difficulty, status])
+}
+
+model ExerciseConcept {
+  exerciseId String
+  conceptId  String
+  weight     Float           @default(1)
+  isPrimary  Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  exercise   Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  concept    LearningConcept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@id([exerciseId, conceptId])
+  @@index([conceptId])
+}
+
+model Misconception {
+  id           String                @id @default(uuid())
+  domainId     String
+  conceptId    String
+  code         String
+  title        String
+  description  String
+  severity     String
+  status       RecordStatus          @default(ACTIVE)
+  metadataJson Json                  @default("{}")
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  deletedAt    DateTime?
+  domain       LearningDomain        @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  concept      LearningConcept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  rules        DomainDiagnosisRule[]
+  diagnoses    AttemptDiagnosis[]
+  microLessons MicroLesson[]
+
+  @@unique([domainId, code])
+  @@index([conceptId, status])
+}
+
+model DomainDiagnosisRule {
+  id              String         @id @default(uuid())
+  domainId        String
+  misconceptionId String
+  code            String
+  strategy        String
+  confidence      Float
+  definitionJson  Json
+  version         Int            @default(1)
+  status          RecordStatus   @default(ACTIVE)
+  metadataJson    Json           @default("{}")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+  domain          LearningDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  misconception   Misconception  @relation(fields: [misconceptionId], references: [id], onDelete: Cascade)
+
+  @@unique([domainId, code, version])
+  @@index([misconceptionId, status])
+}
+
+model LearningEvent {
+  id                 String              @id @default(uuid())
+  idempotencyKey     String              @unique
+  userId             String
+  courseId           String
+  type               ActivityType
+  status             LearningEventStatus @default(PENDING_ANALYSIS)
+  occurredAt         DateTime            @default(now())
+  analyzedAt         DateTime?
+  correlationId      String
+  payloadJson        Json
+  metadataJson       Json                @default("{}")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  course             Course              @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  attempt            Attempt?
+  personalizationRun PersonalizationRun?
+
+  @@index([userId, occurredAt])
+  @@index([status, createdAt])
+}
+
+model Attempt {
+  id                     String                   @id @default(uuid())
+  eventId                String                   @unique
+  userId                 String
+  exerciseId             String
+  isCorrect              Boolean
+  usedHint               Boolean                  @default(false)
+  skipped                Boolean                  @default(false)
+  attemptNumber          Int                      @default(1)
+  responseTimeMs         Int
+  submittedJson          Json
+  score                  Float                    @default(0)
+  metadataJson           Json                     @default("{}")
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  event                  LearningEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  exercise               Exercise                 @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  diagnoses              AttemptDiagnosis[]
+  recommendationEvidence RecommendationEvidence[]
+
+  @@index([userId, createdAt])
+  @@index([exerciseId, isCorrect])
+}
+
+model AttemptDiagnosis {
+  id              String         @id @default(uuid())
+  attemptId       String
+  misconceptionId String?
+  status          String
+  confidence      Float
+  source          String
+  ruleCode        String?
+  evidenceJson    Json
+  modelVersion    String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  attempt         Attempt        @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  misconception   Misconception? @relation(fields: [misconceptionId], references: [id], onDelete: SetNull)
+
+  @@index([attemptId])
+  @@index([misconceptionId, createdAt])
+}
+
+model StudentConceptState {
+  id                     String          @id @default(uuid())
+  studentProfileId       String
+  conceptId              String
+  mastery                Float
+  stability              Float
+  retrievability         Float
+  forgettingRisk         Float
+  nextAttemptProbability Float?
+  modelVersion           String
+  version                Int             @default(1)
+  metadataJson           Json            @default("{}")
+  lastPracticedAt        DateTime?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  student                StudentProfile  @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  concept                LearningConcept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([studentProfileId, conceptId])
+  @@index([conceptId, mastery])
+  @@index([forgettingRisk])
+}
+
+model ConceptStateHistory {
+  id               String          @id @default(uuid())
+  studentProfileId String
+  conceptId        String
+  mastery          Float
+  stability        Float
+  retrievability   Float
+  forgettingRisk   Float
+  triggerEventId   String?
+  modelVersion     String
+  recordedAt       DateTime        @default(now())
+  metadataJson     Json            @default("{}")
+  student          StudentProfile  @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  concept          LearningConcept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@index([studentProfileId, conceptId, recordedAt])
+}
+
+model ReviewSchedule {
+  id                       String               @id @default(uuid())
+  studentProfileId         String
+  conceptId                String
+  recommendationId         String?
+  dueAt                    DateTime
+  intervalDays             Int
+  retrievabilityAtSchedule Float
+  status                   ReviewScheduleStatus @default(SCHEDULED)
+  completedAt              DateTime?
+  metadataJson             Json                 @default("{}")
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  student                  StudentProfile       @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  concept                  LearningConcept      @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  recommendation           Recommendation?      @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, status, dueAt])
+  @@index([conceptId, dueAt])
+}
+
+model Recommendation {
+  id               String                   @id @default(uuid())
+  studentProfileId String
+  conceptId        String
+  assignedById     String?
+  action           RecommendationAction
+  priorityScore    Float
+  reasonsJson      Json
+  status           RecommendationStatus     @default(ACTIVE)
+  modelVersion     String
+  expiresAt        DateTime?
+  completedAt      DateTime?
+  metadataJson     Json                     @default("{}")
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  student          StudentProfile           @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  concept          LearningConcept          @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  assignedBy       User?                    @relation("RecommendationAssignee", fields: [assignedById], references: [id], onDelete: SetNull)
+  evidence         RecommendationEvidence[]
+  reviewSchedules  ReviewSchedule[]
+  generationJobs   AiGenerationJob[]
+
+  @@index([studentProfileId, status, priorityScore])
+  @@index([conceptId, createdAt])
+}
+
+model RecommendationEvidence {
+  id               String         @id @default(uuid())
+  recommendationId String
+  attemptId        String?
+  type             String
+  valueJson        Json
+  explanation      String
+  createdAt        DateTime       @default(now())
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  attempt          Attempt?       @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+
+  @@index([recommendationId])
+  @@index([attemptId])
+}
+
+model AiGenerationJob {
+  id               String            @id @default(uuid())
+  courseId         String
+  sourceId         String?
+  recommendationId String?
+  requestedById    String
+  provider         String
+  promptVersion    String
+  status           AiJobStatus       @default(QUEUED)
+  requestJson      Json
+  contextJson      Json
+  estimatedCostUsd Float             @default(0)
+  durationMs       Int?
+  errorMessage     String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  completedAt      DateTime?
+  course           Course            @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  source           ContentSource?    @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  recommendation   Recommendation?   @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+  requestedBy      User              @relation("GenerationRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  generatedContent GeneratedContent?
+
+  @@index([status, createdAt])
+  @@index([courseId, provider])
+}
+
+model GeneratedContent {
+  id                        String           @id @default(uuid())
+  generationJobId           String           @unique
+  title                     String
+  type                      String
+  status                    ContentStatus    @default(DRAFT)
+  provider                  String
+  promptVersion             String
+  aiDraftJson               Json
+  teacherVersionJson        Json
+  educationalValidationJson Json
+  codeValidationJson        Json
+  version                   Int              @default(1)
+  reuseCount                Int              @default(0)
+  teacherEditingSeconds     Int              @default(0)
+  publishedAt               DateTime?
+  archivedAt                DateTime?
+  metadataJson              Json             @default("{}")
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+  generationJob             AiGenerationJob  @relation(fields: [generationJobId], references: [id], onDelete: Cascade)
+  microLesson               MicroLesson?
+  reviews                   ContentReview[]
+  versions                  ContentVersion[]
+
+  @@index([status, createdAt])
+  @@index([provider, reuseCount])
+}
+
+model MicroLesson {
+  id                   String             @id @default(uuid())
+  generatedContentId   String             @unique
+  conceptId            String
+  misconceptionId      String?
+  title                String
+  level                String
+  objectivesJson       Json
+  sourceReferencesJson Json
+  durationMinutes      Int                @default(5)
+  animationTemplate    String
+  status               ContentStatus      @default(DRAFT)
+  version              Int                @default(1)
+  metadataJson         Json               @default("{}")
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  generatedContent     GeneratedContent   @relation(fields: [generatedContentId], references: [id], onDelete: Cascade)
+  concept              LearningConcept    @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  misconception        Misconception?     @relation(fields: [misconceptionId], references: [id], onDelete: SetNull)
+  slides               MicroLessonSlide[]
+  quiz                 GeneratedQuiz?
+
+  @@index([conceptId, status])
+  @@index([misconceptionId, status])
+}
+
+model MicroLessonSlide {
+  id                String      @id @default(uuid())
+  microLessonId     String
+  order             Int
+  type              SlideType
+  title             String
+  body              String
+  code              String?
+  narration         String
+  animationTemplate String
+  animationDataJson Json
+  audioCacheKey     String?
+  version           Int         @default(1)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  microLesson       MicroLesson @relation(fields: [microLessonId], references: [id], onDelete: Cascade)
+
+  @@unique([microLessonId, order])
+}
+
+model GeneratedQuiz {
+  id             String      @id @default(uuid())
+  microLessonId  String      @unique
+  question       String
+  optionsJson    Json
+  correctIndex   Int
+  explanation    String
+  validationJson Json
+  version        Int         @default(1)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  microLesson    MicroLesson @relation(fields: [microLessonId], references: [id], onDelete: Cascade)
+}
+
+model ContentReview {
+  id                 String           @id @default(uuid())
+  generatedContentId String
+  reviewerId         String
+  decision           ReviewDecision
+  comment            String?
+  fromStatus         ContentStatus
+  toStatus           ContentStatus
+  diffJson           Json
+  createdAt          DateTime         @default(now())
+  content            GeneratedContent @relation(fields: [generatedContentId], references: [id], onDelete: Cascade)
+  reviewer           User             @relation("ContentReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([generatedContentId, createdAt])
+  @@index([reviewerId, createdAt])
+}
+
+model ContentVersion {
+  id                 String           @id @default(uuid())
+  generatedContentId String
+  version            Int
+  snapshotJson       Json
+  changeSummary      String
+  createdById        String
+  createdAt          DateTime         @default(now())
+  content            GeneratedContent @relation(fields: [generatedContentId], references: [id], onDelete: Cascade)
+
+  @@unique([generatedContentId, version])
+}
+
+model Game {
+  id            String       @id @default(uuid())
+  courseId      String
+  code          String
+  title         String
+  description   String
+  type          GameType
+  coverAssetKey String
+  status        RecordStatus @default(ACTIVE)
+  metadataJson  Json         @default("{}")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+  course        Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  levels        GameLevel[]
+
+  @@unique([courseId, code])
+  @@index([type, status])
+}
+
+model GameLevel {
+  id           String        @id @default(uuid())
+  gameId       String
+  level        Int
+  title        String
+  contentJson  Json
+  rewardXp     Int
+  status       RecordStatus  @default(ACTIVE)
+  metadataJson Json          @default("{}")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  game         Game          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  sessions     GameSession[]
+
+  @@unique([gameId, level])
+}
+
+model GameSession {
+  id          String    @id @default(uuid())
+  userId      String
+  gameLevelId String
+  score       Int
+  xpEarned    Int
+  completed   Boolean   @default(false)
+  resultJson  Json
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameLevel   GameLevel @relation(fields: [gameLevelId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+}
+
+model XpEvent {
+  id           String   @id @default(uuid())
+  userId       String
+  amount       Int
+  reason       String
+  sourceType   String
+  sourceId     String?
+  metadataJson Json     @default("{}")
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Badge {
+  id           String         @id @default(uuid())
+  code         String         @unique
+  title        String
+  description  String
+  assetKey     String
+  criteriaJson Json
+  status       RecordStatus   @default(ACTIVE)
+  metadataJson Json           @default("{}")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+  students     StudentBadge[]
+}
+
+model StudentBadge {
+  id           String   @id @default(uuid())
+  userId       String
+  badgeId      String
+  awardedAt    DateTime @default(now())
+  evidenceJson Json
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge        Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([badgeId, awardedAt])
+}
+
+model LeaderboardEntry {
+  id               String         @id @default(uuid())
+  classId          String
+  studentProfileId String
+  boardType        String
+  periodKey        String
+  rank             Int
+  score            Float
+  displayNickname  String
+  metadataJson     Json           @default("{}")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  class            LearningClass  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentProfileId, boardType, periodKey])
+  @@index([classId, boardType, periodKey, rank])
+}
+
+model ModelVersion {
+  id            String               @id @default(uuid())
+  code          String
+  version       String
+  status        ModelStatus          @default(ACTIVE)
+  artifactPath  String
+  algorithm     String
+  trainedAt     DateTime
+  activatedAt   DateTime?
+  featureSchema Json
+  metadataJson  Json                 @default("{}")
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  evaluations   ModelEvaluation[]
+  runs          PersonalizationRun[]
+
+  @@unique([code, version])
+  @@index([status, activatedAt])
+}
+
+model ModelEvaluation {
+  id             String       @id @default(uuid())
+  modelVersionId String
+  datasetName    String
+  splitStrategy  String
+  metricsJson    Json
+  limitations    String
+  dataNotice     String
+  evaluatedAt    DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  modelVersion   ModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+
+  @@index([modelVersionId, evaluatedAt])
+}
+
+model PersonalizationRun {
+  id               String         @id @default(uuid())
+  learningEventId  String         @unique
+  studentProfileId String
+  modelVersionId   String?
+  mode             String
+  inputJson        Json
+  outputJson       Json
+  durationMs       Int
+  correlationId    String
+  createdAt        DateTime       @default(now())
+  learningEvent    LearningEvent  @relation(fields: [learningEventId], references: [id], onDelete: Cascade)
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  modelVersion     ModelVersion?  @relation(fields: [modelVersionId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, createdAt])
+  @@index([mode, createdAt])
+}
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  actorId       String?
+  action        AuditAction
+  entityType    String
+  entityId      String
+  beforeJson    Json?
+  afterJson     Json?
+  correlationId String
+  ipHash        String?
+  metadataJson  Json        @default("{}")
+  createdAt     DateTime    @default(now())
+  actor         User?       @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+}

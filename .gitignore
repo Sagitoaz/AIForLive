@@ -1,0 +1,67 @@
+# Environment files and local credentials
+.env
+.env.*
+!.env.example
+!.env.supabase.example
+.npmrc
+*.pem
+*.key
+
+# Node dependencies and build output
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+dist/
+**/dist/
+build/
+**/build/
+coverage/
+**/coverage/
+*.tsbuildinfo
+.turbo/
+.cache/
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+**/.ruff_cache/
+.mypy_cache/
+.model-cache/
+htmlcov/
+
+# Runtime data, uploads and local databases
+uploads/
+logs/
+*.log
+postgres-data/
+prisma/dev.db
+prisma/dev.db-journal
+supabase/.temp/
+.supabase/
+
+# Generated packages
+EduRecall-AI-source.zip
+*.tgz
+
+# IDE and agent-local state
+.vscode/
+.idea/
+.agents/
+.codex/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
