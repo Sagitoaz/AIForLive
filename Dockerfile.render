@@ -6,7 +6,7 @@ COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages packages
 COPY prisma prisma
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 COPY tsconfig.base.json eslint.config.mjs ./
 COPY apps/api apps/api
