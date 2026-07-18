@@ -137,10 +137,10 @@ interface ProductContextValue {
   setRole: (role: "student" | "teacher") => Promise<void>;
   refresh: () => Promise<void>;
   openLesson: (id: string) => Promise<void>;
-  submitAttempt: (exercise: ExerciseData, submittedAnswer: string, phase?: LessonPhase) => Promise<AttemptOutcome>;
+  submitAttempt: (exercise: ExerciseData, submittedAnswer: string, phase?: LessonPhase, responseTimeMs?: number) => Promise<AttemptOutcome>;
   generateLesson: (brief?: GenerationBrief | "FULL_LESSON" | "REMEDIATION") => Promise<MicroLesson>;
   selectGeneratedLesson: (id: string) => Promise<void>;
-  updateLesson: (lesson: MicroLesson) => Promise<void>;
+  updateLesson: (lesson: MicroLesson, teacherEditingSeconds?: number) => Promise<void>;
   submitLessonReview: () => Promise<void>;
   requestLessonRevision: () => Promise<void>;
   approveLesson: () => Promise<void>;
@@ -298,7 +298,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     finally { setBusy(false); setOperation(null); }
   }, [lesson?.id]);
 
-  const submitAttempt = useCallback(async (exercise: ExerciseData, submittedAnswer: string, phase: LessonPhase = "PRACTICE"): Promise<AttemptOutcome> => {
+  const submitAttempt = useCallback(async (exercise: ExerciseData, submittedAnswer: string, phase: LessonPhase = "PRACTICE", responseTimeMs = 0): Promise<AttemptOutcome> => {
     setBusy(true);
     setOperation("AI đang chấm và điều chỉnh lộ trình...");
     setError(null);
@@ -317,10 +317,9 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
           skipped: false,
           attemptNumber: 1,
           difficulty: exercise.difficulty,
-          responseTimeMs: 12_500,
+          responseTimeMs: Math.max(0, Math.min(3_600_000, Math.round(responseTimeMs))),
           submittedAnswer,
-          expectedAnswer: "server-owned",
-          prerequisiteMastery: .6
+          expectedAnswer: "server-owned"
         })
       });
       setAnalysis(result.analysis);
@@ -380,13 +379,18 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     finally { setBusy(false); setOperation(null); }
   }, []);
 
-  const updateLesson = useCallback(async (draft: MicroLesson) => {
+  const updateLesson = useCallback(async (draft: MicroLesson, teacherEditingSeconds = 0) => {
     setBusy(true);
     setOperation("Đang lưu phiên bản chỉnh sửa...");
     try {
       const result = await apiRequest<MicroLesson>(`/teacher/generated-content/${draft.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ title: draft.title, slides: draft.slides.map(({ id, title, body, narration }) => ({ id, title, body, narration })), quiz: draft.quiz })
+        body: JSON.stringify({
+          title: draft.title,
+          slides: draft.slides.map(({ id, title, body, narration }) => ({ id, title, body, narration })),
+          quiz: draft.quiz,
+          teacherEditingSeconds
+        })
       });
       setGeneratedLesson(result);
       setReviewQueue((items) => items.map((item) => item.id === result.id ? result : item));

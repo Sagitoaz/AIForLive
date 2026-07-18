@@ -2,6 +2,15 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { AnalysisResult, LearningAttempt } from "../common/types";
 import type { SubmitAttemptDto } from "../learning-events/dto/submit-attempt.dto";
 
+export interface PersonalizationContext {
+  stability: number;
+  retrievability: number;
+  prerequisiteMastery: number;
+  courseProgress: number;
+  availableMinutes: number;
+  studentGoal: string;
+}
+
 function isAnalysis(value: unknown): value is AnalysisResult {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
@@ -21,7 +30,8 @@ export class AiClientService {
     eventId: string,
     dto: SubmitAttemptDto,
     mastery: number,
-    recentAttempts: LearningAttempt[]
+    recentAttempts: LearningAttempt[],
+    context: PersonalizationContext
   ): Promise<AnalysisResult> {
     const endpoint = `${process.env.AI_SERVICE_URL ?? "http://localhost:8001"}/v1/personalization/analyze-event`;
     const recent = recentAttempts.slice(-10);
@@ -43,8 +53,8 @@ export class AiClientService {
             concept_code: dto.conceptCode,
             current_state: {
               mastery,
-              stability: 2.3,
-              retrievability: Math.max(0.1, mastery - 0.08),
+              stability: context.stability,
+              retrievability: context.retrievability,
               recent_failures: recent.filter((item) => !item.isCorrect).length,
               last_practiced_at: recent.at(-1)?.createdAt
             },
@@ -65,10 +75,10 @@ export class AiClientService {
               occurred_at: item.createdAt,
               misconception_code: item.analysis?.diagnosis.misconception_code ?? null
             })),
-            prerequisite_mastery: dto.prerequisiteMastery,
-            course_progress: 0.35,
-            available_minutes: 15,
-            student_goal: "Tự viết một mini game Python sau 4 tuần"
+            prerequisite_mastery: context.prerequisiteMastery,
+            course_progress: context.courseProgress,
+            available_minutes: context.availableMinutes,
+            student_goal: context.studentGoal
           }),
           signal: AbortSignal.timeout(2_500)
         });

@@ -11,15 +11,18 @@
 | --- | --- | --- |
 | Node lint | PASS | Web và API ESLint |
 | TypeScript | PASS | Tất cả workspace strict typecheck |
-| API unit test | PASS | 4 suites, 7 tests |
+| API unit test | PASS | 5 suites, 11 tests; gồm resolver target Supabase thật |
 | Web unit test | PASS | 2 files, 5 tests |
 | Python AI lint/test | PASS | Ruff sạch, 17 pytest pass |
 | Production build | PASS | NestJS build và Next.js build, 9 route |
 | Supabase connectivity | PASS | Transaction pooler và session pooler đều `OK` |
 | Prisma migrations | PASS | 3/3 migration; `202607180003_course_plan_drafts` đã áp dụng trên Supabase |
 | Product smoke test | PASS | Progress → animation → attempt → recommendation → lesson review → course-plan revision/publish |
+| Live HTTP E2E contract | READY | 1 test thật; cần `E2E_API_URL` nên được skip rõ ràng trước khi có live URL |
+| Clean install lockfile | PASS | `npm ci --dry-run --ignore-scripts` exit 0 |
 | Idempotency | PASS | Gửi lại cùng key trả đúng cùng attempt, không nhân đôi dữ liệu |
 | AI attempt latency | PASS | Cùng flow range: 10,491 ms trước → 7,574 ms sau tối ưu transaction |
+| Render production build | PARTIAL | Node production build PASS; Dockerfile đã cấu hình nhưng máy kiểm tra chưa bật Docker daemon |
 
 ## Dữ liệu Supabase sau kiểm thử
 
@@ -43,5 +46,6 @@ Tối ưu latency trên là phép đo cục bộ cùng ngày, cùng API/Supabase
 
 - Kết quả mô hình hiện dựa trên dữ liệu mô phỏng; cần hiệu chỉnh lại bằng dữ liệu pilot có đồng thuận.
 - Live LLM/TTS phụ thuộc credential và quota của nhà cung cấp. `LocalTemplateProvider` bảo đảm quy trình soạn bài có cấu trúc vẫn chạy với chi phí thấp.
+- Chỉ ghi nhận external LLM khi generation log có provider `EXTERNAL_LLM`; local template không được tính là lần gọi LLM.
 - Tệp nhị phân chưa được nhận giả là đã xử lý; PDF/DOCX/PPTX cần Storage và worker extraction/OCR.
 - Trước khi dùng dữ liệu trẻ em thật cần hoàn thiện RLS, tenant isolation, retention và privacy review.

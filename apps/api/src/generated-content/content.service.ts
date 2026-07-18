@@ -112,7 +112,12 @@ export class ContentService {
           data: {
             status: AiJobStatus.VALIDATING,
             durationMs: output.generationMs,
-            estimatedCostUsd: output.estimatedCostUsd
+            estimatedCostUsd: output.estimatedCostUsd,
+            contextJson: json({
+              sourceChecksum: verified.source.checksum,
+              sourceChars: verified.text.length,
+              generationTrace: output.trace ?? null
+            })
           }
         });
         const created = await tx.generatedContent.create({
@@ -132,7 +137,8 @@ export class ContentService {
               gradeBand: input.gradeBand,
               sections: output.sections,
               generationMs: output.generationMs,
-              estimatedCostUsd: output.estimatedCostUsd
+              estimatedCostUsd: output.estimatedCostUsd,
+              generationTrace: output.trace ?? null
             }),
             microLesson: {
               create: {
@@ -272,6 +278,7 @@ export class ContentService {
           status: nextStatus,
           teacherVersionJson: json(this.providerOutput(dto)),
           version: nextVersion,
+          teacherEditingSeconds: { increment: input.teacherEditingSeconds ?? 0 },
           microLesson: { update: { title: dto.title, status: nextStatus, version: { increment: 1 } } },
           versions: {
             create: {
@@ -311,7 +318,11 @@ export class ContentService {
           entityId: id,
           correlationId: randomUUID(),
           beforeJson: json({ version: existing.version, status: existing.status }),
-          afterJson: json({ version: nextVersion, status: nextStatus })
+          afterJson: json({
+            version: nextVersion,
+            status: nextStatus,
+            teacherEditingSecondsAdded: input.teacherEditingSeconds ?? 0
+          })
         }
       });
       return tx.generatedContent.findUniqueOrThrow({ where: { id }, include: contentInclude });
@@ -478,6 +489,19 @@ export class ContentService {
     if (!row.microLesson?.quiz) throw new Error(`Generated content ${row.id} has no complete micro-lesson`);
     const metadata = this.objectJson(row.metadataJson);
     const lessonMetadata = this.objectJson(row.microLesson.metadataJson);
+    const traceMetadata = this.objectJson(metadata.generationTrace ?? {});
+    const generationTrace =
+      typeof traceMetadata.model === "string" &&
+      typeof traceMetadata.promptTokens === "number" &&
+      typeof traceMetadata.completionTokens === "number" &&
+      typeof traceMetadata.promptHash === "string"
+        ? {
+            model: traceMetadata.model,
+            promptTokens: traceMetadata.promptTokens,
+            completionTokens: traceMetadata.completionTokens,
+            promptHash: traceMetadata.promptHash
+          }
+        : undefined;
     return {
       id: row.id,
       title: row.title,
@@ -510,7 +534,9 @@ export class ContentService {
       reuseCount: row.reuseCount,
       version: row.version,
       generationMs: typeof metadata.generationMs === "number" ? metadata.generationMs : row.generationJob.durationMs ?? 0,
+      teacherEditingSeconds: row.teacherEditingSeconds,
       estimatedCostUsd: typeof metadata.estimatedCostUsd === "number" ? metadata.estimatedCostUsd : row.generationJob.estimatedCostUsd,
+      ...(generationTrace ? { generationTrace } : {}),
       reviewHistory: row.reviews.map((review) => ({
         action: review.decision,
         from: review.fromStatus,
@@ -536,6 +562,7 @@ export class ContentService {
       provider: content.provider,
       generationMs: content.generationMs,
       estimatedCostUsd: content.estimatedCostUsd,
+      trace: content.generationTrace,
       sections: content.sections ?? []
     };
   }

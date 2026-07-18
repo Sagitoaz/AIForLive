@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsOptional, IsString, MaxLength, Min, ValidateNested } from "class-validator";
+import { IsArray, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 class SlideEditDto {
@@ -35,6 +35,12 @@ class QuizEditDto {
 }
 
 export class EditContentDto {
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(86_400)
+  teacherEditingSeconds?: number;
+
   @IsOptional()
   @IsString()
   @MaxLength(120)

@@ -24,6 +24,12 @@ export interface ProviderOutput {
   provider: "LOCAL_TEMPLATE" | "EXTERNAL_LLM";
   generationMs: number;
   estimatedCostUsd: number;
+  trace?: {
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+    promptHash: string;
+  };
   sections: LessonDraftSection[];
 }
 

@@ -89,6 +89,12 @@ describe("ExternalLlmProvider", () => {
     expect(body.model).toBe("DeepSeek-V4-Flash");
     expect(body.thinking).toEqual({ type: "disabled" });
     expect(output.provider).toBe("EXTERNAL_LLM");
+    expect(output.trace).toMatchObject({
+      model: "DeepSeek-V4-Flash",
+      promptTokens: 100,
+      completionTokens: 200
+    });
+    expect(output.trace?.promptHash).toMatch(/^[0-9a-f]{64}$/);
     expect(output.sourceReferences).toEqual(["source-python-handbook-01"]);
     expect(output.slides).toHaveLength(3);
     expect(output.slides.map((slide) => [slide.id, slide.order])).toEqual([

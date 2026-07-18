@@ -85,6 +85,12 @@ export interface MicroLesson {
   version: number;
   generationMs?: number;
   teacherEditingSeconds?: number;
+  generationTrace?: {
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+    promptHash: string;
+  };
   workflowStartedAt?: string;
   draftKind?: "FULL_LESSON" | "REMEDIATION";
   gradeBand?: string;

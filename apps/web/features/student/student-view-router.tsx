@@ -289,7 +289,7 @@ function PracticeView({ lessonId, phase }: { lessonId?: string; phase: "PRACTICE
     if (!answer || outcome || product.busy) return;
     setSubmitError(null);
     try {
-      const value = await product.submitAttempt(exercise, answer, phase as LessonPhase);
+      const value = await product.submitAttempt(exercise, answer, phase as LessonPhase, Date.now() - startedAt.current);
       setOutcomes((current) => ({ ...current, [exercise.id]: value }));
     } catch (cause) {
       setSubmitError(cause instanceof Error ? cause.message : "Không nộp được câu trả lời");

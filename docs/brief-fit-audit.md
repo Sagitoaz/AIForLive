@@ -1,46 +1,48 @@
-# Đối chiếu dự án với brief STEAM for Vietnam / EduOne
+# Đối chiếu hiện trạng với brief STEAM for Vietnam / EduOne
 
-Ngày rà soát: 18/07/2026. Phạm vi kết luận là source code và demo local hiện tại; không phải kết quả pilot trên học sinh thật.
+Ngày rà soát: 18/07/2026. Tài liệu này mô tả đúng source và dữ liệu pilot hiện tại; không thay thế kết quả pilot trên học sinh thật.
 
-## Kết luận ngắn
+## Kết luận
 
-Dự án **đủ tốt để chạy một prototype demo local có tương tác**, gồm cá nhân hóa, giải thích recommendation, sinh structured draft thật bằng FPT AI và cổng human review có phân quyền. Dự án **chưa sẵn sàng để tuyên bố hoàn thành toàn bộ brief hoặc chạy pilot thật** vì API chưa lưu vào PostgreSQL/Supabase, chưa có cơ chế identity/RLS production, và chưa có live URL/video công khai.
+Prototype đã có hai vòng lặp cốt lõi dùng chung Supabase:
+
+1. Học sinh làm bài → server chấm → FastAPI phân tích mastery/forgetting/misconception → NestJS liên kết đề xuất với bài học/bài tập thật → lưu log giải thích và lịch ôn.
+2. Giảng viên chọn nguồn đã xác minh → AI tạo structured draft → giảng viên sửa → `DRAFT → IN_REVIEW → APPROVED → PUBLISHED` → học sinh chỉ đọc bản đã xuất bản.
+
+Đã có cấu hình một Docker Web Service cho Render, nhưng chỉ được đánh dấu live URL sau khi deploy thành công. Dataset pilot là synthetic, không phải dữ liệu trẻ em thật.
 
 ## Requirement matrix
 
-| Yêu cầu | Trạng thái | Bằng chứng hiện có | Khoảng trống |
+| Yêu cầu | Trạng thái | Bằng chứng hiện có | Khoảng trống còn lại |
 | --- | --- | --- | --- |
-| Recommendation theo từng học sinh, gần thời gian thực | Đạt ở mức demo | FastAPI chạy BKT, forgetting, diagnosis và recommendation sau mỗi attempt; mastery được tách theo `studentId + conceptCode` | State vẫn ở memory; chưa chứng minh độ trễ/tải với 20 học sinh thật |
-| Recommendation log giải thích được | Đạt ở mức demo | Log có candidate signals, rule, attempt ID, model version, reasons và đích cụ thể gồm activity/phase/thời lượng; teacher có màn hình evidence chain | Chưa lưu bền vững vào `PersonalizationRun`/audit tables |
-| AI hỗ trợ tạo bài/course | Đạt ở mức prototype | FPT AI `DeepSeek-V4-Flash` sinh draft tiếng Việt có 3 pha; nguồn TXT phải được xác minh, output được chuẩn hóa/validate và có local fallback | Chưa chứng minh chất lượng trên nhiều môn hoặc đo đủ quy trình 40–50 giờ ngoài pilot |
-| Human review trước publish | Đạt ở mức demo | State machine `DRAFT → APPROVED → PUBLISHED`; student endpoint chỉ trả bản `PUBLISHED`; generate/review/publish yêu cầu JWT vai trò `TEACHER`, còn micro-lesson yêu cầu `STUDENT` | Demo auth vẫn dùng account/secret cố định; chưa có identity provider, token revocation hay RLS production |
-| Tiếng Việt tự nhiên cho K-12 | Đạt ở mức demo | UI và prompt dùng tiếng Việt đơn giản; draft FPT có objective, narration và quiz | Cần giáo viên chấm rubric ngôn ngữ/độ tuổi trên nhiều bài trước pilot |
-| Pilot 1 course, 1 class, 20 students | Đạt ở dữ liệu synthetic | Seed có 1 khóa 6 tuần/12 bài/84 hoạt động, 1 lớp, 20 học sinh; validator kiểm tra 20 students, 8 concepts, 48 model exercises và 400 attempts/events | Chưa có dữ liệu EduOne thật; chỉ được dùng synthetic trước consent |
-| Đo giảm thời gian soạn bài | Một phần | UI đo generation time và teacher workflow time thật trong phiên demo | Brief nêu 40–50 giờ cho một bài hoàn chỉnh; micro-lesson 5 phút chưa phải mẫu tương đương để tính phần trăm giảm |
-| Explainable AI architecture | Đạt | `docs/ai-architecture.md`, `docs/recommendation-explainability.md`, model card và audit UI | Cần cập nhật khi thay model/provider hoặc nối dữ liệu thật |
-| Pilot roadmap 1–2 trang | Đạt | `docs/pilot-roadmap.md` mô tả scope, tuần, metric, privacy và retraining gate | Cần EduOne xác nhận owner, lịch, consent và success thresholds |
-| Prototype live URL hoặc video | Chưa đạt | Demo local chạy được | Chưa có deployment URL/video bàn giao |
-| Public GitHub repo | Chưa xác minh | Source có Git history và cấu trúc repo | Chưa có URL public được cung cấp/kiểm tra trong phiên này |
+| Recommendation theo từng học sinh gần thời gian thực | Verified ở prototype | Attempt thật gọi FastAPI; state, profile goal, quỹ thời gian, progress và prerequisite mastery được đọc từ Supabase | Chưa benchmark tải đồng thời 20 học sinh |
+| Recommendation log giải thích được | Verified ở prototype | `PersonalizationRun`, `RecommendationEvidence`, candidate signals, rule/model version, reason và target resolution audit | Cần rubric giáo viên đánh giá usefulness trong pilot |
+| Target là nội dung học thật | Verified ở source/test | NestJS resolve output semantic sang `PUBLISHED MicroLesson`, `ACTIVE Exercise` hoặc `ACTIVE Lesson` đúng course/concept | Cần smoke lại sau mỗi thay đổi dataset |
+| AI hỗ trợ tạo bài/course | Verified theo provider được cấu hình | Draft có source reference, structured slides/animation, quiz, provider, generation time và version | Chỉ claim external LLM khi log thật ghi `EXTERNAL_LLM`; local template là fallback |
+| Human review trước publish | Verified | Student endpoint chỉ đọc `PUBLISHED`; edit bản approved tạo revision cần duyệt lại; audit/version/review ở Supabase | Chưa tích hợp identity provider/RLS production |
+| Tiếng Việt cho K-12 | Demo-ready | UI, Python course, narration, quiz và animation bằng tiếng Việt | Cần giáo viên EduOne chấm rubric theo độ tuổi |
+| Pilot 1 course, 1 class, 20 students | Verified trên Supabase synthetic | 1 khóa, 1 lớp, 20 enrollment, 12 bài, 36 học liệu, 60 bài tập; phân bố năng lực không đồng đều | Chưa có consent và dữ liệu EduOne thật |
+| Đo thời gian tạo/chỉnh bài | Verified ở mức phiên prototype | Ghi generation milliseconds và teacher editing seconds khi lưu revision | Chưa có paired baseline cho bài hoàn chỉnh 40–50 giờ |
+| Explainable AI architecture | Verified trong tài liệu/source | `docs/ai-mechanisms.md`, model card và evidence UI | Cần cập nhật khi đổi model/provider |
+| Pilot roadmap 1–2 trang | Verified | `docs/pilot-roadmap.md` | Cần EduOne chốt owner, lịch, consent, threshold |
+| Live URL hoặc video | Pending external action | `Dockerfile.render` và `docs/deploy-render.md` sẵn sàng | Cần tạo Web Service và ghi URL/video thật |
+| Public GitHub | Pending external verification | Git repository tồn tại | Chủ repo phải bật public và kiểm tra incognito |
 
-## Kiểm tra các anti-pattern
+## Anti-pattern check
 
-- **Chỉ chạy trên clean sample data:** đã chủ động thêm profile khác thiết bị/kết nối và event gửi muộn, offline batch, sparse history, phản hồi quá nhanh/chậm có quality flags. Vẫn cần test duplicate/out-of-order thật, malformed code submission và tải đồng thời trước pilot.
-- **AI content đi thẳng tới học sinh:** đã chặn bằng state machine, student endpoint chỉ đọc `PUBLISHED`, và API teacher/student có JWT role guards. Trước pilot vẫn cần kiểm thử integration với identity provider và RLS thật.
-- **Mockup/slideshow, không có AI thật:** không mắc ở demo local; personalization chạy thật và content workflow đã gọi FPT AI thật, sau đó chuẩn hóa/validate đầu ra.
-- **Phụ thuộc hoàn toàn vào paid API:** không mắc; FPT AI là provider mặc định nhưng `LocalTemplateProvider` vẫn là fallback không cần khóa. Pilot cần thêm quota/cost log theo bảng giá thực tế.
+- Không dùng memory store hoặc frontend mock cho dữ liệu nghiệp vụ; localhost/deploy dùng Prisma → Supabase.
+- Nội dung AI không tự đến học sinh: bắt buộc human review và publish.
+- Personalization có Python service thật; khi service lỗi, fallback được gắn mode riêng và vẫn lưu audit, không giả là AI service đã trả lời.
+- Dataset có profile mạnh/yếu, sparse history và hành vi không đồng đều; vẫn là synthetic.
+- Không claim PDF/DOCX/PPTX: pipeline grounding hiện hỗ trợ TXT; binary extraction/OCR là backlog.
+- Không claim giảm dropout, tăng learning outcome hoặc tiết kiệm 93% trước pilot.
 
-## Việc ưu tiên trước khi nộp hoặc pilot
+## Việc còn phải làm sau Checkpoint 2
 
-1. Nối NestJS với Prisma/Supabase cho attempt, student-concept state, recommendation log, generated content, version và audit trail; thêm integration test chống lẫn state giữa hai học sinh.
-2. Thay demo credential/secret bằng identity production (ví dụ Supabase Auth), bổ sung refresh-token revocation và thiết kế RLS hay khóa PostgREST khỏi client.
-3. Chạy phép đo trước/sau trên hai bài hoàn chỉnh cùng phạm vi; không suy ra mức giảm từ timer micro-lesson hiện tại.
-4. Thử robustness với dữ liệu bẩn và concurrency; theo dõi FPT quota, cost, fallback/error/override rate.
-5. Tạo commit, public GitHub, deployment URL hoặc video demo có recommendation log và luồng draft-review-publish.
+1. Deploy Render, kiểm tra health/golden path và quay video 60–90 giây.
+2. Chạy paired test hai học sinh và lưu transcript recommendation IDs/logs.
+3. Đo một bài thủ công và một bài AI cùng scope bằng rubric giáo viên.
+4. Trước pilot thật: Supabase Auth/RLS hoặc tenant isolation tương đương, consent, retention/deletion và incident owner.
+5. Thêm browser E2E/CI, robustness malformed input, concurrency và cost/quota monitoring.
 
-## Bằng chứng xác minh hiện tại
-
-Verification cuối đã qua lint, TypeScript, Prisma schema validation, 28 Node unit tests, 1 E2E workflow test, 17 Python tests, synthetic-data validation, model evaluation, asset validation và production build. Luồng E2E đi qua attempt → recommendation target → grounded draft → approve → publish → student quiz → reuse. Xem `docs/build-verification.md` và `docs/run-local-and-supabase.md` để chạy lại.
-
-Model metrics hiện dùng synthetic data và ROC-AUC chỉ khoảng 0.5691; không được trình bày như bằng chứng tác động giáo dục hay chất lượng production.
-
-`npm audit --omit=dev` tại ngày rà soát còn hai advisory mức moderate do Next.js 16.2.10 khóa PostCSS 8.4.31; không có advisory production mức high/critical. Không dùng `npm audit fix --force` vì npm đề xuất hạ Next xuống một major cũ. Cần nâng theo bản Next chính thức khi dependency này được cập nhật.
+Xem `docs/build-verification.md`, `scripts/smoke-product.ps1` và `docs/deploy-render.md` để tái kiểm chứng.

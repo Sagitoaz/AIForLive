@@ -11,7 +11,7 @@ EduRecall AI là sản phẩm học Python bằng tiếng Việt cho học sinh 
 - 4 mô-đun, 12 bài học; mỗi bài gồm Lý thuyết, Thực hành và Kiểm tra cuối bài.
 - 36 học liệu, 60 bài tập có đáp án đã duyệt và 5 câu đánh giá đầu vào.
 - AI ghi nhận attempt, chẩn đoán lỗ hổng, cập nhật mastery và tạo recommendation có bằng chứng giải thích.
-- AI soạn micro-lesson từ nguồn đã xác minh; nội dung đi qua `DRAFT → APPROVED → PUBLISHED`.
+- AI soạn micro-lesson từ nguồn đã xác minh; nội dung đi qua `DRAFT → IN_REVIEW → APPROVED → PUBLISHED`.
 - 4 hoạt động luyện tập dạng game nhẹ, vẫn ưu tiên mục tiêu học tập.
 - Bài đã hoàn thành luôn có thể mở lại để ôn tập.
 
@@ -82,4 +82,4 @@ AI Voice dùng endpoint TTS phía server khi cấu hình nhà cung cấp. Nếu 
 - Tích hợp LLM/TTS bên ngoài cần tài khoản và quota; workflow kiểm duyệt không phụ thuộc một API trả phí duy nhất.
 - Trước pilot thật cần bật RLS/tenant isolation, chính sách quyền riêng tư trẻ em, giám sát chi phí và đánh giá của giáo viên.
 
-Đọc [cơ chế AI](docs/ai-mechanisms.md), [hướng dẫn Supabase](docs/run-local-and-supabase.md), [pilot roadmap](docs/pilot-roadmap.md) và [kịch bản demo](docs/demo-script.md).
+Đọc [cơ chế AI](docs/ai-mechanisms.md), [evidence Checkpoint 2](docs/checkpoint-2-evidence.md), [hướng dẫn Supabase](docs/run-local-and-supabase.md), [hướng dẫn deploy một Render Web Service](docs/deploy-render.md), [pilot roadmap](docs/pilot-roadmap.md) và [kịch bản demo](docs/demo-script.md).

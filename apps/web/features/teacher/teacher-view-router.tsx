@@ -2,7 +2,7 @@
 
 import type { MicroLesson } from "@edurecall/shared-types";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -307,18 +307,31 @@ function LessonEditor({ lesson, onBack }: { lesson: MicroLesson; onBack: () => v
   const [slide, setSlide] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [revisionMode, setRevisionMode] = useState(false);
+  const editingStartedAt = useRef<number | null>(null);
 
   useEffect(() => {
     setWorking(lesson);
     setDirty(false);
     setRevisionMode(false);
+    editingStartedAt.current = null;
     setSlide((current) => Math.min(current, lesson.slides.length));
   }, [lesson]);
 
   const editable = working.status === "DRAFT" || working.status === "REVISION_REQUIRED" || (working.status === "APPROVED" && revisionMode);
   const current = working.slides[slide];
-  const change = (next: MicroLesson) => { setWorking(next); setDirty(true); };
-  const save = async () => { await product.updateLesson(working); setDirty(false); };
+  const change = (next: MicroLesson) => {
+    if (editingStartedAt.current === null) editingStartedAt.current = Date.now();
+    setWorking(next);
+    setDirty(true);
+  };
+  const save = async () => {
+    const editingSeconds = editingStartedAt.current === null
+      ? 0
+      : Math.max(1, Math.round((Date.now() - editingStartedAt.current) / 1_000));
+    await product.updateLesson(working, editingSeconds);
+    editingStartedAt.current = null;
+    setDirty(false);
+  };
   const requestRevision = async () => { await product.requestLessonRevision(); };
   const checks = [
     { label: "Có nguồn tham chiếu", ok: working.sourceReferences.length > 0 },
@@ -337,7 +350,12 @@ function LessonEditor({ lesson, onBack }: { lesson: MicroLesson; onBack: () => v
         </div>
         <div className="editor-status">
           <StatusPill tone={contentStatusTone(working.status)}>{working.status}</StatusPill>
-          <span>v{working.version} · {working.provider}</span>
+          <span>v{working.version} · {working.provider} · AI {Math.max(0, Math.round((working.generationMs ?? 0) / 1_000))}s · GV {working.teacherEditingSeconds ?? 0}s</span>
+          {working.generationTrace && (
+            <span title={`Prompt hash: ${working.generationTrace.promptHash}`}>
+              {working.generationTrace.model} · {working.generationTrace.promptTokens + working.generationTrace.completionTokens} tokens · trace {working.generationTrace.promptHash.slice(0, 8)}
+            </span>
+          )}
         </div>
         <div className="editor-actions">
           <button className="button ghost small" onClick={onBack}>Danh sách</button>

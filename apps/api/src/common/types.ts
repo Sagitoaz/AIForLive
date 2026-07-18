@@ -96,7 +96,14 @@ export interface GeneratedLearningContent {
   reuseCount: number;
   version: number;
   generationMs: number;
+  teacherEditingSeconds: number;
   estimatedCostUsd: number;
+  generationTrace?: {
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+    promptHash: string;
+  };
   reviewHistory: Array<{ action: string; from: ContentStatus; to: ContentStatus; at: string; comment?: string }>;
   updatedAt: string;
   draftKind?: "FULL_LESSON" | "REMEDIATION";

@@ -49,11 +49,22 @@ describe("AiClientService", () => {
       json: jest.fn().mockResolvedValue(responseBody)
     } as unknown as Response);
 
-    await new AiClientService().analyze("current-attempt", current, 0.35, [previous]);
+    await new AiClientService().analyze("current-attempt", current, 0.35, [previous], {
+      stability: 4.2,
+      retrievability: 0.31,
+      prerequisiteMastery: 0.58,
+      courseProgress: 0.41,
+      availableMinutes: 30,
+      studentGoal: "Tự xây dựng mini game Python"
+    });
 
     const request = fetchMock.mock.calls[0]?.[1];
     const payload = JSON.parse(String(request?.body)) as {
-      current_state: { recent_failures: number; last_practiced_at: string };
+      current_state: { recent_failures: number; last_practiced_at: string; stability: number; retrievability: number };
+      prerequisite_mastery: number;
+      course_progress: number;
+      available_minutes: number;
+      student_goal: string;
       recent_history: Array<{
         is_correct: boolean;
         used_hint: boolean;
@@ -63,7 +74,15 @@ describe("AiClientService", () => {
     };
     expect(payload.current_state).toMatchObject({
       recent_failures: 1,
-      last_practiced_at: createdAt
+      last_practiced_at: createdAt,
+      stability: 4.2,
+      retrievability: 0.31
+    });
+    expect(payload).toMatchObject({
+      prerequisite_mastery: 0.58,
+      course_progress: 0.41,
+      available_minutes: 30,
+      student_goal: "Tự xây dựng mini game Python"
     });
     expect(payload.recent_history).toEqual([{
       is_correct: false,

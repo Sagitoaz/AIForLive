@@ -78,6 +78,8 @@ export interface TeacherRecommendation {
   target: RecommendationTarget;
   reasons: unknown;
   candidateLog: unknown;
+  analysisInput?: unknown;
+  targetResolution?: unknown;
   evidence: RecommendationEvidence[];
   status: string;
   modelVersion: string;
@@ -114,6 +116,7 @@ function strings(value: unknown): string[] {
 }
 
 function displayValue(value: unknown): string {
+  if (value === undefined || value === null) return "—";
   if (typeof value === "number") {
     return value >= 0 && value <= 1 ? `${Math.round(value * 100)}%` : String(Math.round(value * 100) / 100);
   }
@@ -134,6 +137,8 @@ function recommendationTone(status: string): "green" | "yellow" | "red" | "blue"
 function RecommendationEvidenceView({ recommendation }: { recommendation: TeacherRecommendation }) {
   const reasons = strings(recommendation.reasons);
   const log = record(recommendation.candidateLog);
+  const analysisInput = record(recommendation.analysisInput);
+  const targetResolution = record(recommendation.targetResolution);
   const candidateScores = Object.entries(record(log.candidateScores));
   const selectedBecause = typeof log.selectedBecause === "string" ? log.selectedBecause : recommendation.action;
   const signalRows = [
@@ -159,6 +164,11 @@ function RecommendationEvidenceView({ recommendation }: { recommendation: Teache
           {reasons.length ? reasons.map((reason) => <p key={reason}>✓ {reason}</p>) : <p>Chưa có lý do dạng văn bản trong bản ghi này.</p>}
           <div className="context-row"><span>Hoạt động đích</span><strong>{recommendation.target.type ?? "—"}</strong></div>
           <div className="context-row"><span>Mã nội dung</span><strong>{recommendation.target.id ?? "—"}</strong></div>
+          <div className="context-row"><span>Resolve từ Supabase</span><strong>{displayValue(targetResolution.source)}</strong></div>
+          <div className="context-row"><span>Tiến độ khóa</span><strong>{displayValue(analysisInput.courseProgress)}</strong></div>
+          <div className="context-row"><span>Mastery tiên quyết</span><strong>{displayValue(analysisInput.prerequisiteMastery)}</strong></div>
+          <div className="context-row"><span>Quỹ thời gian phiên</span><strong>{displayValue(analysisInput.availableMinutes)} phút</strong></div>
+          <div className="context-row"><span>Mục tiêu học sinh</span><strong>{displayValue(analysisInput.studentGoal)}</strong></div>
           <div className="context-row"><span>Trạng thái</span><StatusPill tone={recommendationTone(recommendation.status)}>{recommendation.status}</StatusPill></div>
         </section>
 

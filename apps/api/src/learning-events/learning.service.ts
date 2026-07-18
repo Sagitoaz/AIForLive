@@ -22,6 +22,34 @@ function json(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
 }
 
+type RecommendationTarget = NonNullable<AnalysisResult["recommendation"]["target"]>;
+
+interface RecommendationTargetContext {
+  courseId: string;
+  conceptId: string;
+  currentLesson: {
+    id: string;
+    title: string;
+    durationMinutes: number;
+  };
+  currentExercise: {
+    id: string;
+    prompt: string;
+    phase: LessonPhase;
+    difficulty: number;
+  };
+}
+
+interface RecommendationTargetResolution {
+  target: RecommendationTarget;
+  metadata: {
+    source: "PUBLISHED_MICRO_LESSON" | "ACTIVE_EXERCISE" | "ACTIVE_LESSON" | "CURRENT_EXERCISE" | "CURRENT_LESSON";
+    entityType: "MicroLesson" | "Exercise" | "Lesson";
+    entityId: string;
+    originalSemanticTargetId: string | null;
+  };
+}
+
 @Injectable()
 export class LearningService {
   private readonly logger = new Logger(LearningService.name);
@@ -59,7 +87,16 @@ export class LearningService {
         where: {
           OR: [{ id: dto.activityId ?? "" }, { code: dto.activityId ?? "" }],
           status: "ACTIVE",
-          deletedAt: null
+          deletedAt: null,
+          lesson: {
+            status: "ACTIVE",
+            deletedAt: null,
+            module: {
+              status: "ACTIVE",
+              deletedAt: null,
+              course: { status: "ACTIVE", deletedAt: null }
+            }
+          }
         },
         include: {
           lesson: {
@@ -110,6 +147,20 @@ export class LearningService {
       orderBy: { createdAt: "desc" } as const,
       take: 10
     });
+    const prerequisiteRequest = this.prisma.conceptPrerequisite.findMany({
+      where: { targetConceptId: exercise.lesson.concept.id },
+      select: {
+        prerequisite: {
+          select: {
+            studentStates: {
+              where: { studentProfileId: enrollment.studentProfileId },
+              select: { mastery: true },
+              take: 1
+            }
+          }
+        }
+      }
+    });
     const eventRequest = this.prisma.learningEvent.create({
       data: {
         idempotencyKey: scoredDto.idempotencyKey,
@@ -143,11 +194,13 @@ export class LearningService {
 
     let state: Awaited<typeof stateRequest>;
     let recentRows: Awaited<typeof recentRequest>;
+    let prerequisiteRows: Awaited<typeof prerequisiteRequest>;
     let event: Awaited<typeof eventRequest>;
     try {
-      [state, recentRows, event] = await Promise.all([
+      [state, recentRows, prerequisiteRows, event] = await Promise.all([
         stateRequest,
         recentRequest,
+        prerequisiteRequest,
         eventRequest
       ]);
     } catch (error) {
@@ -160,6 +213,13 @@ export class LearningService {
       throw error;
     }
     const mastery = state?.mastery ?? 0.3;
+    const prerequisiteValues = prerequisiteRows
+      .map((row) => row.prerequisite.studentStates[0]?.mastery)
+      .filter((value): value is number => typeof value === "number");
+    const prerequisiteMastery = prerequisiteValues.length
+      ? prerequisiteValues.reduce((total, value) => total + value, 0) / prerequisiteValues.length
+      : mastery;
+    scoredDto.prerequisiteMastery = prerequisiteMastery;
     const recentAttempts = recentRows.reverse().map((row) => this.rowToAttempt(row));
 
     if (!event.attempt) throw new Error("Attempt transaction failed");
@@ -167,14 +227,45 @@ export class LearningService {
     const startedAt = Date.now();
     let analysis: AnalysisResult;
     let status: LearningEventStatus;
+    const personalizationContext = {
+      stability: state?.stability ?? Math.max(0.5, 1 + mastery * 3),
+      retrievability: state?.retrievability ?? Math.max(0.1, mastery),
+      prerequisiteMastery,
+      courseProgress: Math.max(0, Math.min(1, enrollment.progress)),
+      availableMinutes: Math.max(5, Math.min(60, Math.round(enrollment.student.weeklyAvailabilityMinutes / 4))),
+      studentGoal: enrollment.student.learningGoal ?? "Hoàn thành khóa học Python cơ bản"
+    };
     try {
-      analysis = await this.ai.analyze(event.id, scoredDto, mastery, recentAttempts);
+      analysis = await this.ai.analyze(event.id, scoredDto, mastery, recentAttempts, personalizationContext);
       status = LearningEventStatus.ANALYZED;
     } catch (error) {
       analysis = this.fallback.analyze(event.id, scoredDto, mastery);
       status = LearningEventStatus.FALLBACK_ANALYZED;
       this.logger.warn(JSON.stringify({ event: "personalization_fallback", eventId: event.id, error: String(error) }));
     }
+
+    const targetResolution = await this.resolveRecommendationTarget(analysis, {
+      courseId: enrollment.courseId,
+      conceptId: exercise.lesson.concept.id,
+      currentLesson: {
+        id: exercise.lesson.id,
+        title: exercise.lesson.title,
+        durationMinutes: exercise.lesson.durationMinutes
+      },
+      currentExercise: {
+        id: exercise.id,
+        prompt: exercise.prompt,
+        phase: exercise.phase,
+        difficulty: exercise.difficulty
+      }
+    });
+    analysis = {
+      ...analysis,
+      recommendation: {
+        ...analysis.recommendation,
+        target: targetResolution.target
+      }
+    };
 
     await this.persistAnalysis({
       eventId: event.id,
@@ -185,7 +276,18 @@ export class LearningService {
       analysis,
       status,
       durationMs: Date.now() - startedAt,
-      previousStateVersion: state?.version ?? 0
+      previousStateVersion: state?.version ?? 0,
+      targetResolution: targetResolution.metadata,
+      analysisInput: {
+        masteryBefore: mastery,
+        ...personalizationContext,
+        responseTimeMs: scoredDto.responseTimeMs,
+        usedHint: scoredDto.usedHint,
+        skipped: scoredDto.skipped,
+        attemptNumber: scoredDto.attemptNumber,
+        difficulty: scoredDto.difficulty,
+        recentAttemptIds: recentAttempts.map((attempt) => attempt.id)
+      }
     });
     return {
       id: event.attempt.id,
@@ -225,6 +327,8 @@ export class LearningService {
     status: LearningEventStatus;
     durationMs: number;
     previousStateVersion: number;
+    targetResolution: RecommendationTargetResolution["metadata"];
+    analysisInput: Record<string, unknown>;
   }): Promise<void> {
     const misconception = input.analysis.diagnosis.misconception_code
       ? await this.prisma.misconception.findFirst({
@@ -247,7 +351,11 @@ export class LearningService {
           reasonsJson: json(input.analysis.recommendation.reasons),
           candidateLogJson: json(input.analysis.recommendation.evidence),
           modelVersion: input.analysis.model_version,
-          metadataJson: json({ explanations: input.analysis.explanations, mode: input.analysis.mode }),
+          metadataJson: json({
+            explanations: input.analysis.explanations,
+            mode: input.analysis.mode,
+            targetResolution: input.targetResolution
+          }),
           evidence: {
             create: {
               attemptId: input.attemptId,
@@ -330,7 +438,7 @@ export class LearningService {
           learningEventId: input.eventId,
           studentProfileId: input.studentProfileId,
           mode: input.analysis.mode,
-          inputJson: json({ masteryBefore: input.analysis.mastery_before }),
+          inputJson: json(input.analysisInput),
           outputJson: json(input.analysis),
           durationMs: input.durationMs,
           correlationId: input.eventId
@@ -343,6 +451,241 @@ export class LearningService {
     ]);
   }
 
+  private async resolveRecommendationTarget(
+    analysis: AnalysisResult,
+    context: RecommendationTargetContext
+  ): Promise<RecommendationTargetResolution> {
+    const original = analysis.recommendation.target;
+    const action = this.recommendationAction(analysis.recommendation.action);
+    const originalSemanticTargetId = original?.id ?? null;
+
+    if (action === RecommendationAction.MICRO_LESSON || original?.type === "MICRO_LESSON") {
+      const microLesson = await this.prisma.microLesson.findFirst({
+        where: {
+          conceptId: context.conceptId,
+          status: "PUBLISHED",
+          ...(analysis.diagnosis.misconception_code
+            ? {
+                misconception: {
+                  code: analysis.diagnosis.misconception_code,
+                  status: "ACTIVE",
+                  deletedAt: null
+                }
+              }
+            : {}),
+          generatedContent: {
+            status: "PUBLISHED",
+            generationJob: { courseId: context.courseId }
+          }
+        },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, title: true, durationMinutes: true }
+      });
+      if (microLesson) {
+        return {
+          target: {
+            type: "MICRO_LESSON",
+            id: microLesson.id,
+            title: microLesson.title,
+            phase: "THEORY",
+            estimated_minutes: this.targetMinutes(microLesson.durationMinutes, original?.estimated_minutes),
+            ...(original?.difficulty === undefined ? {} : { difficulty: original.difficulty })
+          },
+          metadata: {
+            source: "PUBLISHED_MICRO_LESSON",
+            entityType: "MicroLesson",
+            entityId: microLesson.id,
+            originalSemanticTargetId
+          }
+        };
+      }
+      return this.currentLessonTarget(context, originalSemanticTargetId, original?.estimated_minutes);
+    }
+
+    if (action === RecommendationAction.PREREQUISITE_REVIEW) {
+      const prerequisiteLesson = await this.prisma.lesson.findFirst({
+        where: {
+          status: "ACTIVE",
+          deletedAt: null,
+          module: {
+            courseId: context.courseId,
+            status: "ACTIVE",
+            deletedAt: null
+          },
+          concept: {
+            status: "ACTIVE",
+            deletedAt: null,
+            prerequisiteFor: { some: { targetConceptId: context.conceptId } }
+          }
+        },
+        orderBy: [{ module: { order: "asc" } }, { order: "asc" }],
+        select: { id: true, title: true, durationMinutes: true }
+      });
+      if (prerequisiteLesson) {
+        return this.lessonTarget(prerequisiteLesson, "THEORY", originalSemanticTargetId, original?.estimated_minutes);
+      }
+      return this.currentLessonTarget(context, originalSemanticTargetId, original?.estimated_minutes);
+    }
+
+    if (action === RecommendationAction.CONTINUE_PATH || original?.type === "LESSON_PHASE") {
+      const lessons = await this.prisma.lesson.findMany({
+        where: {
+          status: "ACTIVE",
+          deletedAt: null,
+          module: {
+            courseId: context.courseId,
+            status: "ACTIVE",
+            deletedAt: null
+          }
+        },
+        orderBy: [{ module: { order: "asc" } }, { order: "asc" }],
+        select: { id: true, title: true, durationMinutes: true }
+      });
+      const currentIndex = lessons.findIndex((lesson) => lesson.id === context.currentLesson.id);
+      const selected = currentIndex >= 0 ? lessons[currentIndex + 1] : undefined;
+      if (selected) {
+        return this.lessonTarget(selected, original?.phase ?? "THEORY", originalSemanticTargetId, original?.estimated_minutes);
+      }
+      return this.currentLessonTarget(context, originalSemanticTargetId, original?.estimated_minutes);
+    }
+
+    const phase = action === RecommendationAction.CHECKPOINT
+      ? LessonPhase.CHECKPOINT
+      : action === RecommendationAction.TEACHER_SUPPORT
+        ? null
+        : LessonPhase.PRACTICE;
+    if (phase) {
+      const exercises = await this.prisma.exercise.findMany({
+        where: {
+          phase,
+          status: "ACTIVE",
+          deletedAt: null,
+          lesson: {
+            conceptId: context.conceptId,
+            status: "ACTIVE",
+            deletedAt: null,
+            module: {
+              courseId: context.courseId,
+              status: "ACTIVE",
+              deletedAt: null
+            }
+          }
+        },
+        orderBy: [{ difficulty: "asc" }, { createdAt: "asc" }],
+        take: 2,
+        select: {
+          id: true,
+          prompt: true,
+          phase: true,
+          difficulty: true,
+          lesson: { select: { durationMinutes: true } }
+        }
+      });
+      const exercise = exercises.find((candidate) => candidate.id !== context.currentExercise.id) ?? exercises[0];
+      if (exercise) {
+        return {
+          target: {
+            type: "ACTIVITY",
+            id: exercise.id,
+            title: this.exerciseTitle(exercise.prompt),
+            phase: exercise.phase,
+            estimated_minutes: this.targetMinutes(
+              Math.min(12, exercise.lesson.durationMinutes),
+              original?.estimated_minutes
+            ),
+            difficulty: exercise.difficulty
+          },
+          metadata: {
+            source: "ACTIVE_EXERCISE",
+            entityType: "Exercise",
+            entityId: exercise.id,
+            originalSemanticTargetId
+          }
+        };
+      }
+      return this.currentExerciseTarget(context, originalSemanticTargetId, original?.estimated_minutes);
+    }
+
+    return this.currentLessonTarget(context, originalSemanticTargetId, original?.estimated_minutes);
+  }
+
+  private lessonTarget(
+    lesson: { id: string; title: string; durationMinutes: number },
+    phase: RecommendationTarget["phase"],
+    originalSemanticTargetId: string | null,
+    estimatedMinutes?: number
+  ): RecommendationTargetResolution {
+    return {
+      target: {
+        type: "LESSON_PHASE",
+        id: lesson.id,
+        title: lesson.title,
+        phase,
+        estimated_minutes: this.targetMinutes(lesson.durationMinutes, estimatedMinutes)
+      },
+      metadata: {
+        source: "ACTIVE_LESSON",
+        entityType: "Lesson",
+        entityId: lesson.id,
+        originalSemanticTargetId
+      }
+    };
+  }
+
+  private currentLessonTarget(
+    context: RecommendationTargetContext,
+    originalSemanticTargetId: string | null,
+    estimatedMinutes?: number
+  ): RecommendationTargetResolution {
+    return {
+      target: {
+        type: "LESSON_PHASE",
+        id: context.currentLesson.id,
+        title: context.currentLesson.title,
+        phase: "THEORY",
+        estimated_minutes: this.targetMinutes(context.currentLesson.durationMinutes, estimatedMinutes)
+      },
+      metadata: {
+        source: "CURRENT_LESSON",
+        entityType: "Lesson",
+        entityId: context.currentLesson.id,
+        originalSemanticTargetId
+      }
+    };
+  }
+
+  private currentExerciseTarget(
+    context: RecommendationTargetContext,
+    originalSemanticTargetId: string | null,
+    estimatedMinutes?: number
+  ): RecommendationTargetResolution {
+    return {
+      target: {
+        type: "ACTIVITY",
+        id: context.currentExercise.id,
+        title: this.exerciseTitle(context.currentExercise.prompt),
+        phase: context.currentExercise.phase,
+        estimated_minutes: this.targetMinutes(10, estimatedMinutes),
+        difficulty: context.currentExercise.difficulty
+      },
+      metadata: {
+        source: "CURRENT_EXERCISE",
+        entityType: "Exercise",
+        entityId: context.currentExercise.id,
+        originalSemanticTargetId
+      }
+    };
+  }
+
+  private targetMinutes(fallback: number, preferred?: number): number {
+    return Math.max(1, Math.min(180, Math.round(preferred ?? fallback)));
+  }
+
+  private exerciseTitle(prompt: string): string {
+    const compact = prompt.replace(/\s+/g, " ").trim();
+    return compact.length <= 180 ? compact : `${compact.slice(0, 177)}...`;
+  }
+
   private async activeEnrollment(userId: string, courseId?: string) {
     const enrollment = await this.prisma.enrollment.findFirst({
       where: {
@@ -351,7 +694,12 @@ export class LearningService {
         ...(courseId ? { courseId } : {}),
         student: { userId, status: "ACTIVE", deletedAt: null }
       },
-      orderBy: { enrolledAt: "desc" }
+      orderBy: { enrolledAt: "desc" },
+      include: {
+        student: {
+          select: { learningGoal: true, weeklyAvailabilityMinutes: true }
+        }
+      }
     });
     if (!enrollment) throw new ForbiddenException("Học sinh chưa được ghi danh vào khóa học này");
     return enrollment;

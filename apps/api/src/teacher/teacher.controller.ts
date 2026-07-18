@@ -286,7 +286,17 @@ export class TeacherController {
         id,
         student: { enrollments: { some: { class: { teacher: { userId: request.user.id } } } } }
       },
-      include: { concept: true, student: { include: { user: true } }, evidence: { include: { attempt: { include: { diagnoses: true } } } } }
+      include: {
+        concept: true,
+        student: { include: { user: true } },
+        evidence: {
+          include: {
+            attempt: {
+              include: { diagnoses: true, event: { include: { personalizationRun: true } } }
+            }
+          }
+        }
+      }
     });
     if (!row) throw new NotFoundException("Recommendation not found");
     return {
@@ -298,6 +308,8 @@ export class TeacherController {
       reasons: row.reasonsJson,
       candidateLog: row.candidateLogJson,
       target: { type: row.targetType, id: row.targetId, phase: row.targetPhase, estimatedMinutes: row.estimatedMinutes },
+      targetResolution: objectJson(row.metadataJson).targetResolution ?? null,
+      analysisInput: row.evidence.find((item) => item.attempt?.event.personalizationRun)?.attempt?.event.personalizationRun?.inputJson ?? null,
       evidence: row.evidence,
       modelVersion: row.modelVersion,
       status: row.status

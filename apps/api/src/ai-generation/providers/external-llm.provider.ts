@@ -1,4 +1,5 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import type { ContentSlide } from "../../common/types";
 import type { ContentGenerationInput, ContentProvider, ProviderOutput } from "./content-provider";
 
@@ -100,7 +101,7 @@ function parseAnimationData(value: unknown, label: string): ContentSlide["animat
   return result;
 }
 
-function parseLesson(payload: JsonRecord, input: ContentGenerationInput): Omit<ProviderOutput, "provider" | "generationMs" | "estimatedCostUsd"> {
+function parseLesson(payload: JsonRecord, input: ContentGenerationInput): Omit<ProviderOutput, "provider" | "generationMs" | "estimatedCostUsd" | "trace"> {
   const rawSlides = payload.slides;
   if (!Array.isArray(rawSlides) || rawSlides.length < 3 || rawSlides.length > 5) {
     throw new Error("slides must contain 3 to 5 items");
@@ -230,7 +231,13 @@ export class ExternalLlmProvider implements ContentProvider {
         ...lesson,
         provider: "EXTERNAL_LLM",
         generationMs: Math.max(1, Math.round(performance.now() - startedAt)),
-        estimatedCostUsd: estimateCost(completion)
+        estimatedCostUsd: estimateCost(completion),
+        trace: {
+          model,
+          promptTokens: completion.usage?.prompt_tokens ?? 0,
+          completionTokens: completion.usage?.completion_tokens ?? 0,
+          promptHash: createHash("sha256").update(`${systemPrompt}\n${userPrompt}`).digest("hex")
+        }
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown provider error";

@@ -1,4 +1,8 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+// Keep browser traffic same-origin in both local development and the Render
+// checkpoint deployment. Next.js proxies this prefix to the Nest API, which
+// means no production URL is baked into the client bundle and CORS/CSP cannot
+// drift when the Render hostname changes.
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/backend-api";
 const responseCache = new Map<string, { expiresAt: number; value: unknown }>();
 const inFlightGets = new Map<string, Promise<unknown>>();
 const GET_CACHE_MS = 12_000;
