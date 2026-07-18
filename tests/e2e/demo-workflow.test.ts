@@ -5,6 +5,7 @@ import { LocalTemplateProvider } from "../../apps/api/src/ai-generation/provider
 import { MockDevelopmentProvider } from "../../apps/api/src/ai-generation/providers/mock-development.provider";
 import { DomainRegistryService } from "../../apps/api/src/domains/domain-registry.service";
 import { ContentService } from "../../apps/api/src/generated-content/content.service";
+import { ContentSourceService } from "../../apps/api/src/generated-content/content-source.service";
 import { ContentValidatorService } from "../../apps/api/src/generated-content/content-validator.service";
 import { SubmitAttemptDto } from "../../apps/api/src/learning-events/dto/submit-attempt.dto";
 import { LearningService } from "../../apps/api/src/learning-events/learning.service";
@@ -24,9 +25,10 @@ describe("EduRecall range misconception workflow", () => {
     }));
     expect(attempt.analysis?.diagnosis.misconception_code).toBe("RANGE_STOP_INCLUDED");
     expect(attempt.analysis?.recommendation.action).toBe("MICRO_LESSON");
+    expect(attempt.analysis?.recommendation.target?.id).toBe("python_range-range_stop_included-v1");
 
     const local = new LocalTemplateProvider();
-    const content = new ContentService(store, new DomainRegistryService(), local, new ExternalLlmProvider(), new MockDevelopmentProvider(local), new ContentValidatorService());
+    const content = new ContentService(store, new DomainRegistryService(), local, new ExternalLlmProvider(), new MockDevelopmentProvider(local), new ContentValidatorService(), new ContentSourceService());
     const input = Object.assign(new GenerateContentDto(), {
       domainCode: "python-foundations", conceptCode: "PYTHON_RANGE", misconceptionCode: "RANGE_STOP_INCLUDED",
       level: "Mới bắt đầu", learningObjective: "Biết stop không thuộc dãy", durationMinutes: 5,

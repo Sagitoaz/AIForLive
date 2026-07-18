@@ -44,7 +44,23 @@ export class FallbackAnalysisService {
           `Nguy cơ quên ước tính ${Math.round(forgettingRisk * 100)}%`,
           ...(misconception ? ["Domain rule xác nhận RANGE_STOP_INCLUDED"] : [])
         ],
-        evidence: { attemptIds: [eventId], modelVersion: "fallback-v1", ruleId: misconception ? "range-stop-rule-v1" : null }
+        evidence: {
+          attemptIds: [eventId],
+          modelVersion: "fallback-v1",
+          ruleId: misconception ? "range-stop-rule-v1" : null,
+          candidateScores: {
+            knowledgeGap: Number((1 - masteryAfter).toFixed(4)),
+            forgettingRisk,
+            recentErrorRate: dto.isCorrect ? 0 : 1,
+            prerequisiteGap: Number((1 - dto.prerequisiteMastery).toFixed(4))
+          },
+          selectedBecause: misconception ? "MICRO_LESSON" : masteryAfter < 0.5 ? "PRACTICE_SET" : "CONTINUE_PATH"
+        },
+        target: misconception
+          ? { type: "MICRO_LESSON", id: "python_range-range_stop_included-v1", title: "Bài bổ trợ: Stop không thuộc range()", phase: "THEORY", estimated_minutes: 5, difficulty: 0.35 }
+          : masteryAfter < 0.5
+            ? { type: "ACTIVITY", id: "python_range-guided-practice", title: "Bộ luyện có gợi ý: range()", phase: "PRACTICE", estimated_minutes: 10, difficulty: 0.5 }
+            : { type: "LESSON_PHASE", id: "lesson-09-theory", title: "Tiếp tục bài while và điều kiện dừng", phase: "THEORY", estimated_minutes: 18, difficulty: 0.6 }
       },
       explanations: [
         "Personalization fallback mode: attempt vẫn được lưu khi Python service không sẵn sàng.",

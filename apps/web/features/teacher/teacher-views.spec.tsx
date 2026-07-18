@@ -6,10 +6,12 @@ import { TeacherViewRouter } from "./teacher-view-router";
 describe("teacher experience", () => {
   beforeEach(() => window.localStorage.clear());
 
-  it("requires recommendation evidence before generation", () => {
+  it("allows a grounded full lesson draft without waiting for a student mistake", () => {
     render(<DemoProvider><TeacherViewRouter path="studio" /></DemoProvider>);
-    expect(screen.getByText("Chưa có recommendation context")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Tạo attempt/ })).toHaveAttribute("href", "/student/exercise");
+    expect(screen.getByText("Bài 8/12 · Khám phá range()")).toBeInTheDocument();
+    expect(screen.getByText(/Python handbook nội bộ · bản 1.3 · VERIFIED/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tạo bản nháp bài học/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Tạo attempt/ })).not.toBeInTheDocument();
   });
 
   it("renders a 20-learner class list", () => {

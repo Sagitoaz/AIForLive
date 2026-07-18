@@ -83,6 +83,16 @@ class RecommendationResult(StrictModel):
     priority_score: float = Field(ge=0.0, le=1.0)
     reasons: list[str]
     evidence: dict[str, Any]
+    target: RecommendationTarget
+
+
+class RecommendationTarget(StrictModel):
+    type: Literal["LESSON_PHASE", "ACTIVITY", "MICRO_LESSON"]
+    id: str = Field(min_length=3, max_length=160)
+    title: str = Field(min_length=3, max_length=200)
+    phase: Literal["THEORY", "PRACTICE", "CHECKPOINT"]
+    estimated_minutes: int = Field(ge=1, le=180)
+    difficulty: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class AnalyzeEventResponse(StrictModel):

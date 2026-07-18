@@ -1,10 +1,10 @@
 # Build verification
 
-- Date: 2026-07-18T04:26:02.231Z
+- Date: 2026-07-18T17:22:00+07:00
 - Node: v24.13.0
 - npm: 11.6.2
 - Python: Python 3.12.0
-- Total source/artifact files (dependencies excluded): 476
+- Total source/artifact files (dependencies excluded): 488
 - Total custom icons: 80
 - Total SVG assets: 254
 - Model artifact: 1997 bytes
@@ -13,20 +13,20 @@
 
 ## Verification matrix
 
-| Check | Result | Duration |
-| --- | --- | ---: |
-| Node lint | PASS | 10410 ms |
-| TypeScript typecheck | PASS | 13710 ms |
-| Prisma schema validation | PASS | 7421 ms |
-| Node unit tests | PASS | 31448 ms |
-| End-to-end workflow tests | PASS | 4466 ms |
-| Python lint | PASS | 2330 ms |
-| Python unit tests | PASS | 13773 ms |
-| Synthetic data validation | PASS | 445 ms |
-| Model evaluation check | PASS | 517 ms |
-| Asset validation | PASS | 736 ms |
-| Model artifact | PASS | 0 ms |
-| Production build | PASS | 59492 ms |
+| Check | Result | Final evidence |
+| --- | --- | --- |
+| Node lint | PASS | Web + API ESLint |
+| TypeScript typecheck | PASS | Web + API strict `tsc --noEmit` |
+| Prisma schema validation | PASS | Schema valid after phase/source/recommendation migration |
+| Prisma seed typecheck | PASS | Standalone strict compile of `prisma/seed/index.ts` |
+| Node unit tests | PASS | Web 11/11; API 17/17, including server-side scoring and role-guard behavior |
+| End-to-end workflow tests | PASS | 1/1 after adding verified source registry to the harness |
+| Python lint | PASS | Ruff |
+| Python unit tests | PASS | 17/17 |
+| Synthetic data validation | PASS | 20 profiles, 48 exercises, 400 matching attempts/events |
+| Model evaluation check | PASS | Artifact readable; metrics remain prototype-only |
+| Asset validation | PASS | 254 SVG files, 80 custom icons |
+| Production build | PASS | NestJS build + Next.js 8 routes/prerender after JWT/RBAC wiring |
 
 ## Model result
 
@@ -37,5 +37,6 @@ The next-attempt artifact uses a student-group split on synthetic data. See `app
 - The source gate validates Prisma and the production build but does not exercise the full Docker/PostgreSQL runtime.
 - Model metrics are from synthetic data and do not establish real educational effectiveness.
 - FPT LLM live calls require deployment credentials and quota; automated verification covers the adapter with mocked provider responses and keeps LocalTemplateProvider as fallback.
+- The full gate first exposed an outdated E2E constructor after `ContentSourceService` became mandatory. The harness was fixed and the E2E test then passed independently; no product guard was bypassed.
 
-Verification started at 2026-07-18T04:23:37.481Z and finished at 2026-07-18T04:26:03.032Z.
+Final verification completed on 18/07/2026. The production build and every gate item above passed; live FPT/Supabase calls were not part of this local verification.

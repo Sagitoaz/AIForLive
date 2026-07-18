@@ -13,7 +13,7 @@ export function GamePlayer({ slug }: { slug: string }) {
   const game = games.find((item) => item.slug === slug) ?? games[0];
   return (
     <div className="game-player-page">
-      <header className="game-header"><Link href="/student/games">← Game center</Link><div><StatusPill tone="purple">Level 1</StatusPill><h1>{game?.title}</h1></div><span>+{game?.xp} XP</span></header>
+      <header className="game-header"><Link href="/student/games">← Phòng luyện kỹ năng</Link><div><StatusPill tone="purple">Thực hành có tương tác</StatusPill><h1>{game?.title}</h1></div><span>PYTHON_RANGE · 5–8 phút</span></header>
       {slug === "code-order" && <CodeOrder />}
       {slug === "predict-output" && <PredictOutput />}
       {slug === "bug-hunter" && <BugHunter />}
@@ -29,7 +29,7 @@ function SortableLine({ id, code, index }: { id: string; code: string; index: nu
 }
 
 function Celebration({ title, detail }: { title: string; detail: string }) {
-  return <div className="game-celebration"><div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, index) => <i key={index} style={{ "--i": index } as React.CSSProperties} />)}</div><Asset type="mascot" name="mam-trophy" alt="Mầm cầm cúp" width={190} height={180}/><h2>{title}</h2><p>{detail}</p><div><Link href="/student/games" className="button ghost">Game center</Link><Link href="/student/roadmap" className="button primary">Nhận thưởng →</Link></div></div>;
+  return <div className="game-celebration learning-complete"><Asset type="mascot" name="mam-celebrate" alt="Mầm xác nhận hoàn thành" width={190} height={180}/><span className="eyebrow">Hoạt động đã hoàn thành</span><h2>{title}</h2><p>{detail}</p><div><Link href="/student/games" className="button ghost">Chọn hoạt động khác</Link><Link href="/student/lesson" className="button primary">Về bài học →</Link></div></div>;
 }
 
 function CodeOrder() {
@@ -43,7 +43,7 @@ function CodeOrder() {
     setItems((current) => arrayMove(current, current.indexOf(String(active.id)), current.indexOf(String(over.id))));
     setResult("idle");
   };
-  if (result === "right") return <Celebration title="Code chạy đúng thứ tự!" detail="Bạn đã nhận 35 XP và badge Code Order."/>;
+  if (result === "right") return <Celebration title="Code chạy đúng thứ tự" detail="Kết quả này là một evidence cho kỹ năng đọc cấu trúc vòng lặp."/>;
   return <section className="game-stage code-order"><div className="game-instruction"><Asset type="game" name="game-asset-01" alt="Các khối code" width={340} height={230}/><span className="eyebrow">Kéo hoặc dùng bàn phím</span><h2>Sắp xếp để lưu và in từng số</h2><p>Dòng trong vòng lặp phải thụt lề sau dòng for.</p></div><div className="game-board"><DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={end}><SortableContext items={items} strategy={verticalListSortingStrategy}>{items.map((id, index) => <SortableLine id={id} code={lineMap[id] ?? ""} index={index} key={id}/>)}</SortableContext></DndContext>{result === "wrong" && <p className="game-error">Thứ tự chưa đúng. Hãy tạo list trước vòng lặp.</p>}<button className="button primary full" onClick={() => setResult(JSON.stringify(items) === JSON.stringify(correct) ? "right" : "wrong")}>Chạy thử code</button></div></section>;
 }
 

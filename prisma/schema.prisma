@@ -37,6 +37,12 @@ enum ActivityType {
   CHECKPOINT
 }
 
+enum LessonPhase {
+  THEORY
+  PRACTICE
+  CHECKPOINT
+}
+
 enum LearningEventStatus {
   PENDING_ANALYSIS
   ANALYZED
@@ -75,6 +81,13 @@ enum ContentSourceType {
   PDF
   DOCX
   PPTX
+}
+
+enum ContentSourceStatus {
+  PENDING_EXTRACTION
+  NEEDS_REVIEW
+  VERIFIED
+  REJECTED
 }
 
 enum AiJobStatus {
@@ -417,6 +430,7 @@ model LearningResource {
   id           String       @id @default(uuid())
   lessonId     String
   type         String
+  phase        LessonPhase  @default(THEORY)
   title        String
   contentJson  Json
   status       RecordStatus @default(ACTIVE)
@@ -426,7 +440,7 @@ model LearningResource {
   deletedAt    DateTime?
   lesson       Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  @@index([lessonId, status])
+  @@index([lessonId, phase, status])
 }
 
 model ContentSource {
@@ -440,7 +454,8 @@ model ContentSource {
   checksum       String
   storageKey     String?
   extractedText  String?
-  status         RecordStatus      @default(ACTIVE)
+  status         ContentSourceStatus @default(PENDING_EXTRACTION)
+  verifiedAt     DateTime?
   metadataJson   Json              @default("{}")
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
@@ -475,6 +490,7 @@ model Exercise {
   lessonId     String
   code         String
   type         String
+  phase        LessonPhase       @default(PRACTICE)
   prompt       String
   difficulty   Float
   contentJson  Json
@@ -490,6 +506,7 @@ model Exercise {
   attempts     Attempt[]
 
   @@unique([lessonId, code])
+  @@index([lessonId, phase, status])
   @@index([difficulty, status])
 }
 
@@ -686,7 +703,12 @@ model Recommendation {
   assignedById     String?
   action           RecommendationAction
   priorityScore    Float
+  targetType       String?
+  targetId         String?
+  targetPhase      LessonPhase?
+  estimatedMinutes Int?
   reasonsJson      Json
+  candidateLogJson Json                     @default("{}")
   status           RecommendationStatus     @default(ACTIVE)
   modelVersion     String
   expiresAt        DateTime?

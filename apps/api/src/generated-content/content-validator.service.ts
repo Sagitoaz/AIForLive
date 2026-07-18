@@ -10,6 +10,12 @@ export class ContentValidatorService {
     if (!output.objectives.length || !output.sourceReferences.length) {
       throw new BadRequestException("Objective and source reference are required");
     }
+    if (output.sections.length !== 3 || output.sections.map((section) => section.phase).join(",") !== "THEORY,PRACTICE,CHECKPOINT") {
+      throw new BadRequestException("Lesson draft must contain THEORY, PRACTICE and CHECKPOINT in order");
+    }
+    if (output.sections.some((section) => section.durationMinutes < 1 || !section.activityTypes.length)) {
+      throw new BadRequestException("Each lesson phase needs a duration and at least one activity type");
+    }
     if (!output.slides.some((slide) => slide.type === "EXAMPLE")) {
       throw new BadRequestException("An example slide is required");
     }

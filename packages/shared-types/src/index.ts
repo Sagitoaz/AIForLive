@@ -2,6 +2,8 @@ export type Role = "STUDENT" | "TEACHER" | "ADMIN";
 export type ContentStatus = "GENERATING" | "DRAFT" | "IN_REVIEW" | "REVISION_REQUIRED" | "APPROVED" | "PUBLISHED" | "REJECTED" | "ARCHIVED";
 export type RecommendationAction = "FLASH_REVIEW" | "MICRO_LESSON" | "PRACTICE_SET" | "PREREQUISITE_REVIEW" | "CONTINUE_PATH" | "CHECKPOINT" | "GAME_PRACTICE" | "TEACHER_SUPPORT";
 export type SlideType = "CONCEPT" | "CODE_STEP" | "EXAMPLE" | "MISCONCEPTION" | "VISUAL" | "QUIZ" | "SUMMARY";
+export type LessonPhase = "THEORY" | "PRACTICE" | "CHECKPOINT";
+export type LearningActivityType = "LECTURE" | "VIDEO" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT";
 
 export interface ConceptState {
   conceptCode: string;
@@ -26,6 +28,24 @@ export interface LearningRecommendation {
   evidence: RecommendationEvidence;
   conceptCode: string;
   status: "ACTIVE" | "COMPLETED" | "DISMISSED";
+  target?: RecommendationTarget;
+}
+
+export interface RecommendationTarget {
+  type: "LESSON_PHASE" | "ACTIVITY" | "MICRO_LESSON";
+  id: string;
+  title: string;
+  phase: LessonPhase;
+  estimatedMinutes: number;
+  difficulty?: number;
+}
+
+export interface LessonDraftSection {
+  phase: LessonPhase;
+  title: string;
+  durationMinutes: number;
+  summary: string;
+  activityTypes: LearningActivityType[];
 }
 
 export interface MicroLessonSlide {
@@ -65,4 +85,8 @@ export interface MicroLesson {
   generationMs?: number;
   teacherEditingSeconds?: number;
   workflowStartedAt?: string;
+  draftKind?: "FULL_LESSON" | "REMEDIATION";
+  gradeBand?: string;
+  totalDurationMinutes?: number;
+  sections?: LessonDraftSection[];
 }

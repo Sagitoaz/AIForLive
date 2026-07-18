@@ -14,15 +14,21 @@ function Invoke-HttpJson {
     [Parameter(Mandatory = $true)][string]$Method,
     [Parameter(Mandatory = $true)][string]$Uri,
     [object]$Body = $null,
-    [int]$TimeoutSec = 15
+    [int]$TimeoutSec = 15,
+    [hashtable]$ExtraHeaders = @{}
   )
+
+  $requestHeaders = @{ Accept = "application/json" }
+  foreach ($headerName in $ExtraHeaders.Keys) {
+    $requestHeaders[$headerName] = $ExtraHeaders[$headerName]
+  }
 
   $request = @{
     Uri = $Uri
     Method = $Method
     UseBasicParsing = $true
     TimeoutSec = $TimeoutSec
-    Headers = @{ Accept = "application/json" }
+    Headers = $requestHeaders
     ErrorAction = "Stop"
   }
   if ($null -ne $Body) {
@@ -96,6 +102,12 @@ try {
   $null = Invoke-HttpJson "Demo reset" "POST" "$ApiUrl/health/demo-reset" @{}
   Write-Host "[OK] Demo memory store reset." -ForegroundColor Green
 
+  $studentSession = Invoke-HttpJson "Student login" "POST" "$ApiUrl/auth/login" @{ email = "minh@edurecall.local"; password = "Demo@123" }
+  $teacherSession = Invoke-HttpJson "Teacher login" "POST" "$ApiUrl/auth/login" @{ email = "teacher@edurecall.local"; password = "Demo@123" }
+  $studentHeaders = @{ Authorization = "Bearer $($studentSession.accessToken)" }
+  $teacherHeaders = @{ Authorization = "Bearer $($teacherSession.accessToken)" }
+  Write-Host "[OK] Student and teacher JWTs issued." -ForegroundColor Green
+
   $idempotencyKey = "smoke-range-$([guid]::NewGuid().ToString('N'))"
   $attemptBody = @{
     idempotencyKey = $idempotencyKey
@@ -103,6 +115,8 @@ try {
     domainCode = "python-foundations"
     courseId = "course-python"
     conceptCode = "PYTHON_RANGE"
+    activityId = "practice-range-predict-01"
+    lessonPhase = "PRACTICE"
     isCorrect = $false
     usedHint = $false
     skipped = $false
@@ -114,14 +128,14 @@ try {
     stopValue = 5
     prerequisiteMastery = 0.72
   }
-  $attempt = Invoke-HttpJson "Submit range attempt" "POST" "$ApiUrl/attempts" $attemptBody 20
+  $attempt = Invoke-HttpJson "Submit range attempt" "POST" "$ApiUrl/attempts" $attemptBody 20 $studentHeaders
   Assert-Equal "Attempt status" $attempt.status "ANALYZED"
   Assert-Equal "Personalization mode" $attempt.analysis.mode "AI_SERVICE"
   Assert-Equal "Misconception" $attempt.analysis.diagnosis.misconception_code "RANGE_STOP_INCLUDED"
   Assert-Equal "Attempt recommendation" $attempt.analysis.recommendation.action "MICRO_LESSON"
   Write-Host "[OK] Attempt analyzed by FastAPI as RANGE_STOP_INCLUDED." -ForegroundColor Green
 
-  $recommendation = Invoke-HttpJson "Fetch recommendation log" "GET" "$ApiUrl/teacher/recommendations/$($attempt.id)"
+  $recommendation = Invoke-HttpJson "Fetch recommendation log" "GET" "$ApiUrl/teacher/recommendations/$($attempt.id)" $null 15 $teacherHeaders
   Assert-Equal "Recommendation action" $recommendation.recommendation.action "MICRO_LESSON"
   Assert-Equal "Recommendation diagnosis" $recommendation.diagnosis.misconception_code "RANGE_STOP_INCLUDED"
   Write-Host "[OK] Explainable recommendation log returned." -ForegroundColor Green
@@ -136,23 +150,23 @@ try {
     sourceId = "source-python-handbook-01"
     provider = "LOCAL_TEMPLATE"
   }
-  $draft = Invoke-HttpJson "Generate structured draft" "POST" "$ApiUrl/ai/content/generate" $generationBody 20
+  $draft = Invoke-HttpJson "Generate structured draft" "POST" "$ApiUrl/ai/content/generate" $generationBody 20 $teacherHeaders
   Assert-Equal "Generated content status" $draft.status "DRAFT"
   Assert-Equal "Generated content provider" $draft.provider "LOCAL_TEMPLATE"
   Write-Host "[OK] Structured DRAFT generated and validated." -ForegroundColor Green
 
-  $approved = Invoke-HttpJson "Approve generated content" "POST" "$ApiUrl/teacher/generated-content/$($draft.id)/approve" @{ comment = "Smoke test teacher approval" }
+  $approved = Invoke-HttpJson "Approve generated content" "POST" "$ApiUrl/teacher/generated-content/$($draft.id)/approve" @{ comment = "Smoke test teacher approval" } 15 $teacherHeaders
   Assert-Equal "Approved content status" $approved.status "APPROVED"
   Write-Host "[OK] Human-review approval transition completed." -ForegroundColor Green
 
-  $published = Invoke-HttpJson "Publish approved content" "POST" "$ApiUrl/teacher/generated-content/$($draft.id)/publish" @{ comment = "Smoke test publication" }
+  $published = Invoke-HttpJson "Publish approved content" "POST" "$ApiUrl/teacher/generated-content/$($draft.id)/publish" @{ comment = "Smoke test publication" } 15 $teacherHeaders
   Assert-Equal "Published content status" $published.status "PUBLISHED"
   Write-Host "[OK] Content published." -ForegroundColor Green
 
-  $studentLesson = Invoke-HttpJson "Read published student lesson" "GET" "$ApiUrl/micro-lessons/$($draft.id)"
+  $studentLesson = Invoke-HttpJson "Read published student lesson" "GET" "$ApiUrl/micro-lessons/$($draft.id)" $null 15 $studentHeaders
   Assert-Equal "Student lesson status" $studentLesson.status "PUBLISHED"
 
-  $quiz = Invoke-HttpJson "Complete micro-lesson quiz" "POST" "$ApiUrl/micro-lessons/$($draft.id)/quiz" @{ selectedIndex = 0 }
+  $quiz = Invoke-HttpJson "Complete micro-lesson quiz" "POST" "$ApiUrl/micro-lessons/$($draft.id)/quiz" @{ selectedIndex = 0 } 15 $studentHeaders
   Assert-Equal "Quiz result" $quiz.correct $true
   if ([double]$quiz.masteryAfter -le [double]$quiz.masteryBefore) {
     throw "Quiz mastery was expected to increase, but changed from $($quiz.masteryBefore) to $($quiz.masteryAfter)."

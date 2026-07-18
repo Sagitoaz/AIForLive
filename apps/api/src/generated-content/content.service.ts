@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { DemoContent } from "../common/types";
-import type { GenerateContentDto } from "../ai-generation/dto/generate-content.dto";
+import { GenerateContentDto } from "../ai-generation/dto/generate-content.dto";
 import { ExternalLlmProvider } from "../ai-generation/providers/external-llm.provider";
 import { LocalTemplateProvider } from "../ai-generation/providers/local-template.provider";
 import { MockDevelopmentProvider } from "../ai-generation/providers/mock-development.provider";
 import { DomainRegistryService } from "../domains/domain-registry.service";
 import { DemoStoreService } from "../shared/demo-store.service";
 import { ContentValidatorService } from "./content-validator.service";
+import { ContentSourceService } from "./content-source.service";
 import type { EditContentDto } from "./dto/review-content.dto";
 
 @Injectable()
@@ -18,7 +19,8 @@ export class ContentService {
     private readonly local: LocalTemplateProvider,
     private readonly external: ExternalLlmProvider,
     private readonly mock: MockDevelopmentProvider,
-    private readonly validator: ContentValidatorService
+    private readonly validator: ContentValidatorService,
+    private readonly sources: ContentSourceService
   ) {}
 
   async generate(input: GenerateContentDto): Promise<DemoContent & { reused: boolean }> {
@@ -33,7 +35,8 @@ export class ContentService {
         content.status === "PUBLISHED" &&
         content.domainCode === input.domainCode &&
         content.conceptCode === input.conceptCode &&
-        content.misconceptionCode === input.misconceptionCode
+        content.misconceptionCode === input.misconceptionCode &&
+        (content.draftKind ?? "REMEDIATION") === input.draftKind
     );
     if (reusable) {
       reusable.reuseCount += 1;
@@ -41,7 +44,8 @@ export class ContentService {
       return { ...reusable, reused: true };
     }
     const provider = input.provider === "EXTERNAL_LLM" ? this.external : input.provider === "MOCK_DEVELOPMENT" ? this.mock : this.local;
-    const output = await provider.generate(input);
+    const sourceExcerpt = this.sources.verifiedExcerpt(input.sourceId);
+    const output = await provider.generate(Object.assign(new GenerateContentDto(), input, { sourceExcerpt }));
     this.validator.validate(output);
     const now = new Date().toISOString();
     const content: DemoContent = {
@@ -62,7 +66,11 @@ export class ContentService {
       generationMs: output.generationMs,
       estimatedCostUsd: output.estimatedCostUsd,
       reviewHistory: [],
-      updatedAt: now
+      updatedAt: now,
+      draftKind: input.draftKind,
+      gradeBand: input.gradeBand,
+      totalDurationMinutes: input.durationMinutes,
+      sections: output.sections
     };
     this.store.contents.set(content.id, content);
     return { ...content, reused: false };
@@ -85,10 +93,16 @@ export class ContentService {
   }
 
   edit(id: string, input: EditContentDto): DemoContent {
-    const content = this.getForTeacher(id);
-    if (["PUBLISHED", "ARCHIVED", "REJECTED"].includes(content.status)) {
+    const existing = this.getForTeacher(id);
+    if (["PUBLISHED", "ARCHIVED", "REJECTED"].includes(existing.status)) {
       throw new BadRequestException("This status cannot be edited");
     }
+    const content: DemoContent = {
+      ...existing,
+      slides: existing.slides.map((slide) => ({ ...slide })),
+      quiz: { ...existing.quiz, options: [...existing.quiz.options] },
+      reviewHistory: [...existing.reviewHistory]
+    };
     if (input.title) content.title = input.title;
     if (input.slides) {
       const edits = new Map(input.slides.map((slide) => [slide.id, slide]));
@@ -101,6 +115,17 @@ export class ContentService {
       if (input.quiz.correctIndex >= input.quiz.options.length) throw new BadRequestException("Quiz answer index is invalid");
       content.quiz = { ...input.quiz };
     }
+    this.validator.validate({
+      title: content.title,
+      objectives: content.objectives,
+      sourceReferences: content.sourceReferences,
+      slides: content.slides,
+      quiz: content.quiz,
+      provider: content.provider,
+      generationMs: content.generationMs,
+      estimatedCostUsd: content.estimatedCostUsd,
+      sections: content.sections ?? []
+    });
     content.version += 1;
     content.updatedAt = new Date().toISOString();
     this.store.contents.set(content.id, content);

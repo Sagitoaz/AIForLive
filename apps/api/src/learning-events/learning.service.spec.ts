@@ -47,6 +47,23 @@ describe("LearningService", () => {
     expect(ai.analyze).toHaveBeenCalledTimes(1);
   });
 
+  it("scores a registered activity on the server instead of trusting client correctness", async () => {
+    const store = new DemoStoreService();
+    const ai = { analyze: jest.fn().mockRejectedValue(new Error("offline")) } as unknown as AiClientService;
+    const service = new LearningService(store, ai, new FallbackAnalysisService());
+    const result = await service.submitAttempt(dto("server-score", {
+      activityId: "practice-range-predict-01",
+      lessonPhase: "PRACTICE",
+      isCorrect: true,
+      submittedAnswer: "1,2,3,4,5",
+      expectedAnswer: "client-supplied-wrong-key"
+    }));
+
+    expect(result.isCorrect).toBe(false);
+    expect(result.activityId).toBe("practice-range-predict-01");
+    expect(result.analysis?.diagnosis.misconception_code).toBe("RANGE_STOP_INCLUDED");
+  });
+
   it("isolates mastery and recent history by student and concept", async () => {
     const store = new DemoStoreService();
     const analyze = jest.fn().mockRejectedValue(new Error("offline"));

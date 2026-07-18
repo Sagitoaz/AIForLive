@@ -88,6 +88,8 @@ class PersonalizationService:
             repeated_misconception_count=repeated,
             next_attempt_probability=next_probability,
             available_minutes=request.available_minutes,
+            concept_code=request.concept_code,
+            student_goal=request.student_goal,
             diagnosis=diagnosis,
             event_id=request.event_id,
             model_version=settings.model_version,

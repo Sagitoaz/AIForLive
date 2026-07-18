@@ -6,7 +6,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { Asset } from "@/components/asset";
 import { EmptyState, Metric, ProgressBar, SectionHeading, StatusPill } from "@/components/ui";
 import { useDemo } from "@/features/demo/demo-context";
-import { concepts, games, genericStudentPages, learners } from "@/lib/demo-data";
+import { concepts, games, genericStudentPages, learners, pythonCourse } from "@/lib/demo-data";
 import { speakVietnamese, vietnameseSpeechMessage } from "@/lib/vietnamese-speech";
 import { GamePlayer } from "./game-player";
 
@@ -117,14 +117,14 @@ function Roadmap() {
             const state = index < 4 ? "done" : index === 4 ? "current" : "locked";
             const mastery = concept.code === "PYTHON_RANGE" ? Math.round(demo.mastery * 100) : concept.mastery;
             return (
-              <Link href={state === "locked" ? "/student/concepts/PYTHON_RANGE" : index === 4 ? "/student/exercise" : `/student/concepts/${concept.code}`} className={`roadmap-mission ${state} side-${index % 2}`} key={concept.code}>
+              <Link href={state === "locked" ? "/student/concepts/PYTHON_RANGE" : index === 4 ? "/student/lesson" : `/student/concepts/${concept.code}`} className={`roadmap-mission ${state} side-${index % 2}`} key={concept.code}>
                 <span className="mission-index">{index + 1}</span><span className="mission-icon"><Asset type="icon" name={concept.icon} alt="" width={38} height={38} /></span><span className="mission-copy"><small>{state === "done" ? "HOÀN THÀNH" : state === "current" ? "NHIỆM VỤ HIỆN TẠI" : "CHƯA MỞ KHÓA"}</small><strong>{concept.title}</strong><em>{state === "locked" ? "Cần prerequisite" : `${mastery}% mastery`}</em></span>
               </Link>
             );
           })}
           <Asset type="mascot" name="mam-guide" alt="Mầm đứng cạnh nhiệm vụ hiện tại" width={130} height={120} className="map-mascot" />
         </section>
-        <aside className="roadmap-legend"><h3>Vì sao range() là bước tiếp theo?</h3><ul><li><span className="dot green" />Mastery for đã đủ ngưỡng 55%</li><li><span className="dot yellow" />range chỉ ở {Math.round(demo.mastery * 100)}%</li><li><span className="dot red" />Stop included lặp lại 3 lần</li><li><span className="dot blue" />Còn 15 phút trong phiên học</li></ul><Link href="/student/exercise" className="button primary full">Bắt đầu nhiệm vụ</Link></aside>
+        <aside className="roadmap-legend"><h3>Vì sao range() là bước tiếp theo?</h3><ul><li><span className="dot green" />Mastery for đã đủ ngưỡng 55%</li><li><span className="dot yellow" />range chỉ ở {Math.round(demo.mastery * 100)}%</li><li><span className="dot red" />Stop included lặp lại 3 lần</li><li><span className="dot blue" />Còn 15 phút trong phiên học</li></ul><Link href="/student/lesson" className="button primary full">Mở bài học 3 pha</Link></aside>
       </div>
     </div>
   );
@@ -133,25 +133,72 @@ function Roadmap() {
 function CourseDetail() {
   return (
     <div className="page-stack">
-      <PageIntro eyebrow="Khóa học đang tham gia" title="Python cơ bản cho học sinh" description="10 lesson · 50 exercise · 4 game · 12 giờ dự kiến" illustration="skill-mastery" />
-      <div className="course-hero-card"><Asset type="cover" name="course-cover-01" alt="Bìa khóa Python" width={300} height={190} /><div><StatusPill tone="green">46% hoàn thành</StatusPill><h2>Tự viết mini game sau 4 tuần</h2><ProgressBar value={46} /><Link href="/student/lesson" className="button primary">Tiếp tục lesson 5 →</Link></div></div>
-      <div className="module-list">{["Khởi động", "Ra quyết định", "Lặp thông minh", "Dữ liệu & hàm"].map((title, index) => <article key={title}><span>{index + 1}</span><div><strong>{title}</strong><small>{["3/3 lesson", "2/2 lesson", "1/3 lesson", "0/2 lesson"][index]}</small></div><ProgressBar value={[100, 100, 33, 0][index] ?? 0} /><Link href={index <= 2 ? "/student/lesson" : "/student/roadmap"}>{index <= 2 ? "Mở" : "Khóa"}</Link></article>)}</div>
+      <PageIntro eyebrow={pythonCourse.audience} title={pythonCourse.title} description={pythonCourse.description} illustration="skill-mastery" />
+      <div className="course-hero-card realistic-course"><Asset type="cover" name="course-cover-01" alt="Bìa khóa Python" width={300} height={190} /><div><div className="course-meta"><StatusPill tone="green">Đang học · {pythonCourse.progress}%</StatusPill><span>{pythonCourse.duration}</span><span>{pythonCourse.cadence}</span></div><h2>Sản phẩm cuối: trò chơi hỏi–đáp bằng Python</h2><p>AI ưu tiên bài range() vì Minh đã đủ nền tảng for nhưng còn nhầm điểm dừng ở 3 lần gần đây.</p><ProgressBar value={pythonCourse.progress} /><Link href="/student/lesson" className="button primary">Học tiếp bài 8 · range() →</Link></div></div>
+      <section className="surface-card course-outcomes"><SectionHeading eyebrow="Sau khóa học" title="Học để làm được, không chỉ xem hết video"/><div>{pythonCourse.outcomes.map((outcome) => <p key={outcome}><Asset type="icon" name="ui-check" alt="" width={20} height={20}/>{outcome}</p>)}</div></section>
+      <section className="course-syllabus"><SectionHeading eyebrow="Chương trình học" title="4 module · 12 bài · mỗi bài có 3 pha"/><div className="syllabus-list">{pythonCourse.modules.map((module, moduleIndex) => <details open={moduleIndex === 2} key={module.id}><summary><span className="module-number">{moduleIndex + 1}</span><div><strong>{module.title}</strong><small>{module.description}</small></div><div className="module-progress"><span>{module.progress}%</span><ProgressBar value={module.progress}/></div></summary><div className="syllabus-lessons">{module.lessons.map((lesson, lessonIndex) => <article className={lesson.status.toLowerCase()} key={lesson.id}><span className="lesson-order">{moduleIndex * 3 + lessonIndex + 1}</span><div className="lesson-summary"><small>{lesson.durationMinutes} phút · {lesson.conceptCode}</small><strong>{lesson.title}</strong><p>{lesson.outcome}</p><div className="phase-chips">{lesson.phases.map((phase) => <span key={phase.phase}>{phase.title} · {phase.durationMinutes}p</span>)}</div></div><StatusPill tone={lesson.status === "COMPLETED" ? "green" : lesson.status === "CURRENT" ? "purple" : lesson.status === "AVAILABLE" ? "blue" : "gray"}>{lesson.status === "COMPLETED" ? "Đã xong" : lesson.status === "CURRENT" ? "Học tiếp" : lesson.status === "AVAILABLE" ? "Có thể học" : "Chưa mở"}</StatusPill>{lesson.status === "CURRENT" && <Link href="/student/lesson" className="button primary small">Mở bài</Link>}</article>)}</div></details>)}</div></section>
     </div>
   );
 }
 
 function LessonPlayer() {
-  const [step, setStep] = useState(0);
-  const steps = [
-    { title: "Vạch dừng", body: "Hãy tưởng tượng robot đi tới biển STOP. Biển báo là nơi dừng, không phải một ô được ghé.", code: "range(start, stop)" },
-    { title: "Đọc dãy", body: "Bắt đầu ở 1, tăng 1 sau mỗi lượt và chỉ đi khi số hiện tại nhỏ hơn 5.", code: "list(range(1, 5))\n# [1, 2, 3, 4]" },
-    { title: "Tự kiểm tra", body: "Giờ hãy làm một câu ngắn để hệ thống kiểm tra cách bạn hiểu stop.", code: "range(1, 5)" }
+  const demo = useDemo();
+  const lesson = pythonCourse.modules[2].lessons[1];
+  const [phaseIndex, setPhaseIndex] = useState(0);
+  const [theoryTab, setTheoryTab] = useState<"lecture" | "video" | "document">("lecture");
+  const [practiceAnswer, setPracticeAnswer] = useState<number | null>(null);
+  const [practiceChecked, setPracticeChecked] = useState(false);
+  const [checkpointAnswers, setCheckpointAnswers] = useState<Record<number, number>>({});
+  const [checkpointScore, setCheckpointScore] = useState<number | null>(null);
+  const phases = lesson.phases;
+  const current = phases[phaseIndex] ?? phases[0]!;
+  const checkpointQuestions = [
+    { prompt: "list(range(2, 6)) tạo dãy nào?", options: ["[2, 3, 4, 5]", "[2, 3, 4, 5, 6]", "[1, 2, 3, 4, 5]"], correct: 0 },
+    { prompt: "Muốn in các số 1 đến 10, stop nên là bao nhiêu?", options: ["10", "11", "9"], correct: 1 },
+    { prompt: "range(6, 1, -2) cho kết quả nào?", options: ["[6, 4, 2]", "[6, 4, 2, 1]", "[1, 3, 5]"], correct: 0 }
   ];
-  const current = steps[step] ?? steps[0];
+  const checkPractice = async () => {
+    if (practiceAnswer === null) return;
+    setPracticeChecked(true);
+    if (practiceAnswer === 1) {
+      await demo.submitRangeMistake();
+    } else {
+      await demo.submitLearningAttempt({
+        activityId: "practice-range-predict-01",
+        phase: "PRACTICE",
+        isCorrect: practiceAnswer === 0,
+        submittedAnswer: practiceAnswer === 0 ? "1, 2, 3, 4" : "0, 1, 2, 3, 4",
+        expectedAnswer: "1, 2, 3, 4",
+        difficulty: 0.45,
+        responseTimeMs: 11_200,
+        stopValue: 5
+      });
+    }
+  };
+  const submitCheckpoint = async () => {
+    const score = checkpointQuestions.filter((question, index) => checkpointAnswers[index] === question.correct).length;
+    setCheckpointScore(score);
+    await demo.submitLearningAttempt({
+      activityId: "checkpoint-range-01",
+      phase: "CHECKPOINT",
+      isCorrect: score >= 2,
+      submittedAnswer: checkpointQuestions.map((_, index) => checkpointAnswers[index]).join(","),
+      expectedAnswer: "0,1,0",
+      difficulty: 0.65,
+      responseTimeMs: 48_000,
+      stopValue: 5
+    });
+  };
   return (
     <div className="lesson-layout">
-      <aside className="lesson-sidebar"><Link href="/student/course">← Khóa học</Link><span className="eyebrow">Lesson 5/10</span><h2>Khám phá range()</h2>{steps.map((item, index) => <button className={index === step ? "active" : index < step ? "done" : ""} onClick={() => setStep(index)} key={item.title}><span>{index < step ? "✓" : index + 1}</span>{item.title}</button>)}</aside>
-      <section className="lesson-stage"><div className="lesson-visual"><Asset type="illustration" name="illustration-code-challenge" alt="Robot đi qua dãy số" width={560} height={300} /></div><span className="eyebrow">{step + 1} · Khái niệm</span><h1>{current?.title}</h1><p>{current?.body}</p><pre><code>{current?.code}</code></pre><div className="lesson-actions"><button className="button ghost" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>← Trước</button>{step < steps.length - 1 ? <button className="button primary" onClick={() => setStep((value) => value + 1)}>Tiếp tục →</button> : <Link className="button primary" href="/student/exercise">Làm bài tập →</Link>}</div></section>
+      <aside className="lesson-sidebar"><Link href="/student/course">← Khóa học</Link><span className="eyebrow">Bài 8/12 · {lesson.durationMinutes} phút</span><h2>{lesson.title}</h2><p>{lesson.outcome}</p>{phases.map((phase, index) => <button aria-label={`${phase.title}, ${phase.durationMinutes} phút`} className={index === phaseIndex ? "active" : index < phaseIndex ? "done" : ""} onClick={() => setPhaseIndex(index)} key={phase.phase}><span>{index < phaseIndex ? "✓" : index + 1}</span><div><strong>{phase.title}</strong><small>{phase.durationMinutes} phút</small></div></button>)}</aside>
+      <section className="lesson-stage three-phase-stage">
+        <div className="phase-header"><div><span className="eyebrow">Pha {phaseIndex + 1}/3 · {current.title}</span><h1>{phaseIndex === 0 ? "Hiểu điểm dừng của range()" : phaseIndex === 1 ? "Thử, sai và sửa ngay trong code" : "Củng cố bằng tình huống mới"}</h1><p>{current.summary}</p></div><StatusPill tone={phaseIndex === 0 ? "blue" : phaseIndex === 1 ? "purple" : "green"}>{current.durationMinutes} phút</StatusPill></div>
+        {phaseIndex === 0 && <div className="phase-content"><div className="resource-tabs">{(["lecture", "video", "document"] as const).map((tab) => <button className={theoryTab === tab ? "active" : ""} onClick={() => setTheoryTab(tab)} key={tab}>{tab === "lecture" ? "Bài giảng" : tab === "video" ? "Video 6 phút" : "Tài liệu đọc"}</button>)}</div>{theoryTab === "lecture" && <div className="theory-panel"><div className="lesson-visual"><Asset type="illustration" name="illustration-code-challenge" alt="Robot đi qua dãy số và dừng trước biển STOP" width={520} height={280}/></div><h2>Stop là vạch dừng, không phải điểm được ghé</h2><p><code>range(start, stop, step)</code> bắt đầu ở <strong>start</strong>, thay đổi theo <strong>step</strong> và dừng trước <strong>stop</strong>. Với step dương, giá trị chỉ được nhận khi còn nhỏ hơn stop.</p><pre><code>{"list(range(1, 5))\n# [1, 2, 3, 4]"}</code></pre><div className="concept-callout">Mẹo kiểm tra: viết thử 3 lượt đầu, hỏi “giá trị hiện tại đã chạm stop chưa?” rồi mới đoán cả dãy.</div></div>}{theoryTab === "video" && <div className="media-lesson"><Asset type="illustration" name="illustration-micro-lesson" alt="Minh họa video về range" width={360} height={220}/><div><StatusPill tone="blue">Video có phụ đề · 06:12</StatusPill><h2>Robot Mầm đi qua trạm số</h2><p>Video dừng ở ba mốc để học sinh tự dự đoán. Có bản chép lời tiếng Việt và điều khiển tốc độ.</p><button className="button dark">▶ Xem đoạn minh họa</button></div></div>}{theoryTab === "document" && <div className="document-card"><h2>Phiếu ghi nhớ range()</h2><p><strong>Cú pháp:</strong> range(start, stop, step)</p><ul><li>start được lấy; stop không được lấy.</li><li>step mặc định là 1 và không được bằng 0.</li><li>Với step âm, dãy giảm và vẫn dừng trước giới hạn.</li></ul><small>Nguồn đã kiểm chứng: Python handbook nội bộ · bản 1.3 · giáo viên Mai duyệt</small></div>}</div>}
+        {phaseIndex === 1 && <div className="practice-lab"><div className="practice-brief"><StatusPill tone="purple">Predict output · mức 0.45</StatusPill><h2>Chương trình sẽ in gì?</h2><p>Đọc start và stop trước, sau đó theo vết từng lượt lặp.</p><pre className="code-window"><code>{"for n in range(1, 5):\n    print(n)"}</code></pre></div><div className="answer-list large">{["1, 2, 3, 4", "1, 2, 3, 4, 5", "0, 1, 2, 3, 4"].map((answer, index) => { const state = practiceChecked ? index === 0 ? "correct" : index === practiceAnswer ? "incorrect" : "" : practiceAnswer === index ? "selected" : ""; return <button className={state} disabled={practiceChecked} onClick={() => setPracticeAnswer(index)} key={answer}><span>{String.fromCharCode(65 + index)}</span><code>{answer}</code></button>; })}</div><button className="button primary" disabled={practiceAnswer === null || demo.busy || practiceChecked} onClick={checkPractice}>{demo.busy ? "AI đang cập nhật hồ sơ..." : "Kiểm tra và ghi learning event"}</button>{practiceChecked && <div className={practiceAnswer === 0 ? "feedback-inline correct" : "feedback-inline incorrect"}><strong>{practiceAnswer === 0 ? "Đúng — stop không thuộc dãy." : "Đã ghi nhận lỗi lệch điểm dừng."}</strong><p>{practiceAnswer === 0 ? "Tiếp tục với một bài có step khác 1." : "Hệ thống kết hợp attempt này với lịch sử; một lỗi đơn lẻ không tự động gắn nhãn học sinh."}</p>{demo.analysis && <small>Recommendation: {demo.analysis.recommendation.action} · ưu tiên {Math.round(demo.analysis.recommendation.priority_score * 100)}%</small>}</div>}</div>}
+        {phaseIndex === 2 && <div className="checkpoint-panel"><div className="checkpoint-note"><Asset type="icon" name="ai-evidence" alt="" width={28} height={28}/><p><strong>Kiểm tra theo kỹ năng, không chỉ tính tổng điểm.</strong> Kết quả cập nhật mastery của range(), mức độ tự tin và bài tiếp theo được đề xuất.</p></div>{checkpointQuestions.map((question, questionIndex) => <fieldset disabled={checkpointScore !== null} key={question.prompt}><legend>{questionIndex + 1}. {question.prompt}</legend>{question.options.map((option, optionIndex) => <label key={option}><input type="radio" name={`checkpoint-${questionIndex}`} checked={checkpointAnswers[questionIndex] === optionIndex} onChange={() => setCheckpointAnswers((currentAnswers) => ({ ...currentAnswers, [questionIndex]: optionIndex }))}/><code>{option}</code></label>)}</fieldset>)}<button className="button primary" disabled={Object.keys(checkpointAnswers).length < checkpointQuestions.length || checkpointScore !== null || demo.busy} onClick={submitCheckpoint}>Nộp kiểm tra cuối bài</button>{checkpointScore !== null && <div className={checkpointScore >= 2 ? "checkpoint-result pass" : "checkpoint-result retry"}><div><span>Kết quả</span><strong>{checkpointScore}/3</strong></div><div><h2>{checkpointScore >= 2 ? "Đã củng cố kiến thức cốt lõi" : "Cần một vòng hỗ trợ ngắn"}</h2><p>{checkpointScore >= 2 ? "AI đề xuất mở bài while, đồng thời hẹn ôn range() sau 5 ngày." : "AI đề xuất bài bổ trợ 5 phút về stop, sau đó làm lại một câu tương đương—không bắt học lại toàn bộ bài."}</p>{demo.analysis && <p className="recommendation-log">Log: {demo.analysis.recommendation.reasons.join(" · ")}</p>}</div></div>}</div>}
+        <div className="lesson-actions"><button className="button ghost" disabled={phaseIndex === 0} onClick={() => setPhaseIndex((value) => Math.max(0, value - 1))}>← Pha trước</button>{phaseIndex < phases.length - 1 ? <button className="button primary" onClick={() => setPhaseIndex((value) => value + 1)}>Sang {phases[phaseIndex + 1]?.title} →</button> : <Link className="button ghost" href="/student/course">Về khóa học</Link>}</div>
+      </section>
     </div>
   );
 }
@@ -203,7 +250,7 @@ function DueReviews() {
       <PageIntro eyebrow="Spaced review" title="Ôn đúng lúc, không ôn mọi thứ" description="Scheduler dùng retrievability và stability; recommendation chọn hoạt động phù hợp." illustration="spaced-review" />
       {demo.analysis ? (
         <div className="review-grid">
-          <article className="review-card urgent"><div className="review-asset"><Asset type="illustration" name="illustration-micro-lesson" alt="Bài ôn range" width={240} height={150} /></div><div className="review-content"><div><StatusPill tone="red">Đến hạn hôm nay</StatusPill><StatusPill tone="purple">MICRO_LESSON</StatusPill></div><h2>Stop không thuộc range()</h2><p>{demo.analysis.recommendation.reasons.join(" · ")}</p><div className="review-signals"><span>Mastery <strong>{Math.round(demo.mastery * 100)}%</strong></span><span>Retrievability <strong>{Math.round(demo.analysis.retrievability * 100)}%</strong></span><span>Ước tính <strong>5 phút</strong></span></div>{demo.lesson?.status === "PUBLISHED" ? <Link className="button primary" href="/student/micro-lesson">Bắt đầu bài ôn →</Link> : <Link className="button dark" href="/teacher/studio">Nhờ teacher tạo bài ôn →</Link>}</div></article>
+          <article className="review-card urgent"><div className="review-asset"><Asset type="illustration" name="illustration-micro-lesson" alt="Bài ôn range" width={240} height={150} /></div><div className="review-content"><div><StatusPill tone="red">Đến hạn hôm nay</StatusPill><StatusPill tone="purple">{demo.analysis.recommendation.action}</StatusPill></div><h2>{demo.analysis.recommendation.target?.title ?? "Stop không thuộc range()"}</h2><p>{demo.analysis.recommendation.reasons.join(" · ")}</p><div className="review-signals"><span>Mastery <strong>{Math.round(demo.mastery * 100)}%</strong></span><span>Retrievability <strong>{Math.round(demo.analysis.retrievability * 100)}%</strong></span><span>Ước tính <strong>{demo.analysis.recommendation.target?.estimated_minutes ?? 5} phút</strong></span></div><small>Đích cụ thể: {demo.analysis.recommendation.target?.id ?? "python_range-range_stop_included-v1"} · {demo.analysis.recommendation.target?.phase ?? "THEORY"}</small>{demo.lesson?.status === "PUBLISHED" ? <Link className="button primary" href="/student/micro-lesson">Bắt đầu bài ôn →</Link> : <Link className="button dark" href="/teacher/studio">Nhờ teacher tạo bài ôn →</Link>}</div></article>
           <article className="review-card"><div className="review-asset"><Asset type="illustration" name="illustration-game-center" alt="Game luyện while" width={220} height={140} /></div><div className="review-content"><StatusPill tone="blue">Ngày mai</StatusPill><h2>Bug Hunter: vòng lặp while</h2><p>Một game 4 phút để kiểm tra biến điều kiện có được cập nhật.</p><Link className="button ghost" href="/student/games/bug-hunter">Xem game</Link></div></article>
         </div>
       ) : (
@@ -257,8 +304,8 @@ function MicroLessonPlayer() {
 function GameCenter() {
   return (
     <div className="page-stack">
-      <PageIntro eyebrow="Học bằng nhiệm vụ" title="Game center" description="Mỗi game luyện một khái niệm và trả về learning event thật." illustration="game-center" />
-      <div className="game-grid">{games.map((game, index) => <Link href={`/student/games/${game.slug}`} className={`game-card ${game.color}`} key={game.slug}><span className="game-level">Level {index + 1}</span><Asset type="game" name={game.asset} alt={game.title} width={260} height={170} /><h2>{game.title}</h2><p>{game.description}</p><span className="xp-reward">+{game.xp} XP <em>Chơi →</em></span></Link>)}</div>
+      <PageIntro eyebrow="Hoạt động thực hành" title="Phòng luyện kỹ năng" description="Các hình thức tương tác được gắn vào bài học như code, trắc nghiệm hay sửa lỗi; mỗi hoạt động đo một kỹ năng rõ ràng." illustration="game-center" />
+      <div className="game-grid">{games.map((game, index) => <Link href={`/student/games/${game.slug}`} className={`game-card ${game.color}`} key={game.slug}><span className="game-level">Hoạt động {index + 1}</span><Asset type="game" name={game.asset} alt={game.title} width={260} height={170} /><h2>{game.title}</h2><p>{game.description}</p><span className="xp-reward">{index < 2 ? "Cơ bản" : "Vận dụng"} <em>Mở hoạt động →</em></span></Link>)}</div>
     </div>
   );
 }
@@ -275,7 +322,7 @@ function ProgressPage() {
   return (
     <div className="page-stack">
       <PageIntro eyebrow="4 tuần gần nhất" title="Tiến bộ không chỉ là tổng điểm" description="Theo dõi mastery, khả năng nhớ lại, consistency và sản phẩm đã tạo." illustration="progress" />
-      <div className="metric-grid four"><Metric label="Mastery gain" value="+27%" note="Từ diagnostic" icon="learning-brain" /><Metric label="Recall accuracy" value="76%" note="+11% sau ôn" icon="learning-recall" tone="blue" /><Metric label="Thời gian học" value="237′" note="Mục tiêu 240′" icon="ui-clock" tone="purple" /><Metric label="Hoạt động" value="38" note="7 game session" icon="nav-game" tone="orange" /></div>
+      <div className="metric-grid four"><Metric label="Mastery gain" value="+27%" note="Từ diagnostic" icon="learning-brain" /><Metric label="Recall accuracy" value="76%" note="+11% sau ôn" icon="learning-recall" tone="blue" /><Metric label="Thời gian học" value="237′" note="Mục tiêu 240′" icon="ui-clock" tone="purple" /><Metric label="Hoạt động" value="38" note="Code, quiz và sửa lỗi" icon="nav-review" tone="orange" /></div>
       <section className="surface-card chart-card"><SectionHeading eyebrow="Mastery & retention" title="Hiểu tốt hơn, nhớ lâu hơn" description="Hai đường đo hai hiện tượng khác nhau." /><div className="chart-wrap" aria-label="Biểu đồ mastery và retention"><ResponsiveContainer width="100%" height={320}><AreaChart data={history}><defs><linearGradient id="mastery" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4AAA64" stopOpacity={0.35}/><stop offset="95%" stopColor="#4AAA64" stopOpacity={0}/></linearGradient><linearGradient id="retention" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#72B9F2" stopOpacity={0.3}/><stop offset="95%" stopColor="#72B9F2" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#DCE8DF"/><XAxis dataKey="week"/><YAxis domain={[0, 100]}/><Tooltip/><Area type="monotone" dataKey="mastery" stroke="#348B4E" strokeWidth={3} fill="url(#mastery)"/><Area type="monotone" dataKey="retention" stroke="#4A9BDF" strokeWidth={3} fill="url(#retention)"/></AreaChart></ResponsiveContainer></div></section>
       {demo.quizCompleted && <div className="before-after"><Asset type="illustration" name="illustration-skill-mastery" alt="" width={250} height={170} /><div><span className="eyebrow">Review impact · range()</span><h2>{Math.round(demo.masteryBeforeReview * 100)}% <span>→</span> {Math.round(demo.mastery * 100)}%</h2><p>Interval tiếp theo tăng từ 1 ngày lên 5 ngày sau câu trả lời đúng.</p></div></div>}
     </div>

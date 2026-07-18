@@ -39,6 +39,14 @@ export interface AnalysisResult {
     priority_score: number;
     reasons: string[];
     evidence: Record<string, unknown>;
+    target?: {
+      type: "LESSON_PHASE" | "ACTIVITY" | "MICRO_LESSON";
+      id: string;
+      title: string;
+      phase: "THEORY" | "PRACTICE" | "CHECKPOINT";
+      estimated_minutes: number;
+      difficulty?: number;
+    };
   };
   explanations: string[];
   mode: "AI_SERVICE" | "DETERMINISTIC_FALLBACK";
@@ -49,6 +57,8 @@ export interface DemoAttempt {
   idempotencyKey: string;
   studentId: string;
   conceptCode: string;
+  activityId?: string;
+  lessonPhase?: "THEORY" | "PRACTICE" | "CHECKPOINT";
   isCorrect: boolean;
   usedHint: boolean;
   status: "PENDING_ANALYSIS" | "ANALYZED" | "FALLBACK_ANALYZED";
@@ -87,4 +97,14 @@ export interface DemoContent {
   estimatedCostUsd: number;
   reviewHistory: Array<{ action: string; from: ContentStatus; to: ContentStatus; at: string; comment?: string }>;
   updatedAt: string;
+  draftKind?: "FULL_LESSON" | "REMEDIATION";
+  gradeBand?: string;
+  totalDurationMinutes?: number;
+  sections?: Array<{
+    phase: "THEORY" | "PRACTICE" | "CHECKPOINT";
+    title: string;
+    durationMinutes: number;
+    summary: string;
+    activityTypes: Array<"LECTURE" | "VIDEO" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT">;
+  }>;
 }

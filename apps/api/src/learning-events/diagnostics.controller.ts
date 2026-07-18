@@ -1,8 +1,14 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { AuthGuard } from "../auth/auth.guard";
+import { Roles } from "../auth/roles.decorator";
+import { RolesGuard } from "../auth/roles.guard";
 
 @ApiTags("diagnostics")
+@ApiBearerAuth()
+@Roles("STUDENT")
+@UseGuards(AuthGuard, RolesGuard)
 @Controller("diagnostics")
 export class DiagnosticsController {
   @Post("start")

@@ -20,8 +20,17 @@ export class GenerateContentDto {
 
   @IsInt()
   @Min(3)
-  @Max(15)
+  @Max(120)
   durationMinutes = 5;
+
+  @IsOptional()
+  @IsIn(["FULL_LESSON", "REMEDIATION"])
+  draftKind: "FULL_LESSON" | "REMEDIATION" = "REMEDIATION";
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  gradeBand = "Lớp 6–9";
 
   @IsOptional()
   @IsString()

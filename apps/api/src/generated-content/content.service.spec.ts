@@ -6,12 +6,13 @@ import { DomainRegistryService } from "../domains/domain-registry.service";
 import { DemoStoreService } from "../shared/demo-store.service";
 import { ContentService } from "./content.service";
 import { ContentValidatorService } from "./content-validator.service";
+import { ContentSourceService } from "./content-source.service";
 
 function service(): ContentService {
   const store = new DemoStoreService();
   const local = new LocalTemplateProvider();
   const mock = new MockDevelopmentProvider(local);
-  return new ContentService(store, new DomainRegistryService(), local, new ExternalLlmProvider(), mock, new ContentValidatorService());
+  return new ContentService(store, new DomainRegistryService(), local, new ExternalLlmProvider(), mock, new ContentValidatorService(), new ContentSourceService());
 }
 
 function input(): GenerateContentDto {
@@ -32,6 +33,8 @@ describe("ContentService", () => {
     const content = await service().generate(input());
     expect(content.status).toBe("DRAFT");
     expect(content.slides.length).toBeGreaterThanOrEqual(3);
+    expect(content.sections?.map((section) => section.phase)).toEqual(["THEORY", "PRACTICE", "CHECKPOINT"]);
+    expect(content.sourceReferences).toEqual(["source-python-handbook-01"]);
   });
 
   it("prevents students from reading draft content", async () => {
@@ -59,5 +62,11 @@ describe("ContentService", () => {
     expect(reused.id).toBe(first.id);
     expect(reused.reused).toBe(true);
     expect(reused.reuseCount).toBe(1);
+  });
+
+  it("rejects generation from a source that has not been reviewed", async () => {
+    const unverified = input();
+    unverified.sourceId = "unknown-upload";
+    await expect(service().generate(unverified)).rejects.toThrow("Content source not found");
   });
 });

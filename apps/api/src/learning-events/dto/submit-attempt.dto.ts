@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class SubmitAttemptDto {
   @ApiProperty({ example: "web-demo-evt-001" })
@@ -24,6 +24,17 @@ export class SubmitAttemptDto {
   @ApiProperty({ example: "PYTHON_RANGE" })
   @IsString()
   conceptCode!: string;
+
+  @ApiPropertyOptional({ example: "practice-range-predict-01" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  activityId?: string;
+
+  @ApiPropertyOptional({ enum: ["THEORY", "PRACTICE", "CHECKPOINT"] })
+  @IsOptional()
+  @IsIn(["THEORY", "PRACTICE", "CHECKPOINT"])
+  lessonPhase?: "THEORY" | "PRACTICE" | "CHECKPOINT";
 
   @ApiProperty({ example: false })
   @IsBoolean()

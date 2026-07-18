@@ -14,4 +14,14 @@ Correctness depends on latent concept ability, exercise difficulty, prerequisite
 
 The generator forces skipped attempts, success after practice, wrong answers at high latent ability, lucky correct answers, implausibly fast and slow responses, multiple-concept exercises, missing misconception labels and repeated registered misconceptions.
 
-All tabular outputs contain the notice `SYNTHETIC DATA — NOT REAL EDUONE DATA`; JSONL events carry a synthetic marker. `scripts/validate-synthetic-data.mjs` verifies row counts and notices.
+It also models operational messiness that a pilot can realistically encounter:
+
+- different grades, learning goals, weekly availability and preferred session lengths;
+- personal computers, tablets, shared phones and library computers;
+- stable, intermittent and offline-sync connectivity;
+- event occurrence time separate from receive time;
+- controlled late events, offline batches and sparse histories, each marked in `data_quality_flags`.
+
+The generator does not corrupt primary keys or flood the data with random nulls. Noise remains traceable so the pipeline can exclude, down-weight or investigate it instead of silently learning from bad telemetry.
+
+All tabular outputs contain the notice `SYNTHETIC DATA — NOT REAL EDUONE DATA`; JSONL events carry a synthetic marker. `scripts/validate-synthetic-data.mjs` verifies 20 profiles, 8 concepts, 48 exercises and matching 400 attempts/events, plus the notices.

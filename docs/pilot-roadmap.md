@@ -2,13 +2,13 @@
 
 ## Scope
 
-One Python foundations course, one class, one teacher and 20 consented learners for 4–6 weeks. AI content always requires human review. The model cannot be used for grades or discipline.
+One six-week Python foundations course (4 modules, 12 lessons, about 16 hours), one class, one teacher and 20 consented learners. Every lesson follows Theory → Practice → Checkpoint. AI content always requires human review. The model cannot be used for grades or discipline.
 
 ## Weeks
 
 1. Baseline diagnostic, accessibility/device check and teacher calibration.
 2. Personalization events, explicit fallback monitoring and weekly teacher review.
-3. Micro-lesson generation/reuse, qualitative feedback and misconception audits.
+3. Full-lesson drafting plus targeted remediation/reuse, qualitative feedback and misconception audits.
 4. Checkpoint comparison, retention review and safety review.
 5–6. Optional extension for sparse data, intervention refinement and closing interviews.
 
@@ -18,7 +18,7 @@ The brief's planning baseline is **40–50 teacher-hours for one complete lesson
 
 For the assisted workflow, an active teacher timer starts when the generated draft is first opened, pauses during explicit breaks or sustained inactivity, resumes for revisions and stops at approve/reject. Generation latency is recorded separately in milliseconds. Each content record should retain content ID, provider/model, prompt version, source IDs, draft timestamp, active editing seconds, review seconds, edit count, decision, reuse count and publish timestamp.
 
-The before/after comparison uses matched content of the same scope, level and format. The five-minute micro-lesson timer in the prototype is a workflow demonstration only and must not be compared directly with the brief's complete-lesson baseline:
+The before/after comparison uses two matched complete lessons of the same scope, grade band, three-phase structure and review rubric. Seven-minute remediation is measured separately and must not be compared directly with the brief's complete-lesson baseline:
 
 - manual active minutes per approved micro-lesson and total manual course hours;
 - assisted generation latency, active teacher-edit minutes and review minutes per approved micro-lesson;

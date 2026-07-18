@@ -1,5 +1,6 @@
 import { PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { createHash } from "node:crypto";
 import concepts from "../../domains/python-foundations/concepts.json";
 import misconceptions from "../../domains/python-foundations/misconceptions.json";
 import prerequisites from "../../domains/python-foundations/prerequisites.json";
@@ -10,6 +11,31 @@ const studentNames = [
   "Minh", "Lan", "An", "Bình", "Chi", "Dũng", "Giang", "Hà", "Khánh", "Linh",
   "Mai", "Nam", "Oanh", "Phúc", "Quân", "Sơn", "Trang", "Uyên", "Việt", "Yến"
 ];
+
+const moduleBlueprints = [
+  ["MODULE-1", "Khởi động cùng Python", "Môi trường, biến, dữ liệu đầu vào và phép tính."],
+  ["MODULE-2", "Chương trình biết lựa chọn", "Biểu thức đúng/sai và nhánh xử lý rõ ràng."],
+  ["MODULE-3", "Lặp có kiểm soát", "for, range, while và cách tránh vòng lặp vô hạn."],
+  ["MODULE-4", "Dữ liệu, hàm và dự án", "List, hàm và trò chơi hỏi–đáp cuối khóa."]
+] as const;
+
+const lessonBlueprints = [
+  ["LESSON-01", "Ra lệnh cho máy tính", "PYTHON_VARIABLES", 45, "Dùng print() và đọc lỗi cú pháp cơ bản."],
+  ["LESSON-02", "Biến và kiểu dữ liệu", "PYTHON_VARIABLES", 55, "Giải thích biến, chuỗi, số nguyên và số thực."],
+  ["LESSON-03", "Nhập liệu và phép tính", "PYTHON_OPERATORS", 60, "Nhận input, chuyển kiểu và tính một biểu thức."],
+  ["LESSON-04", "So sánh và giá trị đúng/sai", "PYTHON_OPERATORS", 55, "Tạo biểu thức Boolean bằng toán tử so sánh."],
+  ["LESSON-05", "Rẽ nhánh với if / elif / else", "PYTHON_IF_ELSE", 70, "Thiết kế nhánh không chồng chéo và đúng thứ tự."],
+  ["LESSON-06", "Checkpoint: Trợ lý kế hoạch học", "PYTHON_IF_ELSE", 60, "Kết hợp input, phép tính và điều kiện trong sản phẩm nhỏ."],
+  ["LESSON-07", "Vòng lặp for", "PYTHON_FOR", 55, "Mô tả từng lượt lặp và biến điều khiển."],
+  ["LESSON-08", "Khám phá range()", "PYTHON_RANGE", 65, "Đọc đúng start, stop, step và tránh lỗi lệch một đơn vị."],
+  ["LESSON-09", "while và điều kiện dừng", "PYTHON_WHILE", 70, "Dùng while khi chưa biết trước số lượt lặp."],
+  ["LESSON-10", "List và vị trí phần tử", "PYTHON_LISTS", 65, "Tạo list, truy cập index và duyệt phần tử."],
+  ["LESSON-11", "Hàm, tham số và return", "PYTHON_FUNCTIONS", 75, "Tách chương trình thành hàm nhỏ có đầu vào và đầu ra."],
+  ["LESSON-12", "Dự án: Trò chơi hỏi–đáp", "PYTHON_FUNCTIONS", 120, "Ghép list, hàm, điều kiện và vòng lặp thành sản phẩm cuối khóa."]
+] as const;
+
+const studentGoals = ["Tạo trò chơi hỏi–đáp", "Củng cố tư duy logic", "Chuẩn bị CLB Tin học", "Học theo tốc độ riêng"] as const;
+const devices = ["Máy tính cá nhân", "Máy tính bảng", "Điện thoại dùng chung", "Máy tính ở thư viện"] as const;
 
 async function main(): Promise<void> {
   const passwordHash = await bcrypt.hash("Demo@123", 10);
@@ -47,15 +73,19 @@ async function main(): Promise<void> {
   });
   const course = await prisma.course.upsert({
     where: { organizationId_code: { organizationId: organization.id, code: "PYTHON-PILOT" } },
-    update: {},
+    update: {
+      title: "Python căn bản: Từ câu lệnh đầu tiên đến trò chơi tương tác",
+      description: "Khóa học 6 tuần cho học sinh lớp 6–9; 12 bài có lý thuyết, thực hành và kiểm tra cuối bài.",
+      estimatedHours: 16
+    },
     create: {
       organizationId: organization.id,
       domainId: domain.id,
       code: "PYTHON-PILOT",
-      title: "Python cơ bản cho học sinh",
-      description: "Học Python qua nhiệm vụ, trò chơi và ôn tập cá nhân hóa.",
+      title: "Python căn bản: Từ câu lệnh đầu tiên đến trò chơi tương tác",
+      description: "Khóa học 6 tuần cho học sinh lớp 6–9; 12 bài có lý thuyết, thực hành và kiểm tra cuối bài.",
       coverAssetKey: "course-cover-01",
-      estimatedHours: 12
+      estimatedHours: 16
     }
   });
   const learningClass = await prisma.learningClass.upsert({
@@ -66,6 +96,26 @@ async function main(): Promise<void> {
       teacherId: teacher.id,
       code: "PY-01",
       name: "Python Explorers — Lớp thử nghiệm"
+    }
+  });
+  const handbookText = "range(start, stop, step) lấy start, dừng trước stop. Ví dụ list(range(1, 5)) là [1, 2, 3, 4].";
+  const handbookChecksum = createHash("sha256").update(handbookText).digest("hex");
+  await prisma.contentSource.upsert({
+    where: { courseId_checksum: { courseId: course.id, checksum: handbookChecksum } },
+    update: { extractedText: handbookText, status: "VERIFIED", verifiedAt: new Date(), metadataJson: { verifiedBy: teacherUser.id, sourceVersion: "1.3" } },
+    create: {
+      id: "source-python-handbook-01",
+      courseId: course.id,
+      uploadedById: teacherUser.id,
+      name: "Python handbook nội bộ · bản 1.3.txt",
+      type: "DATABASE",
+      mimeType: "text/plain",
+      sizeBytes: Buffer.byteLength(handbookText),
+      checksum: handbookChecksum,
+      extractedText: handbookText,
+      status: "VERIFIED",
+      verifiedAt: new Date(),
+      metadataJson: { verifiedBy: teacherUser.id, sourceVersion: "1.3" }
     }
   });
   const conceptIds = new Map<string, string>();
@@ -117,49 +167,73 @@ async function main(): Promise<void> {
     });
   }
   const modules = [];
-  for (let moduleIndex = 0; moduleIndex < 4; moduleIndex += 1) {
+  for (let moduleIndex = 0; moduleIndex < moduleBlueprints.length; moduleIndex += 1) {
+    const blueprint = moduleBlueprints[moduleIndex];
+    if (!blueprint) continue;
     modules.push(await prisma.courseModule.upsert({
-      where: { courseId_code: { courseId: course.id, code: `MODULE-${moduleIndex + 1}` } },
-      update: {},
+      where: { courseId_code: { courseId: course.id, code: blueprint[0] } },
+      update: { title: blueprint[1], description: blueprint[2], order: moduleIndex + 1 },
       create: {
         courseId: course.id,
-        code: `MODULE-${moduleIndex + 1}`,
-        title: ["Khởi động", "Ra quyết định", "Lặp thông minh", "Dữ liệu & hàm"][moduleIndex] ?? "Module",
+        code: blueprint[0],
+        title: blueprint[1],
+        description: blueprint[2],
         order: moduleIndex + 1
       }
     }));
   }
-  for (let index = 0; index < 10; index += 1) {
-    const concept = concepts[index % concepts.length];
-    const conceptId = conceptIds.get(concept.code);
+  for (let index = 0; index < lessonBlueprints.length; index += 1) {
+    const blueprint = lessonBlueprints[index];
+    if (!blueprint) continue;
+    const [lessonCode, title, conceptCode, durationMinutes, summary] = blueprint;
+    const conceptId = conceptIds.get(conceptCode);
     if (!conceptId) continue;
     const module = modules[Math.min(3, Math.floor(index / 3))];
     if (!module) continue;
     const lesson = await prisma.lesson.upsert({
-      where: { moduleId_code: { moduleId: module.id, code: `LESSON-${index + 1}` } },
-      update: {},
+      where: { moduleId_code: { moduleId: module.id, code: lessonCode } },
+      update: { title, summary, order: (index % 3) + 1, durationMinutes },
       create: {
         moduleId: module.id,
         conceptId,
-        code: `LESSON-${index + 1}`,
-        title: index < 8 ? concept.title : `${concept.title} — thử thách`,
-        summary: concept.description,
+        code: lessonCode,
+        title,
+        summary,
         order: (index % 3) + 1,
-        durationMinutes: 10 + (index % 3) * 3
+        durationMinutes,
+        metadataJson: { gradeBand: "Lớp 6–9", structureVersion: "three-phase-v1" }
       }
     });
-    for (let exerciseIndex = 0; exerciseIndex < 5; exerciseIndex += 1) {
+    const resources = [
+      ["THEORY", "LECTURE", `Bài giảng: ${title}`, Math.round(durationMinutes * 0.22)],
+      ["THEORY", "VIDEO", `Video minh họa: ${title}`, Math.max(5, Math.round(durationMinutes * 0.1))],
+      ["THEORY", "DOCUMENT", `Phiếu ghi nhớ: ${title}`, Math.max(4, Math.round(durationMinutes * 0.06))]
+    ] as const;
+    for (const [phase, type, resourceTitle, minutes] of resources) {
+      await prisma.learningResource.upsert({
+        where: { id: `resource-${lessonCode.toLowerCase()}-${type.toLowerCase()}` },
+        update: { phase, type, title: resourceTitle, contentJson: { estimatedMinutes: minutes, locale: "vi-VN", sourceId: "source-python-handbook-01" } },
+        create: { id: `resource-${lessonCode.toLowerCase()}-${type.toLowerCase()}`, lessonId: lesson.id, phase, type, title: resourceTitle, contentJson: { estimatedMinutes: minutes, locale: "vi-VN", sourceId: "source-python-handbook-01" } }
+      });
+    }
+    for (let exerciseIndex = 0; exerciseIndex < 7; exerciseIndex += 1) {
+      const isCheckpoint = exerciseIndex >= 4;
+      const exerciseNumber = exerciseIndex + 1;
+      const exerciseType = isCheckpoint ? (["MULTIPLE_CHOICE", "CODE", "EXPLAIN_CODE"][exerciseIndex - 4] ?? "MULTIPLE_CHOICE") : (["PREDICT_OUTPUT", "CODE_ORDER", "CODE", "DEBUG"] as const)[exerciseIndex] ?? "CODE";
+      const exerciseCode = `EX-${String(index + 1).padStart(2, "0")}-${exerciseNumber}`;
       const exercise = await prisma.exercise.upsert({
-        where: { lessonId_code: { lessonId: lesson.id, code: `EX-${index + 1}-${exerciseIndex + 1}` } },
-        update: {},
+        where: { lessonId_code: { lessonId: lesson.id, code: exerciseCode } },
+        update: { phase: isCheckpoint ? "CHECKPOINT" : "PRACTICE", type: exerciseType, prompt: `${isCheckpoint ? "Kiểm tra chuyển giao" : "Thực hành"} ${exerciseNumber}: ${summary}`, difficulty: Number((0.28 + exerciseIndex * 0.09 + (index % 3) * 0.025).toFixed(2)) },
         create: {
           lessonId: lesson.id,
-          code: `EX-${index + 1}-${exerciseIndex + 1}`,
-          type: ["MULTIPLE_CHOICE", "CODE_ORDER", "PREDICT_OUTPUT", "BUG_HUNTER", "GAME"][exerciseIndex] ?? "MULTIPLE_CHOICE",
-          prompt: `Nhiệm vụ ${exerciseIndex + 1}: ${concept.title}`,
-          difficulty: 0.25 + exerciseIndex * 0.12,
-          contentJson: { conceptCode: concept.code },
-          answerJson: { demo: true }
+          code: exerciseCode,
+          phase: isCheckpoint ? "CHECKPOINT" : "PRACTICE",
+          type: exerciseType,
+          prompt: `${isCheckpoint ? "Kiểm tra chuyển giao" : "Thực hành"} ${exerciseNumber}: ${summary}`,
+          difficulty: Number((0.28 + exerciseIndex * 0.09 + (index % 3) * 0.025).toFixed(2)),
+          contentJson: { conceptCode, locale: "vi-VN", estimatedSeconds: 90 + exerciseIndex * 35, requiresExplanation: exerciseType === "EXPLAIN_CODE", testCaseCount: exerciseType === "CODE" ? 4 : 0 },
+          answerJson: { evaluationMode: exerciseType === "CODE" ? "TEST_CASES" : "STRUCTURED", teacherReviewed: true },
+          metadataJson: { datasetVersion: "pilot-realistic-v2", source: "teacher-authored-seed" }
         }
       });
       await prisma.exerciseConcept.upsert({
@@ -186,21 +260,37 @@ async function main(): Promise<void> {
     });
     const student = await prisma.studentProfile.upsert({
       where: { userId: user.id },
-      update: {},
+      update: {
+        gradeLevel: `Lớp ${6 + (index % 4)}`,
+        learningGoal: studentGoals[index % studentGoals.length],
+        weeklyAvailabilityMinutes: [90, 120, 150, 75, 180][index % 5] ?? 120,
+        responseSpeed: Number((0.72 + (index % 7) * 0.09).toFixed(2)),
+        hintUsageRate: Number((0.08 + (index % 6) * 0.07).toFixed(2)),
+        forgettingRate: Number((0.09 + (index % 5) * 0.035).toFixed(3)),
+        consistencyScore: Number((0.48 + (index % 8) * 0.06).toFixed(2)),
+        engagementLevel: Number((0.5 + ((index * 3) % 8) * 0.055).toFixed(2)),
+        metadataJson: { device: devices[index % devices.length], connectivity: index % 7 === 0 ? "UNSTABLE" : index % 5 === 0 ? "OCCASIONAL_OFFLINE" : "STABLE", sharedDevice: index % 6 === 0, dataQualityFlags: index % 9 === 0 ? ["LATE_EVENT"] : index % 7 === 0 ? ["SPARSE_HISTORY"] : [] }
+      },
       create: {
         userId: user.id,
-        gradeLevel: "THCS",
-        learningGoal: "Tự viết một mini game Python sau 4 tuần",
-        weeklyAvailabilityMinutes: [90, 120, 150][index % 3] ?? 120,
+        gradeLevel: `Lớp ${6 + (index % 4)}`,
+        learningGoal: studentGoals[index % studentGoals.length],
+        weeklyAvailabilityMinutes: [90, 120, 150, 75, 180][index % 5] ?? 120,
+        responseSpeed: Number((0.72 + (index % 7) * 0.09).toFixed(2)),
+        hintUsageRate: Number((0.08 + (index % 6) * 0.07).toFixed(2)),
+        forgettingRate: Number((0.09 + (index % 5) * 0.035).toFixed(3)),
+        consistencyScore: Number((0.48 + (index % 8) * 0.06).toFixed(2)),
+        engagementLevel: Number((0.5 + ((index * 3) % 8) * 0.055).toFixed(2)),
         xp: 240 + index * 37,
         level: 2 + (index % 5),
-        streakDays: 1 + (index % 9)
+        streakDays: 1 + (index % 9),
+        metadataJson: { device: devices[index % devices.length], connectivity: index % 7 === 0 ? "UNSTABLE" : index % 5 === 0 ? "OCCASIONAL_OFFLINE" : "STABLE", sharedDevice: index % 6 === 0, dataQualityFlags: index % 9 === 0 ? ["LATE_EVENT"] : index % 7 === 0 ? ["SPARSE_HISTORY"] : [] }
       }
     });
     await prisma.enrollment.upsert({
       where: { studentProfileId_classId_courseId: { studentProfileId: student.id, classId: learningClass.id, courseId: course.id } },
-      update: {},
-      create: { studentProfileId: student.id, classId: learningClass.id, courseId: course.id, progress: 0.18 + (index % 8) * 0.08 }
+      update: { progress: Number(Math.max(0.08, Math.min(0.82, 0.12 + (index % 8) * 0.075 + (index % 5 === 0 ? -0.05 : 0))).toFixed(3)) },
+      create: { studentProfileId: student.id, classId: learningClass.id, courseId: course.id, progress: Number(Math.max(0.08, Math.min(0.82, 0.12 + (index % 8) * 0.075 + (index % 5 === 0 ? -0.05 : 0))).toFixed(3)), metadataJson: { placementCompleted: index !== 18, lastSyncQuality: index % 7 === 0 ? "LATE" : "ON_TIME" } }
     });
     for (const [conceptIndex, concept] of concepts.entries()) {
       const conceptId = conceptIds.get(concept.code);
@@ -222,7 +312,7 @@ async function main(): Promise<void> {
       });
     }
   }
-  console.log("Seeded 1 domain, 1 course, 1 class, 20 students, 8 concepts, 10 lessons and 50 exercises.");
+  console.log("Seeded 1 domain, 1 realistic 6-week course, 1 class, 20 varied students, 8 concepts, 12 lessons, 36 resources and 84 exercises.");
 }
 
 async function run(): Promise<void> {

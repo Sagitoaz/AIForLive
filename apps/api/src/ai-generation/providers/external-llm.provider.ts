@@ -1,7 +1,6 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import type { DemoSlide } from "../../common/types";
-import type { GenerateContentDto } from "../dto/generate-content.dto";
-import type { ContentProvider, ProviderOutput } from "./content-provider";
+import type { ContentGenerationInput, ContentProvider, ProviderOutput } from "./content-provider";
 
 const slideTypes = new Set<DemoSlide["type"]>([
   "CONCEPT",
@@ -101,7 +100,7 @@ function parseAnimationData(value: unknown, label: string): DemoSlide["animation
   return result;
 }
 
-function parseLesson(payload: JsonRecord, input: GenerateContentDto): Omit<ProviderOutput, "provider" | "generationMs" | "estimatedCostUsd"> {
+function parseLesson(payload: JsonRecord, input: ContentGenerationInput): Omit<ProviderOutput, "provider" | "generationMs" | "estimatedCostUsd"> {
   const rawSlides = payload.slides;
   if (!Array.isArray(rawSlides) || rawSlides.length < 3 || rawSlides.length > 5) {
     throw new Error("slides must contain 3 to 5 items");
@@ -146,7 +145,12 @@ function parseLesson(payload: JsonRecord, input: GenerateContentDto): Omit<Provi
       options,
       correctIndex,
       explanation: text(quiz.explanation, "quiz.explanation")
-    }
+    },
+    sections: [
+      { phase: "THEORY", title: "Lý thuyết có minh họa", durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.35)), summary: "Bài giảng, video và tài liệu đọc bám theo nguồn đã được giáo viên xác minh.", activityTypes: ["LECTURE", "VIDEO", "DOCUMENT"] },
+      { phase: "PRACTICE", title: "Thực hành có phản hồi", durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.45)), summary: "Code, câu hỏi dự đoán và hoạt động sửa lỗi tạo learning event cho cá nhân hóa.", activityTypes: ["CODE", "MULTIPLE_CHOICE", "DEBUG"] },
+      { phase: "CHECKPOINT", title: "Kiểm tra cuối bài", durationMinutes: Math.max(1, input.durationMinutes - Math.round(input.durationMinutes * 0.35) - Math.round(input.durationMinutes * 0.45)), summary: "Câu hỏi mới kiểm tra khả năng chuyển giao kiến thức trước khi cập nhật lộ trình.", activityTypes: ["MULTIPLE_CHOICE", "CODE"] }
+    ]
   };
 }
 
@@ -162,7 +166,7 @@ function estimateCost(response: ChatCompletionResponse): number {
 export class ExternalLlmProvider implements ContentProvider {
   readonly code = "EXTERNAL_LLM";
 
-  async generate(input: GenerateContentDto): Promise<ProviderOutput> {
+  async generate(input: ContentGenerationInput): Promise<ProviderOutput> {
     const apiKey = process.env.EXTERNAL_LLM_API_KEY;
     if (!apiKey) {
       throw new ServiceUnavailableException("External provider key is not configured; choose Local demo provider");
@@ -175,7 +179,7 @@ export class ExternalLlmProvider implements ContentProvider {
       "Bạn là chuyên gia thiết kế bài học STEM cho học sinh K-12 Việt Nam.",
       "Chỉ trả về một JSON object, không Markdown, không HTML, không URL và không JavaScript thực thi.",
       "Ngôn ngữ phải tự nhiên, đơn giản, tích cực; mọi nội dung sẽ ở trạng thái DRAFT để giáo viên duyệt.",
-      "JSON gồm title, objectives (1-4 mục), slides (3-5 mục) và quiz.",
+      "JSON gồm title, objectives (1-4 mục), slides (3-5 mục) và quiz; hệ thống sẽ đặt các phần tử này vào cấu trúc 3 pha.",
       "Mỗi slide gồm id, order, type, title, body, code tùy chọn, narration, animationTemplate, animationData.",
       `type chỉ thuộc: ${[...slideTypes].join(", ")}.`,
       `animationTemplate chỉ thuộc: ${[...animationTemplates].join(", ")}.`,
@@ -185,7 +189,7 @@ export class ExternalLlmProvider implements ContentProvider {
       "Không thêm sourceReferences; hệ thống sẽ gắn source ID đã kiểm chứng."
     ].join("\n");
     const userPrompt = JSON.stringify({
-      task: "Tạo micro-lesson có cấu trúc",
+      task: input.draftKind === "FULL_LESSON" ? "Tạo bài học đầy đủ có cấu trúc" : "Tạo bài bổ trợ có cấu trúc",
       locale: "vi-VN",
       audience: `Học sinh K-12 Việt Nam, trình độ ${input.level}`,
       domainCode: input.domainCode,
@@ -193,7 +197,9 @@ export class ExternalLlmProvider implements ContentProvider {
       misconceptionCode: input.misconceptionCode,
       learningObjective: input.learningObjective,
       durationMinutes: input.durationMinutes,
-      verifiedSourceId: input.sourceId
+      verifiedSourceId: input.sourceId,
+      verifiedSourceExcerpt: input.sourceExcerpt ?? "Trích đoạn nguồn chưa được truyền trong test provider; production service bắt buộc nguồn VERIFIED.",
+      instruction: "Chỉ dùng kiến thức có trong trích đoạn nguồn; nếu thiếu thông tin, nêu giới hạn trong nội dung thay vì tự bổ sung."
     });
 
     try {

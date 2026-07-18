@@ -1,6 +1,20 @@
 import type { DemoSlide } from "../../common/types";
 import type { GenerateContentDto } from "../dto/generate-content.dto";
 
+export type LessonActivityType = "LECTURE" | "VIDEO" | "DOCUMENT" | "CODE" | "MULTIPLE_CHOICE" | "CODE_ORDER" | "DEBUG" | "PROJECT";
+
+export interface LessonDraftSection {
+  phase: "THEORY" | "PRACTICE" | "CHECKPOINT";
+  title: string;
+  durationMinutes: number;
+  summary: string;
+  activityTypes: LessonActivityType[];
+}
+
+export interface ContentGenerationInput extends GenerateContentDto {
+  sourceExcerpt?: string;
+}
+
 export interface ProviderOutput {
   title: string;
   objectives: string[];
@@ -10,9 +24,10 @@ export interface ProviderOutput {
   provider: "LOCAL_TEMPLATE" | "EXTERNAL_LLM";
   generationMs: number;
   estimatedCostUsd: number;
+  sections: LessonDraftSection[];
 }
 
 export interface ContentProvider {
   readonly code: string;
-  generate(input: GenerateContentDto): Promise<ProviderOutput>;
+  generate(input: ContentGenerationInput): Promise<ProviderOutput>;
 }

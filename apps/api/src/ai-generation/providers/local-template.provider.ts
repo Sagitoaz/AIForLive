@@ -1,13 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import type { DemoSlide } from "../../common/types";
-import type { GenerateContentDto } from "../dto/generate-content.dto";
-import type { ContentProvider, ProviderOutput } from "./content-provider";
+import type { ContentGenerationInput, ContentProvider, ProviderOutput } from "./content-provider";
 
 @Injectable()
 export class LocalTemplateProvider implements ContentProvider {
   readonly code = "LOCAL_TEMPLATE";
 
-  async generate(input: GenerateContentDto): Promise<ProviderOutput> {
+  async generate(input: ContentGenerationInput): Promise<ProviderOutput> {
     const start = performance.now();
     const isRange = input.misconceptionCode === "RANGE_STOP_INCLUDED";
     const title = isRange ? "Dừng đúng lúc với range()" : `Gỡ rối ${input.conceptCode}`;
@@ -109,7 +108,30 @@ export class LocalTemplateProvider implements ContentProvider {
           },
       provider: "LOCAL_TEMPLATE",
       generationMs: Math.max(8, Math.round(performance.now() - start)),
-      estimatedCostUsd: 0
+      estimatedCostUsd: 0,
+      sections: [
+        {
+          phase: "THEORY",
+          title: "Lý thuyết có minh họa",
+          durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.35)),
+          summary: `Bài giảng, video ngắn và phiếu đọc được grounding từ ${input.sourceId}.`,
+          activityTypes: ["LECTURE", "VIDEO", "DOCUMENT"]
+        },
+        {
+          phase: "PRACTICE",
+          title: "Thực hành có phản hồi",
+          durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.45)),
+          summary: "Học sinh dự đoán, chạy code rồi sửa một lỗi điển hình; mỗi lần nộp tạo learning event.",
+          activityTypes: ["CODE", "MULTIPLE_CHOICE", "DEBUG"]
+        },
+        {
+          phase: "CHECKPOINT",
+          title: "Kiểm tra cuối bài",
+          durationMinutes: Math.max(1, input.durationMinutes - Math.round(input.durationMinutes * 0.35) - Math.round(input.durationMinutes * 0.45)),
+          summary: "Câu hỏi mới đo đúng kỹ năng mục tiêu và quyết định bước học tiếp theo.",
+          activityTypes: ["MULTIPLE_CHOICE", "CODE"]
+        }
+      ]
     };
   }
 }

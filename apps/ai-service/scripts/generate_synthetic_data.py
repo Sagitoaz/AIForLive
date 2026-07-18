@@ -45,6 +45,13 @@ PERSONAS = [
     "Sparse data",
     "Strong improvement after review",
 ]
+GOALS = [
+    "Tạo trò chơi hỏi–đáp",
+    "Củng cố tư duy logic",
+    "Chuẩn bị CLB Tin học",
+    "Học theo tốc độ riêng",
+]
+DEVICES = ["PERSONAL_COMPUTER", "TABLET", "SHARED_PHONE", "LIBRARY_COMPUTER"]
 
 
 def sigmoid(value: float) -> float:
@@ -75,9 +82,7 @@ def main() -> None:
                 {
                     "exercise_id": f"ex-{concept_index + 1:02d}-{local_index + 1:02d}",
                     "concept_code": concept_code,
-                    "secondary_concept_code": (
-                        CONCEPTS[max(0, concept_index - 1)][0] if local_index == 5 else ""
-                    ),
+                    "secondary_concept_code": (CONCEPTS[max(0, concept_index - 1)][0] if local_index == 5 else ""),
                     "difficulty": round(0.22 + local_index * 0.11 + rng.uniform(-0.025, 0.025), 3),
                     "exercise_type": [
                         "MULTIPLE_CHOICE",
@@ -150,6 +155,16 @@ def main() -> None:
                 "learning_gain": round(gain, 3),
                 "engagement_level": round(engagement, 3),
                 "weekly_availability_minutes": rng.choice([60, 90, 120, 150, 180]),
+                "grade_level": f"Lớp {6 + index % 4}",
+                "learning_goal": GOALS[index % len(GOALS)],
+                "device_type": DEVICES[index % len(DEVICES)],
+                "shared_device": int(index % 6 == 0),
+                "connectivity": (
+                    "UNSTABLE" if index % 7 == 0 else "OCCASIONAL_OFFLINE" if index % 5 == 0 else "STABLE"
+                ),
+                "preferred_session_minutes": [20, 30, 45, 25, 40][index % 5],
+                "placement_completed": int(index != 18),
+                "profile_quality_flags": "SPARSE_HISTORY" if persona == "Sparse data" else "",
                 "data_notice": notice,
             }
         )
@@ -231,6 +246,20 @@ def main() -> None:
         if not is_correct and not skipped and rng.random() < 0.64:
             misconception = misconception_map.get(concept_code, "")
         occurred = start + timedelta(hours=attempt_index * 3.2 + rng.uniform(0, 2))
+        ingestion_lag_seconds = rng.randint(1, 24)
+        quality_flags: list[str] = []
+        if attempt_index % 67 == 0:
+            ingestion_lag_seconds = rng.randint(3_600, 28_800)
+            quality_flags.append("LATE_EVENT")
+        if attempt_index % 97 == 0:
+            quality_flags.append("IMPLAUSIBLY_FAST")
+        if attempt_index % 113 == 0:
+            quality_flags.append("LONG_RESPONSE")
+        if attempt_index % 89 == 0:
+            quality_flags.append("OFFLINE_BATCH")
+        if skipped:
+            quality_flags.append("SKIPPED")
+        received = occurred + timedelta(seconds=ingestion_lag_seconds)
         attempt_id = f"attempt-{attempt_index + 1:04d}"
         attempts.append(
             {
@@ -240,6 +269,10 @@ def main() -> None:
                 "concept_code": concept_code,
                 "secondary_concept_code": exercise["secondary_concept_code"],
                 "occurred_at": occurred.isoformat(),
+                "received_at": received.isoformat(),
+                "ingestion_lag_seconds": ingestion_lag_seconds,
+                "session_id": f"session-{student_id}-{attempt_index // 20:03d}",
+                "lesson_phase": "CHECKPOINT" if exercise["exercise_type"] == "CHECKPOINT" else "PRACTICE",
                 "is_correct": int(is_correct),
                 "skipped": int(skipped),
                 "used_hint": int(used_hint),
@@ -251,6 +284,10 @@ def main() -> None:
                 "latent_ability": round(ability, 3),
                 "probability_correct": round(probability, 4),
                 "misconception_code": misconception,
+                "connectivity_mode": "OFFLINE_SYNC"
+                if "OFFLINE_BATCH" in quality_flags
+                else str(profile["connectivity"]),
+                "data_quality_flags": "|".join(quality_flags),
                 "data_notice": notice,
             }
         )
@@ -263,7 +300,17 @@ def main() -> None:
                 "concept_codes": [concept_code]
                 + ([str(exercise["secondary_concept_code"])] if exercise["secondary_concept_code"] else []),
                 "occurred_at": occurred.isoformat(),
-                "metadata": {"synthetic": True, "data_notice": notice},
+                "received_at": received.isoformat(),
+                "metadata": {
+                    "synthetic": True,
+                    "data_notice": notice,
+                    "lesson_phase": "CHECKPOINT" if exercise["exercise_type"] == "CHECKPOINT" else "PRACTICE",
+                    "connectivity_mode": "OFFLINE_SYNC"
+                    if "OFFLINE_BATCH" in quality_flags
+                    else str(profile["connectivity"]),
+                    "data_quality_flags": quality_flags,
+                    "ingestion_lag_seconds": ingestion_lag_seconds,
+                },
             }
         )
 
@@ -283,7 +330,19 @@ def main() -> None:
         for event in events:
             handle.write(json.dumps(event, ensure_ascii=False) + "\n")
     (OUT / "README.md").write_text(
-        f"# Synthetic pilot dataset\n\n{notice}\n\nSeed: {SEED}; students: 20; attempts: 400.\n",
+        f"""# Synthetic pilot dataset
+
+{notice}
+
+- Seed: {SEED}
+- Quy mô pilot: 1 lớp, 20 học sinh, 48 bài tập, 400 attempts
+- Hồ sơ có khối lớp, mục tiêu, quỹ thời gian, thiết bị dùng chung và chất lượng kết nối khác nhau.
+- Dữ liệu không hoàn hảo có kiểm soát: event gửi muộn, offline batch,
+  phản hồi quá nhanh/chậm, lượt bỏ qua và học sinh ít dữ liệu.
+- Không cố tình làm hỏng khóa chính hoặc nhãn hàng loạt; mỗi bất thường đều có
+  `data_quality_flags` để pipeline có thể lọc hoặc giảm trọng số.
+- Toàn bộ tên và hành vi là synthetic, không phải dữ liệu thật của EduOne.
+""",
         encoding="utf-8",
     )
     print(f"Generated {len(profiles)} students, {len(exercises)} exercises, {len(attempts)} attempts")

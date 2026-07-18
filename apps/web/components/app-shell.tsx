@@ -19,7 +19,7 @@ export function AppShell({ role, children }: { role: "student" | "teacher"; chil
     <div className={`app-shell ${role}`}>
       <aside className="sidebar">
         <Logo />
-        <div className="workspace-label">{role === "student" ? "Khu học tập" : "Teacher workspace"}</div>
+        <div className="workspace-label">{role === "student" ? "Khu học tập" : "Khu giảng viên"}</div>
         <nav aria-label={role === "student" ? "Điều hướng học sinh" : "Điều hướng giảng viên"}>
           {nav.map(([href, label, icon]) => {
             const active = href === `/${role}` ? pathname === href : pathname.startsWith(href);
@@ -50,24 +50,26 @@ export function AppShell({ role, children }: { role: "student" | "teacher"; chil
                 <span className="xp-chip"><Asset type="icon" name="gamify-xp" alt="" width={20} height={20} /> {demo.xp} XP</span>
                 <span className="streak-chip"><Asset type="icon" name="gamify-streak" alt="" width={20} height={20} /> 7</span>
                 <Link className="profile-chip" href="/student/profile"><Asset type="avatar" name="avatar-01" alt="Minh" width={36} height={36} /><span>Minh</span></Link>
-                <Link className="switch-link" href="/teacher">Teacher demo</Link>
+                <Link className="switch-link" href="/login">Đổi vai trò</Link>
               </>
             ) : (
               <>
-                <span className="provider-chip"><Asset type="icon" name="ai-spark" alt="" width={20} height={20} /> Local demo provider</span>
+                <span className="provider-chip"><Asset type="icon" name="ai-spark" alt="" width={20} height={20} /> AI có kiểm duyệt</span>
                 <Link className="profile-chip" href="/teacher"><Asset type="avatar" name="avatar-24" alt="Cô Mai" width={36} height={36} /><span>Cô Mai</span></Link>
-                <Link className="switch-link" href="/student">Student demo</Link>
+                <Link className="switch-link" href="/login">Đổi vai trò</Link>
               </>
             )}
           </div>
         </header>
         <main id="main-content" className="app-content">{children}</main>
         <nav className="mobile-nav" aria-label="Điều hướng nhanh">
-          {nav.slice(0, 5).map(([href, label, icon]) => (
-            <Link className={pathname === href ? "active" : ""} href={href} key={href}>
+          {nav.slice(0, 5).map(([href, label, icon]) => {
+            const active = href === `/${role}` ? pathname === href : pathname.startsWith(href);
+            return (
+            <Link className={active ? "active" : ""} aria-current={active ? "page" : undefined} href={href} key={href}>
               <Asset type="icon" name={icon} alt="" width={21} height={21} /><span>{label}</span>
             </Link>
-          ))}
+          );})}
         </nav>
       </div>
     </div>

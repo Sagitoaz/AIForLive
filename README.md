@@ -9,8 +9,10 @@ EduRecall AI is a Vietnamese-first EdTech hackathon prototype that combines evid
 - Bayesian Knowledge Tracing updates concept mastery after each attempt.
 - A forgetting model separates current understanding from recall risk.
 - Domain rules diagnose known misconceptions with inspectable evidence.
-- The recommendation engine explains every action using stored thresholds and signals.
-- Teachers create structured micro-lesson drafts with FPT AI `DeepSeek-V4-Flash`, edit them, approve them and publish them.
+- The recommendation engine returns a concrete lesson/activity target and explains the choice using stored thresholds, candidate signals, attempt IDs and model/rule versions.
+- The pilot course contains 4 modules and 12 realistic lessons; every lesson has Theory, Practice and Checkpoint phases.
+- Teachers create grounded three-phase lesson or remediation drafts with FPT AI `DeepSeek-V4-Flash`, edit them, approve them and publish them.
+- Uploaded TXT sources must be reviewed before generation; binary documents stay honestly marked as pending extraction.
 - Published content can be reused for learners with the same misconception without another provider call.
 - The app works without a paid AI key through an explicitly labelled `LocalTemplateProvider`.
 
@@ -84,16 +86,16 @@ npm run dev
 | Student Minh | `minh@edurecall.local` | `Demo@123` |
 | Student Lan | `lan@edurecall.local` | `Demo@123` |
 
-The NestJS auth endpoint can issue demo JWTs, but the browser selector currently switches roles locally and business endpoints are not protected by those guards yet.
+The browser account selector signs in through NestJS and stores a short-lived demo access token. Student learning/diagnostic endpoints and teacher content, class and recommendation endpoints enforce JWT role guards; submitted learning events are bound to the student identity in the token.
 
 ## Demo story
 
-1. Log in as Minh and open **Range Runner diagnostic**.
-2. Submit the answer that includes `5` for `range(1, 5)`.
-3. Inspect the `RANGE_STOP_INCLUDED` diagnosis and micro-lesson recommendation.
-4. Switch to the teacher dashboard, inspect evidence, generate and edit the structured draft.
-5. Approve and publish it.
-6. Return as Minh, study the due review, finish its quiz and inspect the mastery before/after view.
+1. As a teacher, open **Nội dung AI** and generate lesson 8 from the verified Python handbook source; inspect its Theory–Practice–Checkpoint plan.
+2. Edit the draft, approve it and publish it. New AI content never starts as student-visible.
+3. As Minh, open **Khóa học**, inspect the 4-module/12-lesson syllabus and enter lesson 8.
+4. Move through theory, practice and checkpoint; submit the answer that incorrectly includes `5` for `range(1, 5)`.
+5. Inspect the `RANGE_STOP_INCLUDED` diagnosis, exact remediation target and recommendation log.
+6. Return to the teacher studio, create a seven-minute remediation from that evidence, review and publish it; then complete it as Minh.
 
 The browser retains the demo workflow in local storage, and uses the API when it is available. This allows UI judging even before Docker is started while preserving the full API integration path.
 
@@ -116,7 +118,7 @@ Set `AI_PROVIDER=external-llm`, `EXTERNAL_LLM_BASE_URL=https://mkp-api.fptcloud.
 
 ## Model lifecycle
 
-`generate_synthetic_data.py` creates 20 learner personas, 48 exercises and 400 attempts with a fixed seed. `train_models.py` uses a group split by student to avoid row leakage and exports a small logistic-regression artifact. See `docs/model-card.md`; this model is for prototype behavior only and must never be used for grading, discipline or high-stakes decisions.
+`generate_synthetic_data.py` creates 20 learner personas, 48 exercises and 400 attempts with a fixed seed. Profiles vary in grade, goal, device, shared-device access and connectivity. Events include traceable late/offline/sparse cases instead of unrealistically clean data. `train_models.py` uses a group split by student to avoid row leakage and exports a small logistic-regression artifact. See `docs/model-card.md`; this model is for prototype behavior only and must never be used for grading, discipline or high-stakes decisions.
 
 ## Deployment and security
 
@@ -126,10 +128,10 @@ Docker Compose is suitable for a local judge demo. Before production, rotate sec
 
 - The NestJS runtime currently uses an in-process demo store; the Prisma/Supabase schema is not yet wired into request handlers.
 - FPT AI drafting requires an active account/quota; the browser demo falls back to `LocalTemplateProvider` if the external request fails.
-- JWT/RBAC building blocks exist, but the web flow and business controllers do not enforce them yet.
+- Core student and teacher workflows enforce demo JWT/RBAC. This is not production identity: secrets, refresh-token storage/revocation, per-tenant authorization and PostgreSQL/Supabase RLS still need to be completed.
 - Synthetic model quality does not establish effectiveness on real learners.
-- File extractors expose validated adapters and demo text extraction; production OCR and malware scanning need managed services.
+- TXT upload, checksum, preview and teacher verification work in the prototype. PDF/DOCX/PPTX are accepted only into `PENDING_EXTRACTION`; production extraction, OCR and malware scanning still need managed workers.
 - Browser speech quality varies by OS and installed Vietnamese voices.
 - The source ZIP excludes dependencies and database volumes by design.
 
-See `docs/brief-fit-audit.md` for the requirement-by-requirement status, `docs/run-local-and-supabase.md` for the two database setup choices, `docs/pilot-roadmap.md` for the 4–6 week pilot and `docs/demo-script.md` for the judge walkthrough.
+See `docs/product-blueprint.md` for the product scope and flows, `docs/design-research.md` for the evidence behind key decisions, `docs/brief-fit-audit.md` for requirement status, `docs/run-local-and-supabase.md` for database setup, `docs/pilot-roadmap.md` for the 4–6 week pilot and `docs/demo-script.md` for the judge walkthrough.

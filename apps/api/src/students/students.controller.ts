@@ -1,5 +1,8 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { AuthGuard } from "../auth/auth.guard";
+import { Roles } from "../auth/roles.decorator";
+import { RolesGuard } from "../auth/roles.guard";
 import { DemoStoreService } from "../shared/demo-store.service";
 
 const concepts = [
@@ -15,7 +18,17 @@ const concepts = [
 
 const demoStudentId = "student-minh";
 
+const courseModules = [
+  { id: "module-1", title: "Khởi động cùng Python", description: "Môi trường, biến, dữ liệu đầu vào và phép tính.", progress: 1, lessons: [["lesson-01", "Ra lệnh cho máy tính", "PYTHON_OUTPUT", 45], ["lesson-02", "Biến và kiểu dữ liệu", "PYTHON_VARIABLES", 55], ["lesson-03", "Nhập liệu và phép tính", "PYTHON_OPERATORS", 60]] },
+  { id: "module-2", title: "Chương trình biết lựa chọn", description: "Biểu thức đúng/sai và nhánh xử lý rõ ràng.", progress: 1, lessons: [["lesson-04", "So sánh và giá trị đúng/sai", "PYTHON_BOOLEAN", 55], ["lesson-05", "Rẽ nhánh với if / elif / else", "PYTHON_IF_ELSE", 70], ["lesson-06", "Checkpoint: Trợ lý kế hoạch học", "PYTHON_IF_ELSE", 60]] },
+  { id: "module-3", title: "Lặp có kiểm soát", description: "for, range, while và cách tránh vòng lặp vô hạn.", progress: 0.34, lessons: [["lesson-07", "Vòng lặp for", "PYTHON_FOR", 55], ["lesson-08", "Khám phá range()", "PYTHON_RANGE", 65], ["lesson-09", "while và điều kiện dừng", "PYTHON_WHILE", 70]] },
+  { id: "module-4", title: "Dữ liệu, hàm và dự án", description: "List, hàm và trò chơi hỏi–đáp cuối khóa.", progress: 0, lessons: [["lesson-10", "List và vị trí phần tử", "PYTHON_LISTS", 65], ["lesson-11", "Hàm, tham số và return", "PYTHON_FUNCTIONS", 75], ["lesson-12", "Dự án: Trò chơi hỏi–đáp", "PYTHON_PROJECT", 120]] }
+] as const;
+
 @ApiTags("students")
+@ApiBearerAuth()
+@Roles("STUDENT")
+@UseGuards(AuthGuard, RolesGuard)
 @Controller("students/me")
 export class StudentsController {
   private goal = { objective: "Tự viết một mini game Python", weeks: 4, weeklyMinutes: 120 };
@@ -125,14 +138,28 @@ export class CoursesController {
   course(@Param("id") id: string): Record<string, unknown> {
     return {
       id,
-      title: "Python cơ bản cho học sinh",
-      description: "10 bài học, 50 nhiệm vụ và 4 mini-game trong một lộ trình cá nhân hóa.",
-      modules: [
-        { id: "module-1", title: "Khởi động", lessons: 3, progress: 1 },
-        { id: "module-2", title: "Ra quyết định", lessons: 2, progress: 0.65 },
-        { id: "module-3", title: "Lặp thông minh", lessons: 3, progress: 0.25 },
-        { id: "module-4", title: "Dữ liệu & hàm", lessons: 2, progress: 0 }
-      ]
+      title: "Python căn bản: Từ câu lệnh đầu tiên đến trò chơi tương tác",
+      description: "Khóa học 6 tuần dành cho học sinh lớp 6–9 mới bắt đầu; 12 bài có đủ lý thuyết, thực hành và kiểm tra cuối bài.",
+      audience: "Lớp 6–9 · người mới bắt đầu",
+      durationMinutes: 960,
+      cadence: "3 buổi/tuần · 45–60 phút/buổi",
+      finalProduct: "Trò chơi hỏi–đáp có điểm số và nhiều lượt chơi",
+      modules: courseModules.map((module) => ({
+        ...module,
+        lessons: module.lessons.map(([lessonId, title, conceptCode, durationMinutes], index) => ({
+          id: lessonId,
+          title,
+          conceptCode,
+          durationMinutes,
+          status: module.id === "module-1" || module.id === "module-2" || lessonId === "lesson-07" ? "COMPLETED" : lessonId === "lesson-08" ? "CURRENT" : "LOCKED",
+          phases: [
+            { phase: "THEORY", activityTypes: ["LECTURE", "VIDEO", "DOCUMENT"] },
+            { phase: "PRACTICE", activityTypes: ["CODE", "MULTIPLE_CHOICE", "DEBUG"] },
+            { phase: "CHECKPOINT", activityTypes: ["MULTIPLE_CHOICE", "CODE"] }
+          ],
+          order: courseModules.findIndex((item) => item.id === module.id) * 3 + index + 1
+        }))
+      }))
     };
   }
 
@@ -142,11 +169,14 @@ export class CoursesController {
       id,
       title: "Khám phá range()",
       conceptCode: "PYTHON_RANGE",
+      moduleId: "module-3",
+      order: 8,
+      durationMinutes: 65,
       objectives: ["Đọc đúng start và stop", "Dự đoán dãy", "Tránh bẫy stop included"],
       sections: [
-        { type: "TEXT", title: "Vạch dừng", body: "range dừng trước stop." },
-        { type: "CODE", title: "Thử nhanh", code: "list(range(1, 5))" },
-        { type: "CHECK", title: "Tự kiểm tra", question: "Phần tử cuối là gì?" }
+        { phase: "THEORY", title: "Lý thuyết", durationMinutes: 23, resources: [{ type: "LECTURE", title: "Start, stop và step" }, { type: "VIDEO", title: "Robot Mầm đi qua trạm số", durationMinutes: 6 }, { type: "DOCUMENT", title: "Phiếu ghi nhớ range()" }] },
+        { phase: "PRACTICE", title: "Thực hành", durationMinutes: 29, activities: [{ id: "range-predict-01", type: "MULTIPLE_CHOICE", difficulty: 0.45 }, { id: "range-code-02", type: "CODE", difficulty: 0.55 }, { id: "range-debug-03", type: "DEBUG", difficulty: 0.6 }] },
+        { phase: "CHECKPOINT", title: "Kiểm tra cuối bài", durationMinutes: 13, passRule: { minimumCorrect: 2, totalQuestions: 3 }, updatesPath: true }
       ]
     };
   }
