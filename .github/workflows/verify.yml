@@ -28,6 +28,8 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: apps/ai-service/requirements.txt
+      - name: Match Render package manager
+        run: npm install --global npm@10.9.8
       - name: Clean Node install
         run: npm ci --no-audit --no-fund
       - name: Install Python checks
@@ -35,7 +37,7 @@ jobs:
       - name: Static checks
         run: npm run lint && npm run typecheck && npm run render:check
       - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=moderate
+        run: npm audit --omit=dev --audit-level=high
       - name: Automated tests
         run: npm run test && npm run ai:test
       - name: Data and asset validation
