@@ -2,6 +2,7 @@
   "name": "edurecall-ai",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@10.9.8",
   "description": "AI-powered personalization and human-reviewed content creation for self-paced learning.",
   "workspaces": [
     "apps/web",

@@ -14,6 +14,14 @@ const startScript = text("scripts/start-render.sh");
 const requirements = text("apps/ai-service/requirements.render.txt");
 const blueprint = text("render.yaml");
 const dockerignore = text(".dockerignore");
+const packageManifest = JSON.parse(text("package.json"));
+const packageLock = JSON.parse(text("package-lock.json"));
+
+assert.equal(packageManifest.packageManager, "npm@10.9.8", "packageManager must match Render's npm version");
+assert.equal(packageLock.lockfileVersion, 3, "Render requires an npm lockfile v3");
+for (const lockPath of ["node_modules/@emnapi/core", "node_modules/@emnapi/runtime"]) {
+  assert.ok(packageLock.packages?.[lockPath], `npm 10 clean install record missing: ${lockPath}`);
+}
 
 const renderDependencies = new Set(requirements
   .split(/\r?\n/)
@@ -47,4 +55,4 @@ for (const staleKey of ["NEXT_PUBLIC_API_URL", "API_INTERNAL_URL", "AI_SERVICE_U
 }
 assert.match(dockerignore, /^\.env$/m, "Docker context must exclude .env");
 
-console.log("Render deployment contract: OK (Docker, Python deps, supervisor, Blueprint, secret boundaries)");
+console.log("Render deployment contract: OK (npm 10 lock, Docker, Python deps, supervisor, Blueprint, secret boundaries)");

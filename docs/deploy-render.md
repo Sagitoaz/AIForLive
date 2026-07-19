@@ -257,7 +257,7 @@ npm run typecheck
 npm run test
 npm run ai:test
 npm run render:check
-npm audit --omit=dev --audit-level=moderate
+npm audit --omit=dev --audit-level=high
 npm run build
 git status --short
 ```

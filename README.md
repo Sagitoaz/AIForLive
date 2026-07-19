@@ -175,7 +175,7 @@ npm run validate:synthetic
 npm run ai:evaluate
 npm run validate:assets
 npm run render:check
-npm audit --omit=dev --audit-level=moderate
+npm audit --omit=dev --audit-level=high
 npm run db:check
 
 $env:E2E_API_URL="http://127.0.0.1:4000/api"
@@ -195,12 +195,12 @@ Kết quả gần nhất ngày 19/07/2026:
 - Smoke product: pass trong 110,4 giây.
 - Production build: NestJS + Next.js pass; 9 route.
 - Render contract/startup smoke: pass; DB + AI ready, 23 demo account, TTS ẩn danh bị chặn 401.
-- Production dependency audit: 0 vulnerability tại thời điểm kiểm tra.
+- Production dependency audit: 2 moderate từ PostCSS do Next 16.2.10 pin; không có high/critical.
 - Synthetic validation: 20 students, 8 concepts, 48 dataset exercises, 400 attempts/events.
 - Asset validation: 254 SVG, 80 custom icons.
 - Model evaluation: accuracy 0,6703; ROC-AUC 0,5691; Brier 0,2169 — **synthetic artifact, không phải hiệu quả giáo dục**.
 
-Lần `npm ci` trên máy kiểm chứng hiện tại bị chặn bởi lỗi junction/workspace của filesystem Windows. Các lệnh chuẩn phía trên đã pass sau một cài đặt dependency tạm không sửa lockfile. Vì vậy production build là **Tested**, còn clean-clone install trên host khác vẫn cần CI xác nhận; xem chi tiết tại [build verification](docs/build-verification.md).
+Lần `npm ci` trên máy kiểm chứng hiện tại bị chặn bởi lỗi junction/workspace của filesystem Windows. Lockfile đã được chuẩn hóa bằng đúng npm `10.9.8` của Render và exact-version `ci --dry-run` pass; clean install thực trên Windows vẫn dừng ở thao tác tạo workspace symlink. Vì vậy production build là **Tested**, còn clean-clone install Linux vẫn cần GitHub Actions/Render xác nhận sau commit; xem chi tiết tại [build verification](docs/build-verification.md).
 
 ## An toàn, grounding và dữ liệu trẻ em
 
