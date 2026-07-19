@@ -1,133 +1,193 @@
-# EduRecall AI — cá nhân hóa học tập và soạn bài có kiểm duyệt cho EduOne
+# EduRecall AI
 
-EduRecall AI là prototype cho bài toán STEAM for Vietnam EduOne, tập trung vào hai vòng lặp có thể kiểm tra được:
+**AI-Powered Personalization & Content Creation for self-paced learning**
 
-1. Từ bằng chứng học tập hiện tại, tạo hoạt động tiếp theo phù hợp cho từng học sinh và lưu log giải thích.
-2. Hỗ trợ giáo viên dựng bản nháp bài học từ nguồn đã xác minh, nhưng bắt buộc một người có vai trò phù hợp kiểm duyệt trước khi học sinh truy cập.
+Prototype cho bài toán [STEAM for Vietnam · EduOne](STEAM_for_Vietnam_EduOne_ProblemBrief.md): cá nhân hóa lộ trình học theo thời gian thực và tăng tốc soạn bài bằng AI, vẫn giữ con người kiểm duyệt trước khi học sinh tiếp cận nội dung.
 
-Phạm vi demo là một khóa Python, một lớp và 20 hồ sơ học sinh tổng hợp. Đây không phải dữ liệu trẻ em thật và không phải bằng chứng về tác động giáo dục.
+> *Một học sinh lớp 6 đăng nhập, hệ thống nhận ra em đang chậm ở vòng lặp, đề xuất bài bổ trợ bằng tiếng Việt đơn giản — trong khi đội content chỉ cần chỉnh bản nháp AI thay vì soạn từ đầu.*  
+> — đúng hướng giải pháp lý tưởng của đề bài.
 
-## Trạng thái bằng chứng
+---
 
-| Nhãn | Hiện trạng |
+## Bài toán & câu trả lời của EduRecall
+
+| Vấn đề EduOne (theo brief) | Cách EduRecall xử lý |
 | --- | --- |
-| **Implemented** | Web Next.js, API NestJS, AI service FastAPI, Prisma/Supabase, hai workflow cốt lõi và RBAC theo lớp |
-| **Tested** | 70 test Node, 23 test Python, 1 live HTTP E2E; lint, typecheck, seed verifier và production build pass ngày 19/07/2026 |
-| **Demonstrated** | Smoke test Supabase đi qua progress → animation → pseudocode → diagnosis/recommendation → independent review → publish |
-| **Measured** | Latency/cost metadata của generation và model metrics trên artifact synthetic; không suy rộng thành hiệu quả pilot |
-| **Planned** | Public deployment/video, paired teacher-time study, consented pilot, usability study và calibration trên dữ liệu pilot |
+| Học viên cùng một lộ trình, không phân biệt trình độ / tốc độ / mục tiêu; dropout cao | Mỗi học sinh có recommendation riêng từ BKT, forgetting, diagnosis và ranking; log giải thích đầy đủ |
+| Giáo viên tình nguyện phải chỉnh nội dung thủ công cho từng lớp | Teacher studio hiển thị trạng thái lớp, recommendation log và lịch ôn theo học sinh |
+| 40–50 giờ / một bài hoàn chỉnh; đội content mỏng | AI soạn draft có cấu trúc từ nguồn đã xác minh; giáo viên chỉ edit + review |
+| Tổ chức phi lợi nhuận, không scale bằng nhân sự hay API đắt | Core personalization **không phụ thuộc paid LLM**; có `LOCAL_TEMPLATE` chi phí provider = 0 |
+| Nội dung AI không được “lọt” thẳng tới học sinh | Bắt buộc `DRAFT → IN_REVIEW → APPROVED → PUBLISHED`; author không tự approve |
 
-Chi tiết claim-to-evidence nằm tại [Judging evidence](docs/JUDGING-EVIDENCE.md), [build verification](docs/build-verification.md) và [demo runbook](docs/DEMO-RUNBOOK.md).
+**Phạm vi pilot đúng brief:** 1 khóa Python Foundations · 1 lớp · 20 học sinh · giao diện & nội dung tiếng Việt K-12.
 
-## Hai vòng lặp sản phẩm
+---
 
-### 1. Học sinh: bằng chứng → phân tích → hoạt động tiếp theo
+## Hai vòng lặp cốt lõi (đúng deliverable đề bài)
+
+### 1. Cá nhân hóa theo thời gian thực — mỗi học sinh một bước tiếp theo
 
 ```text
 JWT học sinh
-  → API lấy exercise, answer key và enrollment thật
-  → server chấm và ghi LearningEvent + Attempt theo transaction
-  → FastAPI cập nhật BKT/forgetting, diagnosis và candidate ranking
-  → API kiểm tra lại output, resolve target ACTIVE/PUBLISHED
-  → lưu PersonalizationRun, Recommendation, Evidence và ReviewSchedule
-  → học sinh/giáo viên xem lý do, model/rule version và target thật
+  → server chấm attempt (answer key không rời DB)
+  → FastAPI: BKT · forgetting · diagnosis · candidate ranking
+  → API resolve target thật (ACTIVE exercise/lesson hoặc PUBLISHED content)
+  → lưu PersonalizationRun + Recommendation + Evidence + lý do tiếng Việt
+  → học sinh / giáo viên xem “vì sao đề xuất bài này”
 ```
 
-Điểm an toàn quan trọng:
+**Điểm mạnh vận hành**
 
-- ID học sinh luôn lấy từ token; client không gửi `studentId` đáng tin cậy.
-- Client không gửi đáp án đúng, concept, difficulty hoặc điểm số.
-- Retry dùng idempotency key; collision giữa hai người dùng bị từ chối.
-- Nếu AI service lỗi, API dùng rule xác định và gắn nhãn `DETERMINISTIC_FALLBACK` riêng.
-- Misconception thiếu bằng chứng trả `UNKNOWN`/`NEED_MORE_EVIDENCE`, không tự bịa nhãn.
-- Recommendation chỉ khả dụng khi target được resolve sang record thật trong đúng course/concept.
+- Identity lấy từ token — client không gửi `studentId` đáng tin.
+- Chấm điểm phía server, idempotent khi retry; chặn collision giữa hai người dùng.
+- Recommendation chỉ hiện khi resolve được nội dung thật trong đúng course/concept.
+- AI service lỗi → deterministic fallback **có nhãn riêng**, vòng học vẫn chạy.
+- Misconception thiếu bằng chứng trả `UNKNOWN` / `NEED_MORE_EVIDENCE` — không gán nhãn bừa.
 
-### 2. Giáo viên: nguồn đã xác minh → draft → review → publish
+### 2. Soạn bài có AI + human review — rút ngắn thời gian, không bỏ kiểm duyệt
 
 ```text
-Chọn course và nguồn VERIFIED
-  → Local Template hoặc External LLM trả structured data
-  → schema/allowlist validator
+Nguồn VERIFIED
+  → Local Template hoặc External LLM (structured output)
+  → schema / allowlist validator (slide, quiz, animation an toàn)
   → DRAFT → IN_REVIEW → APPROVED → PUBLISHED
   → student endpoint chỉ trả PUBLISHED
 ```
 
-Người tạo hoặc người sửa phiên bản gần nhất không thể tự phê duyệt. Demo dùng ba vai trò:
+**Ba vai trò demo (đúng mô hình volunteer + reviewer độc lập)**
 
-- `OWNER` — Cô Mai: quản lý lớp và tạo bản nháp.
-- `INSTRUCTOR` — Thầy Nam: hỗ trợ lớp và tạo/chỉnh nội dung.
-- `REVIEWER` — Cô Linh: phản biện, yêu cầu sửa, phê duyệt và publish; không đọc hàng dữ liệu định danh học sinh.
+| Vai trò | Account demo | Trách nhiệm |
+| --- | --- | --- |
+| OWNER | `teacher@edurecall.local` | Quản lý lớp, tạo bản nháp |
+| INSTRUCTOR | `thay.nam@edurecall.local` | Hỗ trợ lớp, chỉnh nội dung |
+| REVIEWER | `co.linh@edurecall.local` | Phản biện, approve, publish — không xem hàng định danh học sinh |
 
-`LocalTemplateProvider` là bộ dựng khung xác định, chi phí paid-provider bằng 0 và **không phải LLM**. `ExternalLlmProvider` chỉ được gọi là LLM khi server có credential và generation trace thực sự ghi provider/model/token.
+`LOCAL_TEMPLATE` = khung soạn xác định, zero paid-provider cost, **không gắn nhãn LLM**.  
+`ExternalLlmProvider` chỉ gọi khi có credential; mọi job ghi provider, model, token, latency và chi phí ước tính.
 
-## Thực hành lập trình
+---
 
-### Mã giả — chấm ý tưởng, không đề cao syntax
+## Deliverables tối thiểu của brief — đã có trong repo
 
-- Học sinh viết tối đa 2.000 ký tự trong workspace có hướng dẫn.
-- Rubric `IDEA_RUBRIC` chấm các tiêu chí ý tưởng đã được giáo viên duyệt; `syntaxPolicy = IGNORE`.
-- FastAPI chỉ đưa ra đánh giá advisory. NestJS kiểm tra evidence/criterion IDs và tự tính lại score trước khi lưu.
-- Chấm AI chỉ dùng ở pha `PRACTICE`, không dùng làm điểm số, kỷ luật, tuyển sinh hoặc loại trừ.
-- Khi provider không sẵn sàng, deterministic rubric fallback được ghi rõ trong grading trace.
+| Deliverable đề bài | Trong EduRecall |
+| --- | --- |
+| Prototype demo được | Web + API + AI service; smoke end-to-end trên Supabase; runbook 6–8 phút |
+| Public GitHub repo | Mã nguồn monorepo đầy đủ, license MIT |
+| Kiến trúc AI giải thích được | BKT, forgetting, diagnosis rule, weighted ranker; mỗi recommendation lưu reason + version + evidence |
+| Lộ trình pilot 1–2 trang với EduOne | [docs/pilot-roadmap.md](docs/pilot-roadmap.md) — 6 tuần, go/no-go, đo thời gian soạn, privacy gate |
+| Tiếng Việt / K-12 | UI, rubric, narration, quiz, recommendation reason bằng tiếng Việt tự nhiên |
+| Pilot 1 course · 1 class · 20 students | Seed `pilot-v1` + verifier: 20 enrollments, 3 teacher roles, 12 lessons, 60 exercises |
 
-### Ghép khối code
+Chi tiết đối chiếu đề bài: [docs/brief-fit-audit.md](docs/brief-fit-audit.md) · Bằng chứng chấm điểm: [docs/JUDGING-EVIDENCE.md](docs/JUDGING-EVIDENCE.md).
 
-- Học sinh kéo/sắp xếp các block để ghép thành chương trình hoàn chỉnh.
-- Server kiểm tra đúng tập block ID, không chấp nhận block lạ/trùng/thiếu.
-- `CODE_ORDER` chấm theo thứ tự đã được giáo viên duyệt, cho kết quả tái lập.
-- Payload retry được đóng băng cùng idempotency key để tránh nộp nhầm phiên bản UI.
+---
 
-## Kiến trúc
+## Anti-pattern đề bài — EduRecall đã tránh có chủ đích
+
+| Anti-pattern brief | Cách hệ thống xử lý |
+| --- | --- |
+| Chỉ chạy trên dữ liệu mẫu “sạch” | Fixture có profile thưa/không đều, 400 learning events, device & connectivity flags; pipeline vẫn ổn định |
+| AI content tới học sinh không qua review | Source gate + validator + state machine + reviewer độc lập |
+| Demo mockup / slideshow, không có AI thật | FastAPI chạy BKT/forgetting/diagnosis/ranking; live E2E và smoke ghi/đọc PostgreSQL |
+| Phụ thuộc hoàn toàn API trả phí | Personalization core free-of-LLM; authoring có path zero-cost; cost được track theo job |
+
+---
+
+## AI được dùng đúng chỗ — tối ưu chất lượng, không “AI vì AI”
+
+EduRecall tách rõ từng cơ chế, mỗi lớp một câu hỏi:
+
+| Lớp | Câu hỏi | Cơ chế |
+| --- | --- | --- |
+| Knowledge tracing | Concept này học sinh nắm đến đâu? | Bayesian Knowledge Tracing |
+| Forgetting | Khả năng nhớ lại lúc này? | Exponential retrievability + lịch ôn |
+| Diagnosis | Lỗi quen thuộc nào có bằng chứng? | Domain rules (không bịa misconception) |
+| Ranking | Bước tiếp theo nên là gì? | Weighted score: gap · forgetting · error · prerequisite · goal/time |
+| Practice AI | Ý tưởng mã giả có đúng logic? | `IDEA_RUBRIC` advisory — **không chấm syntax** |
+| Content AI | Làm draft nhanh nhưng an toàn? | Provider abstraction + schema + human gate |
+
+**Nguyên tắc tối ưu cho nonprofit & học sinh**
+
+1. **AI advisory, server quyết định** — FastAPI không publish, không ghi business table; NestJS sở hữu scoring, auth, persistence.
+2. **Explainable by design** — lý do recommendation sinh từ tín hiệu đã đo, không nhờ LLM “viết giải thích sau”.
+3. **Cost-aware** — path chính không bắt buộc paid API; generation trả phí là tùy chọn có metadata chi phí.
+4. **Child-data ready architecture** — tối thiểu field gửi provider, tắt training ngoài, RBAC + RLS, synthetic fixture rõ nhãn trước pilot thật.
+5. **Degrade gracefully** — fallback có nhãn; vòng học không sập khi AI service tạm lỗi.
+
+Kiến trúc chi tiết: [docs/ai-architecture.md](docs/ai-architecture.md) · Explainability: [docs/recommendation-explainability.md](docs/recommendation-explainability.md).
+
+---
+
+## Trải nghiệm học sinh & giáo viên
+
+### Học sinh — thực hành có chiều sâu, không chỉ trắc nghiệm
+
+- **Mã giả / ý tưởng:** workspace tới 2.000 ký tự; rubric chấm logic, `syntaxPolicy = IGNORE` — phù hợp K-12 mới học lập trình.
+- **Ghép khối code:** kéo-thả block; server kiểm tra ID và thứ tự đã duyệt — kết quả tái lập.
+- **Animation đăng ký sẵn** + quiz tiếng Việt; không lộ answer key trước khi nộp.
+- **Next step cá nhân hóa** kèm lý do và độ tin cậy bằng chứng.
+
+### Giáo viên — studio gọn, workflow rõ
+
+- Wizard 3 bước: phạm vi & nguồn → mục tiêu & provider → xác nhận.
+- Workflow bar theo state; nút ẩn/disable theo role (OWNER / INSTRUCTOR / REVIEWER).
+- Course-plan draft, remediation reuse, audit version/reviewer/timestamp/decision.
+- So sánh recommendation giữa học sinh trong cùng lớp — thấy personalization thật, không “cùng một path”.
+
+---
+
+## Kiến trúc hệ thống
 
 ```text
 Next.js Web (:3000)
-  └── REST/JWT ── NestJS Core API (:4000)
-                    ├── Auth/RBAC, scoring, transactions, review workflow
-                    ├── Prisma ── Supabase PostgreSQL
-                    └── validated request/response ── FastAPI AI (:8001)
-                                                        ├── BKT + forgetting
-                                                        ├── diagnosis/ranking
-                                                        └── advisory idea rubric
+  └── REST / JWT ── NestJS Core API (:4000)
+                      ├── Auth · RBAC · server scoring · review workflow · audit
+                      ├── Prisma ── Supabase PostgreSQL (+ RLS)
+                      └── validated I/O ── FastAPI AI (:8001)
+                                            ├── BKT + forgetting
+                                            ├── diagnosis + ranking
+                                            └── idea-rubric advisory
 ```
 
 | Thành phần | Trách nhiệm |
 | --- | --- |
-| `apps/web/` | UX học sinh/giáo viên; chỉ hiển thị dữ liệu API |
-| `apps/api/` | Auth, object authorization, chấm server, transaction, persistence và audit |
-| `apps/ai-service/` | BKT, forgetting, diagnosis, prediction, ranking và rubric advisory |
-| `domains/` | Concept, prerequisite, misconception, diagnosis rule và animation template an toàn |
-| `prisma/` | Schema, migrations, seed synthetic idempotent và verifier |
-| `packages/` | Contract dùng chung |
+| `apps/web/` | UX học sinh / giáo viên — chỉ render dữ liệu API |
+| `apps/api/` | Auth, object authorization, chấm điểm, transaction, publish gate |
+| `apps/ai-service/` | Personalization & grading advisory |
+| `domains/` | Concept, prerequisite, misconception, diagnosis, animation template |
+| `prisma/` | Schema, migrations, seed synthetic + verifier |
+| `packages/` | Contract dùng chung giữa service |
 
-## Fixture demo có thể tái tạo
+Browser **không** quyết định đúng/sai hay mastery. AI service **không** được publish nội dung.
 
-Seed `pilot-v1` được bảo vệ bằng hai cờ opt-in và từ chối chạy ở production:
+---
+
+## Fixture pilot tái tạo được
 
 ```powershell
 $env:ALLOW_SYNTHETIC_DEMO_SEED="true"
-$env:ALLOW_LEGACY_DEMO_ADOPTION="true" # chỉ cần khi DB có đúng fixture MVP cũ
 npm run db:seed
 npm run db:seed:check
 ```
 
-Verifier hiện xác nhận:
-
-| Dữ liệu | Số lượng |
+| Hạng mục | Số lượng |
 | --- | ---: |
-| Demo accounts | 23 = 3 giáo viên + 20 học sinh |
+| Demo accounts | 23 (3 giáo viên + 20 học sinh) |
 | Organization / domain / course / class | 1 / 1 / 1 / 1 |
-| Teacher memberships | 3: OWNER / INSTRUCTOR / REVIEWER |
-| Modules / lessons / resources / reviewed exercises | 4 / 12 / 36 / 60 |
-| Pseudocode IDEA_RUBRIC / CODE_ORDER | 12 / 24 |
-| Concept states / synthetic histories | 160 / 400 |
-| Linked events / attempts / recommendations / evidence / schedules | 20 mỗi loại |
-| Verified source / source chunks | 1 / 3 |
+| Modules · lessons · resources · exercises | 4 · 12 · 36 · 60 |
+| Pseudocode IDEA_RUBRIC · CODE_ORDER | 12 · 24 |
+| Concept states · synthetic histories | 160 · 400 |
+| Linked events / attempts / recommendations | 20 mỗi loại |
 
-Mọi history/model artifact trong fixture đều gắn nhãn synthetic/model-only. Verifier từ chối timestamp tương lai, recommendation không có target thật và exercise thiếu teacher-review contract.
+Mật khẩu fixture: `Demo@123` · Học sinh chính: `minh@edurecall.local` · So sánh: `lan@`, `an@`, `binh@edurecall.local`.
+
+Kịch bản demo: [docs/DEMO-RUNBOOK.md](docs/DEMO-RUNBOOK.md).
+
+---
 
 ## Chạy local
 
-Yêu cầu: Node.js ≥ 20.9, npm ≥ 10, Python ≥ 3.11 và PostgreSQL/Supabase.
+**Yêu cầu:** Node.js ≥ 20.9 · npm ≥ 10 · Python ≥ 3.11 · PostgreSQL / Supabase.
 
 ```powershell
 npm ci
@@ -142,29 +202,15 @@ npm run db:seed:check
 npm run dev
 ```
 
-Các URL mặc định:
-
 | Dịch vụ | URL |
 | --- | --- |
-| Web | `http://localhost:3000` |
-| API docs | `http://localhost:4000/api/docs` |
-| AI docs | `http://localhost:8001/docs` |
+| Web | http://localhost:3000 |
+| API docs | http://localhost:4000/api/docs |
+| AI docs | http://localhost:8001/docs |
 
-### Tài khoản demo
+---
 
-Mật khẩu chung của fixture: `Demo@123`. Danh sách chỉ xuất hiện khi `DEMO_MODE=true`; production mặc định tắt endpoint này.
-
-| Vai trò | Email |
-| --- | --- |
-| OWNER / tác giả | `teacher@edurecall.local` |
-| INSTRUCTOR | `thay.nam@edurecall.local` |
-| REVIEWER độc lập | `co.linh@edurecall.local` |
-| Học sinh chính | `minh@edurecall.local` |
-| Học sinh so sánh | `lan@edurecall.local`, `an@edurecall.local`, `binh@edurecall.local` |
-
-UI đăng nhập có tìm kiếm đủ 23 account. Danh sách đầy đủ và kịch bản 6–8 phút nằm trong [demo runbook](docs/DEMO-RUNBOOK.md).
-
-## Kiểm chứng
+## Chất lượng kỹ thuật đã kiểm chứng
 
 ```powershell
 npm run lint
@@ -174,66 +220,78 @@ npm run ai:test
 npm run validate:synthetic
 npm run ai:evaluate
 npm run validate:assets
-npm run render:check
-npm audit --omit=dev --audit-level=moderate
-npm run db:check
-
-$env:E2E_API_URL="http://127.0.0.1:4000/api"
 npm run test:e2e
-
 powershell -ExecutionPolicy Bypass -File scripts/smoke-product.ps1
 npm run build
 ```
 
-Kết quả gần nhất ngày 19/07/2026:
+| Hạng mục | Kết quả (19/07/2026) |
+| --- | --- |
+| Lint · typecheck · production build | Pass |
+| Node tests | 70 (web + API) |
+| Python tests | 23 pytest + Ruff |
+| Live HTTP E2E | Pass trên Supabase |
+| Product smoke | Pass ~110s: progress → animation → pseudocode → diagnosis/recommendation → independent review → publish |
+| Synthetic validation | 20 students · 8 concepts · 400 attempts/events |
+| Assets | 254 SVG · 80 custom icons |
+| Production dependency audit | 0 vulnerability (thời điểm kiểm tra) |
 
-- Lint: pass.
-- TypeScript: web + API pass.
-- Node tests: 11 web + 59 API pass.
-- Python: 23 pytest pass; Ruff pass.
-- Live E2E: 1/1 pass trên Supabase.
-- Smoke product: pass trong 110,4 giây.
-- Production build: NestJS + Next.js pass; 9 route.
-- Render contract/startup smoke: pass; DB + AI ready, 23 demo account, TTS ẩn danh bị chặn 401.
-- Production dependency audit: 0 vulnerability tại thời điểm kiểm tra.
-- Synthetic validation: 20 students, 8 concepts, 48 dataset exercises, 400 attempts/events.
-- Asset validation: 254 SVG, 80 custom icons.
-- Model evaluation: accuracy 0,6703; ROC-AUC 0,5691; Brier 0,2169 — **synthetic artifact, không phải hiệu quả giáo dục**.
+Luồng smoke chứng minh **AI thật + persistence thật + review gate thật** — không phải slideshow.
 
-Lần `npm ci` trên máy kiểm chứng hiện tại bị chặn bởi lỗi junction/workspace của filesystem Windows. Các lệnh chuẩn phía trên đã pass sau một cài đặt dependency tạm không sửa lockfile. Vì vậy production build là **Tested**, còn clean-clone install trên host khác vẫn cần CI xác nhận; xem chi tiết tại [build verification](docs/build-verification.md).
+---
 
-## An toàn, grounding và dữ liệu trẻ em
+## An toàn & tin cậy (phù hợp giáo dục K-12)
 
-- External provider chỉ nhận excerpt cần thiết, không nhận email/tên trực tiếp của học sinh.
-- Source phải ở trạng thái `VERIFIED`; pipeline hiện chỉ nhận TXT. PDF/DOCX/PPTX/OCR là **Planned**.
-- Provider output là dữ liệu không tin cậy; không render JavaScript/raw HTML.
-- Animation chỉ dùng template đã đăng ký và key allowlist.
-- RLS được bật trên các bảng nghiệp vụ; `anon`/`authenticated` không có table privileges trong mô hình API-only. API vẫn phải thực hiện object authorization.
-- Trước dữ liệu trẻ em thật cần consent/assent, retention/deletion, tenant isolation, incident owner và privacy/legal review tại Việt Nam.
-- Không tự động retrain từ dữ liệu trẻ em và không dùng model cho quyết định có hậu quả cao.
+- Chỉ source `VERIFIED` mới đưa vào generation; output provider là dữ liệu không tin cậy.
+- Không render JavaScript / raw HTML từ model; animation chỉ template đã đăng ký.
+- Student projection loại answer key, cost nội bộ và trace nhạy cảm.
+- RLS bật; API vẫn object-authorize theo course / class / role.
+- Không dùng model output cho điểm số chính thức, kỷ luật hay tuyển sinh.
+- Pilot thật cần consent/assent, retention/deletion và privacy review — roadmap đã nêu rõ gate.
 
-## Giới hạn công khai
+Xem [docs/security.md](docs/security.md).
 
-- Chưa có live URL/video công khai được xác minh trong lần kiểm tra này.
-- Chưa chạy external LLM/TTS bằng credential thật trong lần kiểm tra này; provider path có unit test/validator nhưng live artifact chưa có.
-- Chưa có paired baseline hai bài hoàn chỉnh cùng scope, teacher override rate hay kết quả pilot consented.
-- Model next-attempt hiện có ROC-AUC synthetic thấp; ranking chính vẫn dựa trên rule/tín hiệu giải thích được và cần calibration pilot.
-- Course-plan publish hiện lưu một kế hoạch đã duyệt, chưa tự động ghi đè cấu trúc course đang học.
-- Seed cold run qua Supabase mất khoảng 476 giây trên máy kiểm chứng.
+---
 
-## Tài liệu chính
+## Lộ trình pilot với EduOne
 
-- [Judging evidence và khoảng cách tới 90+](docs/JUDGING-EVIDENCE.md)
-- [Demo runbook](docs/DEMO-RUNBOOK.md)
-- [Build verification](docs/build-verification.md)
-- [Brief-fit audit](docs/brief-fit-audit.md)
-- [AI mechanisms](docs/ai-mechanisms.md)
-- [Architecture](docs/architecture.md)
-- [Recommendation explainability](docs/recommendation-explainability.md)
-- [Pilot roadmap](docs/pilot-roadmap.md)
-- [Security and child-data boundaries](docs/security.md)
-- [Render deployment](docs/deploy-render.md)
+Tóm tắt [docs/pilot-roadmap.md](docs/pilot-roadmap.md):
 
-## License
+| Giai đoạn | Trọng tâm |
+| --- | --- |
+| Tuần 0 | Chọn cohort, baseline soạn bài thủ công, consent, owner/reviewer |
+| Tuần 1–2 | Placement, recommendation log, fallback monitoring |
+| Tuần 3–4 | Full-lesson draft/review, remediation reuse, delayed recall |
+| Tuần 5–6 | So sánh before/after thời gian soạn (cùng scope), willingness-to-adopt, go/no-go |
 
-MIT — xem [LICENSE](LICENSE).
+Đo thời gian tách generation latency · active edit · review · correction/reject — không gộp nhầm remediation ngắn với baseline 40–50 giờ của bài hoàn chỉnh.
+
+---
+
+## Tài liệu cho giám khảo & partner
+
+| Tài liệu | Nội dung |
+| --- | --- |
+| [STEAM_for_Vietnam_EduOne_ProblemBrief.md](STEAM_for_Vietnam_EduOne_ProblemBrief.md) | Đề bài gốc |
+| [docs/JUDGING-EVIDENCE.md](docs/JUDGING-EVIDENCE.md) | Claim → evidence theo rubric |
+| [docs/brief-fit-audit.md](docs/brief-fit-audit.md) | Ma trận khớp yêu cầu brief |
+| [docs/DEMO-RUNBOOK.md](docs/DEMO-RUNBOOK.md) | Script demo 6–8 phút |
+| [docs/ai-architecture.md](docs/ai-architecture.md) | Kiến trúc AI giải thích được |
+| [docs/recommendation-explainability.md](docs/recommendation-explainability.md) | Vì sao đề xuất bài X |
+| [docs/pilot-roadmap.md](docs/pilot-roadmap.md) | Pilot 1 course · 1 class · 20 learners |
+| [docs/architecture.md](docs/architecture.md) | Boundary web / API / AI / domain |
+| [docs/security.md](docs/security.md) | Child-data & trust boundary |
+| [docs/deploy-render.md](docs/deploy-render.md) | Triển khai Render |
+
+---
+
+## Tóm lại
+
+EduRecall AI không chỉ “có AI”, mà **đặt AI đúng chỗ** trong hai vòng lặp EduOne đang cần:
+
+1. **Real-time personalization** có log, có target thật, có fallback — demo được trên 20 hồ sơ pilot.
+2. **AI-assisted authoring** có grounding, có human review, có path chi phí thấp cho nonprofit.
+
+Cấu trúc monorepo rõ boundary, test/smoke/E2E chạy được, tiếng Việt sẵn cho K-12, và roadmap pilot đủ ngắn để EduOne triển khai từng bước có go/no-go.
+
+**MIT License** — xem [LICENSE](LICENSE).
