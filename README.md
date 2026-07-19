@@ -124,7 +124,7 @@ Kiến trúc chi tiết: [docs/ai-architecture.md](docs/ai-architecture.md) · E
 
 - **Mã giả / ý tưởng:** workspace tới 2.000 ký tự; rubric chấm logic, `syntaxPolicy = IGNORE` — phù hợp K-12 mới học lập trình.
 - **Ghép khối code:** kéo-thả block; server kiểm tra ID và thứ tự đã duyệt — kết quả tái lập.
-- **Animation đăng ký sẵn** + quiz tiếng Việt; không lộ answer key trước khi nộp.
+- **Mỗi bài demo có animation đăng ký sẵn + AI Voice từ narration đã duyệt**; quiz tiếng Việt không lộ answer key trước khi nộp.
 - **Next step cá nhân hóa** kèm lý do và độ tin cậy bằng chứng.
 
 ### Giáo viên — studio gọn, workflow rõ

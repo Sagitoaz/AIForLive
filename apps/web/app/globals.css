@@ -58,6 +58,8 @@ code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospac
 .button.small { border-radius: 12px; font-size: 13px; min-height: 38px; padding: 8px 14px; }
 .button.large { border-radius: 17px; font-size: 16px; min-height: 56px; padding: 15px 24px; }
 .button.full { width: 100%; }
+.ai-voice-control { align-items: flex-start; display: inline-flex; flex-direction: column; gap: 5px; }
+.ai-voice-status { color: var(--muted); font-size: 11px; line-height: 1.4; max-width: 250px; }
 .text-link, .reason-link { color: var(--primary-700); font-size: 13px; font-weight: 850; }
 .text-link:hover, .reason-link:hover { text-decoration: underline; }
 .status-pill { align-items: center; border-radius: 999px; display: inline-flex; font-size: 10px; font-weight: 900; letter-spacing: .06em; line-height: 1; padding: 7px 10px; text-transform: uppercase; }

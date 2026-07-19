@@ -202,6 +202,91 @@ const lessonDefinitions = [
   { concept: "PYTHON_FUNCTIONS", title: "Dự án chương trình hỏi đáp" }
 ] as const;
 
+interface DemoTheoryAnimation {
+  title: string;
+  text: string;
+  narration: string;
+  animationTemplate: string;
+  animationData: Prisma.InputJsonObject;
+}
+
+function demoTheoryAnimation(conceptCode: string, conceptTitle: string): DemoTheoryAnimation {
+  switch (conceptCode) {
+    case "PYTHON_VARIABLES":
+      return {
+        title: "Giá trị của biến thay đổi như thế nào?",
+        text: "Biến là một tên giúp chương trình lưu và cập nhật dữ liệu. Khi có phép gán mới, giá trị cũ được thay bằng giá trị mới.",
+        narration: "Hãy xem biến điểm như một chiếc hộp có nhãn. Ban đầu điểm bằng năm. Sau phép gán mới, điểm đổi thành tám, còn tên biến vẫn giữ nguyên.",
+        animationTemplate: "VARIABLE_CHANGE",
+        animationData: { variable: "diem", before: 5, after: 8 }
+      };
+    case "PYTHON_OPERATORS":
+      return {
+        title: "Toán tử biến dữ liệu thành kết quả",
+        text: "Toán tử số học tạo ra giá trị mới; toán tử so sánh trả về Đúng hoặc Sai để chương trình có thể ra quyết định.",
+        narration: "Dòng đầu cộng bốn với ba để được bảy. Dòng sau so sánh bảy có lớn hơn năm hay không và nhận kết quả đúng.",
+        animationTemplate: "CODE_HIGHLIGHT",
+        animationData: { lines: ["tong = 4 + 3", "tong > 5", "Kết quả: True"], activeLine: 2 }
+      };
+    case "PYTHON_IF_ELSE":
+      return {
+        title: "Chọn đúng một nhánh với if/else",
+        text: "Chương trình kiểm tra điều kiện. Nếu điều kiện đúng, nhánh if chạy; nếu sai, nhánh else chạy.",
+        narration: "Điều kiện hỏi điểm có từ năm trở lên không. Khi điều kiện đúng, chương trình đi theo nhánh đạt. Nếu sai, chương trình đi theo nhánh cần luyện thêm.",
+        animationTemplate: "FLOW_BRANCH",
+        animationData: { condition: "điểm >= 5?", truePath: "Đạt", falsePath: "Luyện thêm" }
+      };
+    case "PYTHON_FOR":
+      return {
+        title: "Vòng for đi qua từng phần tử",
+        text: "Vòng for lấy lần lượt từng phần tử trong một dãy, thực hiện cùng một nhóm lệnh rồi mới chuyển sang phần tử tiếp theo.",
+        narration: "Vòng lặp lần lượt đi qua An, Bình và Chi. Mỗi lượt chỉ xử lý một tên, sau ba lượt thì vòng lặp kết thúc.",
+        animationTemplate: "LOOP_TIMELINE",
+        animationData: { iterations: 3, values: ["An", "Bình", "Chi"] }
+      };
+    case "PYTHON_RANGE":
+      return {
+        title: "Dãy số range dừng trước stop",
+        text: "range(2, 5) đi qua 2, 3, 4 và dừng ngay trước 5.",
+        narration: "Dãy bắt đầu từ hai và dừng ngay trước năm, nên năm không thuộc kết quả.",
+        animationTemplate: "NUMBER_SEQUENCE",
+        animationData: { start: 2, stop: 5, step: 1, values: ["2", "3", "4"] }
+      };
+    case "PYTHON_WHILE":
+      return {
+        title: "While phải tiến về điều kiện dừng",
+        text: "Vòng while tiếp tục khi điều kiện còn đúng. Biến điều khiển phải được cập nhật để vòng lặp có thể kết thúc.",
+        narration: "Biến lượt bắt đầu bằng một và tăng dần. Mỗi lần cập nhật giúp điều kiện tiến gần hơn tới lúc sai để vòng lặp dừng an toàn.",
+        animationTemplate: "VARIABLE_CHANGE",
+        animationData: { variable: "luot", before: 1, after: 2 }
+      };
+    case "PYTHON_LISTS":
+      return {
+        title: "Chỉ số list bắt đầu từ 0",
+        text: "Mỗi phần tử trong list có một chỉ số. Phần tử đầu tiên mang chỉ số 0, phần tử thứ hai mang chỉ số 1.",
+        narration: "List có ba phần tử Táo, Cam và Ổi. Chỉ số một đang được chọn nên giá trị nhận được là Cam, phần tử thứ hai trong list.",
+        animationTemplate: "LIST_INDEX",
+        animationData: { items: ["Táo", "Cam", "Ổi"], activeIndex: 1 }
+      };
+    case "PYTHON_FUNCTIONS":
+      return {
+        title: "Hàm nhận đầu vào và trả kết quả",
+        text: "Hàm đóng gói các bước xử lý dưới một tên. Dữ liệu đi vào qua tham số và kết quả đi ra bằng giá trị trả về.",
+        narration: "Hàm gấp đôi nhận số ba, nhân số đó với hai rồi trả về kết quả sáu. Ta có thể gọi lại hàm với đầu vào khác mà không viết lại logic.",
+        animationTemplate: "FUNCTION_FLOW",
+        animationData: { input: "3", steps: ["nhận x", "x × 2", "return"], output: "6" }
+      };
+    default:
+      return {
+        title: `Minh họa ${conceptTitle}`,
+        text: `Quan sát từng bước để hiểu ${conceptTitle}.`,
+        narration: `Hãy quan sát minh họa từng bước của ${conceptTitle}.`,
+        animationTemplate: "CODE_HIGHLIGHT",
+        animationData: { lines: [conceptTitle], activeLine: 1 }
+      };
+  }
+}
+
 function ideaRubric(conceptCode: string): Prisma.InputJsonObject {
   return {
     teacherReviewed: true,
@@ -832,27 +917,21 @@ async function seed(): Promise<void> {
       }
     });
 
+    const theoryAnimation = demoTheoryAnimation(concept.code, concept.title);
     const resources = [
-      concept.code === "PYTHON_RANGE"
-        ? {
-            type: "ANIMATION",
-            phase: LessonPhase.THEORY,
-            title: "Dãy số range dừng trước stop",
-            contentJson: {
-              kind: "explanation",
-              conceptCode: concept.code,
-              text: "range(2, 5) đi qua 2, 3, 4 và dừng ngay trước 5.",
-              animationTemplate: "NUMBER_SEQUENCE",
-              animationData: { start: 2, stop: 5, step: 1, values: [2, 3, 4] },
-              narration: "Dãy bắt đầu từ hai và dừng ngay trước năm, nên năm không thuộc kết quả."
-            }
-          }
-        : {
-            type: "TEXT",
-            phase: LessonPhase.THEORY,
-            title: "Khái niệm cốt lõi",
-            contentJson: { kind: "explanation", conceptCode: concept.code, text: concept.title }
-          },
+      {
+        type: "ANIMATION",
+        phase: LessonPhase.THEORY,
+        title: theoryAnimation.title,
+        contentJson: {
+          kind: "explanation",
+          conceptCode: concept.code,
+          text: theoryAnimation.text,
+          animationTemplate: theoryAnimation.animationTemplate,
+          animationData: theoryAnimation.animationData,
+          narration: theoryAnimation.narration
+        }
+      },
       {
         type: "WORKED_EXAMPLE",
         phase: LessonPhase.PRACTICE,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Asset } from "@/components/asset";
+import { AiVoiceButton } from "@/components/ai-voice-button";
 import { LearningAnimation } from "@/components/learning-animation";
 import { EmptyState, Metric, ProgressBar, SectionHeading, StatusPill } from "@/components/ui";
 import {
@@ -17,7 +18,6 @@ import {
 import { CodeOrderWorkspace, PseudocodeWorkspace } from "./practice-workspaces";
 import { createOrReusePendingAttempt, type PendingAttemptRequest } from "./pending-attempt";
 import { apiRequest } from "@/lib/api";
-import { speakVietnamese } from "@/lib/vietnamese-speech";
 import styles from "./student-learning.module.css";
 
 type LessonState = "COMPLETED" | "CURRENT" | "NOT_STARTED";
@@ -174,6 +174,7 @@ function resourceTypeLabel(type: string) {
 function ResourceCard({ resource, lesson }: { resource: LessonResourceData; lesson: LessonData }) {
   const content = resource.content;
   const body = firstText(content, ["body", "text", "summary", "description", "content", "html"]);
+  const narration = firstText(content, ["narration", "voiceText", "audioText"]);
   const duration = firstText(content, ["estimatedMinutes", "durationMinutes"]);
   const format = firstText(content, ["format", "mimeType"]);
   const url = safeResourceUrl(content);
@@ -189,7 +190,7 @@ function ResourceCard({ resource, lesson }: { resource: LessonResourceData; less
         {body && !isAnimation && <p className={styles.resourceContent}>{body}</p>}
       </div>
       <div className={styles.inlineActions}>
-        {resource.type === "LECTURE" && <button className="button ghost small" onClick={() => void speakVietnamese(`${resource.title}. ${body ?? lesson.summary}`)}>Nghe bài</button>}
+        <AiVoiceButton text={`${resource.title}. ${narration ?? body ?? lesson.summary}`} />
         {url && <a className="button ghost small" href={url} target="_blank" rel="noreferrer">Mở tài nguyên ↗</a>}
       </div>
       {isAnimation && (
@@ -456,7 +457,7 @@ function MicroLessonView() {
   return (
     <div className="page-stack">
       <header className="micro-header"><Link href="/student/reviews">← Đề xuất</Link><div><StatusPill tone="green">Đã xuất bản</StatusPill><strong>{lesson.title}</strong></div><span>{slide + 1}/{lesson.slides.length}</span></header>
-      {current && <section className="surface-card"><LearningAnimation template={current.animationTemplate} data={current.animationData} title={current.title}/><div className={styles.resourceBody}><h2>{current.title}</h2><p className={styles.resourceContent}>{current.body}</p>{current.code && <pre><code>{current.code}</code></pre>}<button className="button ghost small" onClick={() => void speakVietnamese(current.narration)}>Nghe bài</button></div></section>}
+      {current && <section className="surface-card"><LearningAnimation template={current.animationTemplate} data={current.animationData} title={current.title}/><div className={styles.resourceBody}><h2>{current.title}</h2><p className={styles.resourceContent}>{current.body}</p>{current.code && <pre><code>{current.code}</code></pre>}<AiVoiceButton text={current.narration || `${current.title}. ${current.body}`} /></div></section>}
       <div className="micro-actions"><button className="button ghost" disabled={slide === 0} onClick={() => setSlide((value) => value - 1)}>← Trước</button><button className="button ghost" disabled={slide === lesson.slides.length - 1} onClick={() => setSlide((value) => value + 1)}>Tiếp →</button></div>
       <section className="micro-quiz"><span className="eyebrow">Củng cố · câu {questionIndex + 1}/{questions.length}</span><ProgressBar value={(Object.keys(results).length / questions.length) * 100}/><h2>{question.question}</h2><div className="answer-list">{question.options.map((option, index) => <button aria-pressed={selected === index} className={selected === index ? "selected" : ""} disabled={Boolean(result)} onClick={() => setSelections((currentSelections) => ({ ...currentSelections, [questionIndex]: index }))} key={option}>{option}</button>)}</div><button className="button primary" disabled={selected === null || Boolean(result) || product.busy} onClick={() => void submitQuiz()}>{product.busy ? product.operation ?? "Đang chấm…" : result ? "Đã ghi nhận" : "Kiểm tra"}</button>{result && <div className={`${styles.answerFeedback} ${result.correct ? styles.answerCorrect : styles.answerIncorrect}`}><h3>{result.correct ? "Chính xác" : "Chưa đúng"}</h3><p>{result.explanation} Mức độ nắm vững mới {Math.round(result.masteryAfter * 100)}%.</p>{questionIndex < questions.length - 1 && <button className="button ghost small" onClick={() => setQuestionIndex((value) => value + 1)}>Câu tiếp →</button>}</div>}{allAnswered && <div className={styles.completionCard}><h2>Đã hoàn thành phần củng cố</h2><p>Bạn trả lời đúng {correctAnswers}/{questions.length} câu. Kết quả từng câu đã được lưu trên Supabase.</p><div className={styles.resultActions}><Link className="button primary" href="/student/course">Về khóa học →</Link><Link className="button ghost" href="/student/progress">Xem tiến bộ</Link></div></div>}</section>
     </div>

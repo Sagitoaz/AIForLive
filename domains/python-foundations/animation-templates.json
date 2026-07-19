@@ -1,7 +1,7 @@
 [
   { "code": "NUMBER_SEQUENCE", "allowedKeys": ["start", "stop", "step", "values"], "concepts": ["PYTHON_RANGE"] },
   { "code": "VARIABLE_CHANGE", "allowedKeys": ["variable", "before", "after"], "concepts": ["PYTHON_VARIABLES", "PYTHON_WHILE"] },
-  { "code": "CODE_HIGHLIGHT", "allowedKeys": ["lines", "activeLine"], "concepts": ["PYTHON_IF_ELSE", "PYTHON_FOR"] },
+  { "code": "CODE_HIGHLIGHT", "allowedKeys": ["lines", "activeLine"], "concepts": ["PYTHON_OPERATORS", "PYTHON_IF_ELSE", "PYTHON_FOR"] },
   { "code": "FLOW_BRANCH", "allowedKeys": ["condition", "truePath", "falsePath"], "concepts": ["PYTHON_IF_ELSE"] },
   { "code": "LOOP_TIMELINE", "allowedKeys": ["iterations", "values"], "concepts": ["PYTHON_FOR", "PYTHON_WHILE"] },
   { "code": "LIST_INDEX", "allowedKeys": ["items", "activeIndex"], "concepts": ["PYTHON_LISTS"] },

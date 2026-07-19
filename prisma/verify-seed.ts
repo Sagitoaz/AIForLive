@@ -203,6 +203,31 @@ async function verify(): Promise<void> {
   if (topologyLessons.length !== 12 || topologyLessons.some((lesson) => lesson.status !== "ACTIVE" || lesson.deletedAt || lesson.resources.length !== 3 || lesson.exercises.length !== 5)) {
     throw new Error("Fixture course must contain 12 active lessons with 3 resources and 5 exercises each");
   }
+  const registeredAnimationTemplates = new Set([
+    "NUMBER_SEQUENCE",
+    "VARIABLE_CHANGE",
+    "CODE_HIGHLIGHT",
+    "FLOW_BRANCH",
+    "LOOP_TIMELINE",
+    "LIST_INDEX",
+    "FUNCTION_FLOW",
+    "BUG_REVEAL"
+  ]);
+  for (const lesson of topologyLessons) {
+    const theoryAnimations = lesson.resources.filter((resource) => resource.phase === "THEORY" && resource.type === "ANIMATION");
+    const content = theoryAnimations[0] ? objectJson(theoryAnimations[0].contentJson) : {};
+    const animationData = objectJson(content.animationData);
+    if (
+      theoryAnimations.length !== 1
+      || typeof content.animationTemplate !== "string"
+      || !registeredAnimationTemplates.has(content.animationTemplate)
+      || Object.keys(animationData).length === 0
+      || typeof content.narration !== "string"
+      || !content.narration.trim()
+    ) {
+      throw new Error(`${lesson.code} must expose one registered theory animation with non-empty narration`);
+    }
+  }
   const rangeConceptId = exerciseRows.find((exercise) => exercise.code === "EX-08-1")?.concepts[0]?.conceptId;
   const rangeLesson = topologyLessons.find((lesson) => lesson.conceptId === rangeConceptId);
   const rangeAnimations = rangeLesson?.resources.filter((resource) => {

@@ -47,17 +47,19 @@ function VariableChange({ data }: { data: Record<string, unknown> }) {
 
 function FlowBranch({ data }: { data: Record<string, unknown> }) {
   const condition = asText(data.condition, "Điều kiện?");
-  return <div className="animation-flow"><div className="decision">{condition}</div><div className="branch yes"><small>Đúng</small><strong>{asText(data.trueLabel ?? data.whenTrue, "Chạy nhánh if")}</strong></div><div className="branch no"><small>Sai</small><strong>{asText(data.falseLabel ?? data.whenFalse, "Chạy nhánh else")}</strong></div></div>;
+  return <div className="animation-flow"><div className="decision">{condition}</div><div className="branch yes"><small>Đúng</small><strong>{asText(data.truePath ?? data.trueLabel ?? data.whenTrue, "Chạy nhánh if")}</strong></div><div className="branch no"><small>Sai</small><strong>{asText(data.falsePath ?? data.falseLabel ?? data.whenFalse, "Chạy nhánh else")}</strong></div></div>;
 }
 
 function ListIndex({ data }: { data: Record<string, unknown> }) {
-  const values = asList(data.values).length ? asList(data.values) : ["Táo", "Cam", "Ổi"];
-  const selected = Number(data.index ?? 0);
+  const supplied = asList(data.items ?? data.values);
+  const values = supplied.length ? supplied : ["Táo", "Cam", "Ổi"];
+  const selected = Number(data.activeIndex ?? data.index ?? 0);
   return <div className="animation-list">{values.map((value, index) => <div className={index === selected ? "selected" : ""} key={`${value}-${index}`}><small>[{index}]</small><strong>{value}</strong></div>)}</div>;
 }
 
 function FunctionFlow({ data }: { data: Record<string, unknown> }) {
-  return <div className="animation-function"><div><small>Đầu vào</small><strong>{asText(data.input, "tham số")}</strong></div><span>→</span><div className="processor"><code>{asText(data.function ?? data.name, "ham()")}</code><small>{asText(data.process, "xử lý")}</small></div><span>→</span><div><small>Kết quả</small><strong>{asText(data.output, "giá trị trả về")}</strong></div></div>;
+  const steps = asList(data.steps);
+  return <div className="animation-function"><div><small>Đầu vào</small><strong>{asText(data.input, "tham số")}</strong></div><span>→</span><div className="processor"><code>{asText(data.function ?? data.name, "hàm()")}</code><small>{steps.length ? steps.join(" → ") : asText(data.process, "xử lý")}</small></div><span>→</span><div><small>Kết quả</small><strong>{asText(data.output, "giá trị trả về")}</strong></div></div>;
 }
 
 function BugReveal({ data }: { data: Record<string, unknown> }) {
