@@ -187,7 +187,7 @@ function ResourceCard({ resource, lesson }: { resource: LessonResourceData; less
       <div className={styles.resourceBody}>
         <strong>{resource.title}</strong>
         <span className={styles.resourceMeta}>{resourceTypeLabel(resource.type)}{duration ? ` · ${duration} phút` : ""}{format ? ` · ${format}` : ""}</span>
-        {body && !isAnimation && <p className={styles.resourceContent}>{body}</p>}
+        {body && <p className={styles.resourceContent}>{body}</p>}
       </div>
       <div className={styles.inlineActions}>
         <AiVoiceButton text={`${resource.title}. ${narration ?? body ?? lesson.summary}`} />

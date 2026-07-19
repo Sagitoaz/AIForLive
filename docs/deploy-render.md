@@ -174,7 +174,7 @@ Lần build đầu có thể lâu vì image chứa cả Node, Python và model d
 Giả sử URL là:
 
 ```text
-https://edurecall-checkpoint-2.onrender.com
+https://YOUR-SERVICE.onrender.com
 ```
 
 Kiểm tra theo thứ tự:
@@ -192,7 +192,7 @@ Chạy smoke test trực tiếp vào bản deploy bằng PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/smoke-product.ps1 `
-  -ApiUrl "https://edurecall-checkpoint-2.onrender.com/backend-api"
+  -ApiUrl "https://YOUR-SERVICE.onrender.com/backend-api"
 ```
 
 Smoke test ghi attempt, recommendation, content version/review và course-plan draft thật vào Supabase. Chỉ chạy trên project pilot, không chạy trên dữ liệu trẻ em thật.
@@ -200,7 +200,7 @@ Smoke test ghi attempt, recommendation, content version/review và course-plan d
 Hoặc chạy live E2E tự động (test được skip rõ ràng nếu chưa truyền URL):
 
 ```powershell
-$env:E2E_API_URL="https://edurecall-checkpoint-2.onrender.com/backend-api"
+$env:E2E_API_URL="https://YOUR-SERVICE.onrender.com/backend-api"
 npm run test:e2e
 Remove-Item Env:E2E_API_URL
 ```

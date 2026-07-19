@@ -228,7 +228,7 @@ npm run build
 | Hạng mục | Kết quả (19/07/2026) |
 | --- | --- |
 | Lint · typecheck · production build | Pass |
-| Node tests | 70 (web + API) |
+| Node tests | 75 (16 web + 59 API) |
 | Python tests | 23 pytest + Ruff |
 | Live HTTP E2E | Pass trên Supabase |
 | Product smoke | Pass ~110s: progress → animation → pseudocode → diagnosis/recommendation → independent review → publish |
@@ -237,6 +237,8 @@ npm run build
 | Production dependency audit | 0 vulnerability (thời điểm kiểm tra) |
 
 Luồng smoke chứng minh **AI thật + persistence thật + review gate thật** — không phải slideshow.
+
+Live Render ngày 19/07/2026 đã được chủ dự án kiểm tra với External LLM (`DeepSeek-V4-Flash`, 1938 tokens, 7s, trace `b69e656a`), AI Voice trên account học sinh và phản hồi mã giả. Xem [live demo evidence](docs/live-demo-evidence.md) để phân biệt owner-observed runtime evidence với automated tests và artifact còn cần lưu trước submission.
 
 ---
 

@@ -140,7 +140,7 @@ Nếu muốn chứng minh revision gate thay vì publish ngay:
 
 Hiển thị [Judging evidence](JUDGING-EVIDENCE.md) hoặc terminal:
 
-- 70 Node tests + 23 Python tests.
+- 75 Node tests + 23 Python tests.
 - 1 live E2E và full smoke pass.
 - Fixture verifier: 23 account, 12 bài, 60 reviewed exercise, 400 synthetic histories, 20 linked recommendations.
 - `LOCAL_TEMPLATE` không phải LLM; model evaluation là synthetic.
