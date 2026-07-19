@@ -21,6 +21,12 @@ enum RecordStatus {
   ARCHIVED
 }
 
+enum ClassTeacherRole {
+  OWNER
+  INSTRUCTOR
+  REVIEWER
+}
+
 enum EnrollmentStatus {
   INVITED
   ACTIVE
@@ -217,17 +223,18 @@ model StudentProfile {
 }
 
 model TeacherProfile {
-  id             String          @id @default(uuid())
-  userId         String          @unique
-  bio            String?
-  specialization String?
-  status         RecordStatus    @default(ACTIVE)
-  metadataJson   Json            @default("{}")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  deletedAt      DateTime?
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classes        LearningClass[]
+  id               String                   @id @default(uuid())
+  userId           String                   @unique
+  bio              String?
+  specialization   String?
+  status           RecordStatus             @default(ACTIVE)
+  metadataJson     Json                     @default("{}")
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  deletedAt        DateTime?
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes          LearningClass[]
+  classMemberships ClassTeacherMembership[]
 
   @@index([status])
 }
@@ -261,6 +268,7 @@ model LearningClass {
   deletedAt          DateTime?
   organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   teacher            TeacherProfile     @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  teacherMemberships ClassTeacherMembership[]
   enrollments        Enrollment[]
   leaderboardEntries LeaderboardEntry[]
   coursePlanDrafts   CoursePlanDraft[]
@@ -268,6 +276,24 @@ model LearningClass {
   @@unique([organizationId, code])
   @@index([teacherId, status])
   @@map("Class")
+}
+
+model ClassTeacherMembership {
+  id               String           @id @default(uuid())
+  classId          String
+  teacherProfileId String
+  role             ClassTeacherRole @default(INSTRUCTOR)
+  status           RecordStatus     @default(ACTIVE)
+  metadataJson     Json             @default("{}")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+  class            LearningClass    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher          TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, teacherProfileId])
+  @@index([teacherProfileId, status])
+  @@index([classId, status])
 }
 
 model Enrollment {

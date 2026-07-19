@@ -85,6 +85,7 @@ export interface MicroLesson {
   version: number;
   generationMs?: number;
   teacherEditingSeconds?: number;
+  requestedBy?: { id: string; displayName: string };
   generationTrace?: {
     model: string;
     promptTokens: number;

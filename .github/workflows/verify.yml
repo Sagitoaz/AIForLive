@@ -1,0 +1,44 @@
+name: Verify release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+      DIRECT_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+      JWT_ACCESS_SECRET: ci-only-access-secret-not-used-outside-build
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-not-used-outside-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/ai-service/requirements.txt
+      - name: Clean Node install
+        run: npm ci --no-audit --no-fund
+      - name: Install Python checks
+        run: npm run ai:install
+      - name: Static checks
+        run: npm run lint && npm run typecheck && npm run render:check
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=moderate
+      - name: Automated tests
+        run: npm run test && npm run ai:test
+      - name: Data and asset validation
+        run: npm run validate:synthetic && npm run ai:evaluate && npm run validate:assets
+      - name: Production build
+        run: npm run build

@@ -190,12 +190,12 @@ export class ExternalLlmProvider implements ContentProvider {
       "Không thêm sourceReferences; hệ thống sẽ gắn source ID đã kiểm chứng."
     ].join("\n");
     const userPrompt = JSON.stringify({
-      task: input.draftKind === "FULL_LESSON" ? "Tạo bài học đầy đủ có cấu trúc" : "Tạo bài bổ trợ có cấu trúc",
+      task: input.draftKind === "FULL_LESSON" ? "Tạo khung bài học 3 pha có cấu trúc để giáo viên hoàn thiện" : "Tạo bài bổ trợ có cấu trúc",
       locale: "vi-VN",
       audience: `Học sinh K-12 Việt Nam, trình độ ${input.level}`,
       domainCode: input.domainCode,
       conceptCode: input.conceptCode,
-      misconceptionCode: input.misconceptionCode,
+      ...(input.misconceptionCode ? { misconceptionCode: input.misconceptionCode } : {}),
       learningObjective: input.learningObjective,
       durationMinutes: input.durationMinutes,
       verifiedSourceId: input.sourceId,

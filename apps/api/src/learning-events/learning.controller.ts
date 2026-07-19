@@ -17,14 +17,12 @@ export class LearningController {
 
   @Post("learning-events")
   event(@Req() request: AuthenticatedRequest, @Body() body: LearningEventDto): Promise<Record<string, unknown>> {
-    body.studentId = request.user.id;
-    return this.learning.recordEvent(body);
+    return this.learning.recordEvent(request.user.id, body);
   }
 
   @Post("attempts")
   attempt(@Req() request: AuthenticatedRequest, @Body() body: SubmitAttemptDto) {
-    body.studentId = request.user.id;
-    return this.learning.submitAttempt(body);
+    return this.learning.submitAttempt(request.user.id, body);
   }
 
   @Get("attempts/:id/analysis")

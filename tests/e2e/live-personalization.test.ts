@@ -45,7 +45,7 @@ liveDescribe("live Supabase personalization flow", () => {
     const lesson = await request<{
       sections: Array<{
         phase: string;
-        activities?: Array<{ id: string; code: string; difficulty: number }>;
+        activities?: Array<{ id: string; code: string; difficulty: number; content: { responseMode?: string } }>;
       }>;
     }>(`/lessons/${rangeLesson!.id}`, { headers });
     const exercise = lesson.sections
@@ -64,20 +64,16 @@ liveDescribe("live Supabase personalization flow", () => {
       method: "POST",
       headers,
       body: JSON.stringify({
-        idempotencyKey: `live-e2e-${crypto.randomUUID()}`,
-        domainCode: "python-foundations",
+        idempotencyKey: `attempt-${crypto.randomUUID()}`,
         courseId: dashboard.course.id,
-        conceptCode: "PYTHON_RANGE",
         activityId: exercise!.id,
-        lessonPhase: "PRACTICE",
-        isCorrect: false,
+        submission: {
+          kind: exercise!.content.responseMode === "PSEUDOCODE" ? "PSEUDOCODE" : "TEXT",
+          text: "NHẬN điểm bắt đầu và điểm dừng; LẶP qua từng số trước điểm dừng; HIỂN THỊ kết quả"
+        },
         usedHint: false,
         skipped: false,
-        attemptNumber: 1,
-        difficulty: exercise!.difficulty,
-        responseTimeMs: 4_200,
-        submittedAnswer: "1,2,3,4,5",
-        expectedAnswer: "server-owned"
+        responseTimeMs: 4_200
       })
     });
 

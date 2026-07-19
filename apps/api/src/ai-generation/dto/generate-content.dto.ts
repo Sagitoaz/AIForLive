@@ -1,14 +1,18 @@
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min, ValidateIf } from "class-validator";
 
 export class GenerateContentDto {
   @IsString()
   domainCode = "python-foundations";
 
   @IsString()
+  @IsNotEmpty()
   conceptCode!: string;
 
+  @ValidateIf((input: GenerateContentDto, value: unknown) => input.draftKind === "REMEDIATION" || value !== undefined)
   @IsString()
-  misconceptionCode!: string;
+  @IsNotEmpty()
+  @MaxLength(100)
+  misconceptionCode?: string;
 
   @IsString()
   @MaxLength(100)
@@ -32,8 +36,8 @@ export class GenerateContentDto {
   @MaxLength(80)
   gradeBand = "Lớp 6–9";
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   sourceId!: string;
 
   @IsOptional()

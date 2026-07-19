@@ -14,6 +14,81 @@ function objectJson(value: Prisma.JsonValue): Record<string, Prisma.JsonValue> {
     : {};
 }
 
+function teacherClassAccess(userId: string): Prisma.LearningClassWhereInput {
+  return {
+    status: "ACTIVE",
+    deletedAt: null,
+    OR: [
+      { teacher: { userId, status: "ACTIVE", deletedAt: null } },
+      {
+        teacherMemberships: {
+          some: {
+            teacher: { userId, status: "ACTIVE", deletedAt: null },
+            status: "ACTIVE",
+            deletedAt: null
+          }
+        }
+      }
+    ]
+  };
+}
+
+function courseAccess(user: AuthenticatedRequest["user"]): Prisma.CourseWhereInput {
+  return user.role === "STUDENT"
+    ? {
+        enrollments: {
+          some: {
+            status: "ACTIVE",
+            deletedAt: null,
+            student: { userId: user.id, status: "ACTIVE", deletedAt: null },
+            class: { status: "ACTIVE", deletedAt: null }
+          }
+        }
+      }
+    : {
+        enrollments: {
+          some: {
+            status: "ACTIVE",
+            deletedAt: null,
+            class: teacherClassAccess(user.id)
+          }
+        }
+      };
+}
+
+function publicExerciseContent(value: Prisma.JsonValue): Record<string, unknown> {
+  const content = objectJson(value);
+  const textKeys = ["guidance", "starterText", "syntaxPolicy", "code", "starterCode", "snippet", "conceptCode"] as const;
+  const result: Record<string, unknown> = {};
+  const responseMode = content.responseMode;
+  if (typeof responseMode === "string" && ["TEXT", "MULTIPLE_CHOICE", "PSEUDOCODE", "CODE_ORDER"].includes(responseMode)) {
+    result.responseMode = responseMode;
+  }
+  for (const key of textKeys) {
+    if (typeof content[key] === "string") result[key] = content[key];
+  }
+  if (Array.isArray(content.options)) {
+    const options: Array<string | { id: string; text: string }> = [];
+    for (const option of content.options) {
+      if (typeof option === "string") {
+        options.push(option);
+        continue;
+      }
+      const row = objectJson(option);
+      if (typeof row.id === "string" && typeof row.text === "string") options.push({ id: row.id, text: row.text });
+    }
+    result.options = options;
+  }
+  if (Array.isArray(content.blocks)) {
+    const blocks = content.blocks.flatMap((block) => {
+      const row = objectJson(block);
+      return typeof row.id === "string" && typeof row.text === "string" ? [{ id: row.id, text: row.text }] : [];
+    });
+    if (new Set(blocks.map((block) => block.id)).size === blocks.length) result.blocks = blocks;
+  }
+  return result;
+}
+
 function stringValue(...values: Array<Prisma.JsonValue | undefined>): string | null {
   const value = values.find((candidate) => typeof candidate === "string" && candidate.trim());
   return typeof value === "string" ? value : null;
@@ -81,11 +156,11 @@ export class StudentsController {
         where: { studentProfileId: context.id, status: { in: ["DUE", "SCHEDULED"] }, dueAt: { lte: new Date() } }
       }),
       this.prisma.personalizationRun.findFirst({
-        where: { studentProfileId: context.id },
+        where: { studentProfileId: context.id, learningEvent: { courseId: enrollment.courseId } },
         orderBy: { createdAt: "desc" }
       }),
       this.prisma.learningEvent.findMany({
-        where: { userId: request.user.id, occurredAt: { gte: since } },
+        where: { userId: request.user.id, courseId: enrollment.courseId, occurredAt: { gte: since } },
         select: { occurredAt: true, payloadJson: true }
       }),
       this.prisma.studentBadge.findMany({
@@ -174,7 +249,12 @@ export class StudentsController {
         orderBy: { order: "asc" }
       }),
       this.prisma.recommendation.findFirst({
-        where: { studentProfileId: context.id, status: "ACTIVE" },
+        where: {
+          studentProfileId: context.id,
+          status: "ACTIVE",
+          concept: { domainId: enrollment.course.domainId },
+          evidence: { some: { attempt: { event: { courseId: enrollment.courseId } } } }
+        },
         orderBy: [{ priorityScore: "desc" }, { createdAt: "desc" }]
       })
     ]);
@@ -225,14 +305,20 @@ export class StudentsController {
   @Get("reviews")
   async reviews(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const context = await this.studentContext(request.user.id);
+    const enrollment = context.enrollments[0]!;
     const schedule = await this.prisma.reviewSchedule.findMany({
-      where: { studentProfileId: context.id, status: { in: ["SCHEDULED", "DUE"] } },
+      where: {
+        studentProfileId: context.id,
+        status: { in: ["SCHEDULED", "DUE"] },
+        concept: { domainId: enrollment.course.domainId }
+      },
       include: { concept: true, recommendation: true },
       orderBy: { dueAt: "asc" }
     });
     const dueContent = await this.prisma.generatedContent.findMany({
       where: {
         status: "PUBLISHED",
+        generationJob: { courseId: enrollment.courseId },
         microLesson: { conceptId: { in: schedule.map((item) => item.conceptId) }, status: "PUBLISHED" }
       },
       select: { id: true, title: true, microLesson: { select: { conceptId: true, durationMinutes: true } } }
@@ -254,8 +340,9 @@ export class StudentsController {
   @Get("recommendations")
   async recommendations(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>[]> {
     const context = await this.studentContext(request.user.id);
+    const enrollment = context.enrollments[0]!;
     const rows = await this.prisma.recommendation.findMany({
-      where: { studentProfileId: context.id },
+      where: { studentProfileId: context.id, concept: { domainId: enrollment.course.domainId } },
       include: { concept: true, evidence: true },
       orderBy: [{ status: "asc" }, { priorityScore: "desc" }, { createdAt: "desc" }],
       take: 30
@@ -278,13 +365,14 @@ export class StudentsController {
   @Get("progress")
   async progress(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const context = await this.studentContext(request.user.id);
+    const enrollment = context.enrollments[0]!;
     const [history, attempts, events] = await Promise.all([
       this.prisma.conceptStateHistory.findMany({
-        where: { studentProfileId: context.id },
+        where: { studentProfileId: context.id, concept: { domainId: enrollment.course.domainId } },
         orderBy: { recordedAt: "asc" }
       }),
-      this.prisma.attempt.findMany({ where: { userId: request.user.id } }),
-      this.prisma.learningEvent.findMany({ where: { userId: request.user.id }, select: { payloadJson: true } })
+      this.prisma.attempt.findMany({ where: { userId: request.user.id, event: { courseId: enrollment.courseId } } }),
+      this.prisma.learningEvent.findMany({ where: { userId: request.user.id, courseId: enrollment.courseId }, select: { payloadJson: true } })
     ]);
     const weekly = new Map<string, { sum: number; retention: number; count: number }>();
     for (const item of history) {
@@ -355,12 +443,22 @@ export class StudentsController {
           where: { status: "ACTIVE", deletedAt: null },
           include: { course: true, class: true },
           orderBy: { enrolledAt: "desc" },
-          take: 1
+          take: 10
         }
       }
     });
     if (!profile || !profile.enrollments[0]) throw new NotFoundException("Không tìm thấy hồ sơ học tập đang hoạt động");
-    return profile;
+    const enrollmentPriority = (value: Prisma.JsonValue): number => {
+      const metadata = objectJson(value);
+      if (metadata.primaryLearningContext === true) return 2;
+      if (typeof metadata.fixture === "string" && metadata.fixture.length > 0) return 1;
+      return 0;
+    };
+    const enrollments = [...profile.enrollments].sort((left, right) => {
+      const priority = enrollmentPriority(right.metadataJson) - enrollmentPriority(left.metadataJson);
+      return priority || right.enrolledAt.getTime() - left.enrolledAt.getTime();
+    });
+    return { ...profile, enrollments };
   }
 
   private goalDto(profile: { learningGoal: string | null; weeklyAvailabilityMinutes: number; metadataJson: Prisma.JsonValue }) {
@@ -387,7 +485,7 @@ export class CoursesController {
   @Get("courses/:id")
   async course(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
     const course = await this.prisma.course.findFirst({
-      where: { OR: [{ id }, { code: id }], status: "ACTIVE", deletedAt: null },
+      where: { OR: [{ id }, { code: id }], status: "ACTIVE", deletedAt: null, organization: { status: "ACTIVE", deletedAt: null }, ...courseAccess(request.user) },
       include: {
         modules: {
           where: { status: "ACTIVE", deletedAt: null },
@@ -500,7 +598,12 @@ export class CoursesController {
   @Get("lessons/:id")
   async lesson(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
     const lesson = await this.prisma.lesson.findFirst({
-      where: { OR: [{ id }, { code: id }], status: "ACTIVE", deletedAt: null },
+      where: {
+        OR: [{ id }, { code: id }],
+        status: "ACTIVE",
+        deletedAt: null,
+        module: { status: "ACTIVE", deletedAt: null, course: { status: "ACTIVE", deletedAt: null, ...courseAccess(request.user) } }
+      },
       include: {
         concept: true,
         module: true,
@@ -556,7 +659,7 @@ export class CoursesController {
             type: item.type,
             prompt: item.prompt,
             difficulty: item.difficulty,
-            content: item.contentJson,
+            content: publicExerciseContent(item.contentJson),
             presentation: presentationDto(item.type, item.contentJson, item.metadataJson)
           }))
         },
@@ -570,7 +673,7 @@ export class CoursesController {
             type: item.type,
             prompt: item.prompt,
             difficulty: item.difficulty,
-            content: item.contentJson,
+            content: publicExerciseContent(item.contentJson),
             presentation: presentationDto(item.type, item.contentJson, item.metadataJson)
           })),
           passRule: { minimumCorrect: Math.max(1, Math.ceil(checkpoint.length * 0.67)), totalQuestions: checkpoint.length },

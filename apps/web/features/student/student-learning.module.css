@@ -88,7 +88,8 @@
 
 .lessonCopy p {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 14px;
+  line-height: 1.5;
   margin: 4px 0;
 }
 
@@ -96,7 +97,8 @@
 .resourceMeta,
 .helperText {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .lessonActions,
@@ -244,6 +246,22 @@
   width: 100%;
 }
 
+.textAnswerLabel {
+  display: grid;
+  gap: 7px;
+}
+
+.textAnswerLabel > span {
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.textAnswerLabel > small {
+  color: var(--muted);
+  font-size: 12px;
+  justify-self: end;
+}
+
 .answerFeedback,
 .completionCard,
 .saveNote {
@@ -268,8 +286,81 @@
 
 .answerFeedback p,
 .completionCard p {
-  font-size: 11px;
+  font-size: 14px;
+  line-height: 1.55;
   margin: 0;
+}
+
+.gradingSummary {
+  align-items: center;
+  background: rgba(255, 255, 255, .72);
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 12px 0;
+  padding: 12px 14px;
+}
+
+.gradingSummary strong {
+  font-size: 22px;
+}
+
+.gradingSummary span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rubricResults {
+  display: grid;
+  gap: 9px;
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+}
+
+.rubricResults li {
+  background: rgba(255, 255, 255, .76);
+  border: 1px solid rgba(34, 89, 51, .12);
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 11px 13px;
+}
+
+.rubricResults strong,
+.rubricResults span {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rubricResults small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.gradingTrace {
+  background: rgba(255, 255, 255, .72);
+  border-radius: 12px;
+  display: grid;
+  font-size: 12px;
+  gap: 7px;
+  margin: 10px 0;
+  padding: 10px 12px;
+}
+
+.gradingTrace summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.gradingTrace span,
+.gradingTrace small {
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .completionCard {

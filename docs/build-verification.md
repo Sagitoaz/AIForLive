@@ -1,51 +1,106 @@
 # Build verification
 
-- Ngày kiểm chứng: 2026-07-18
-- Node: v24.13.0
-- Python: 3.12.0
-- Kết quả: **PASSED**
+- Ngày kiểm chứng: **19/07/2026**
+- Host: Windows, Node `v24.13.0`, Python `3.12.0`
+- Kết luận: **product flow và production build pass; clean-install trên host hiện tại chưa được chứng minh**.
 
 ## Ma trận kiểm chứng
 
-| Hạng mục | Kết quả | Bằng chứng |
+| Hạng mục | Kết quả | Bằng chứng lần chạy này |
 | --- | --- | --- |
-| Node lint | PASS | Web và API ESLint |
-| TypeScript | PASS | Tất cả workspace strict typecheck |
-| API unit test | PASS | 5 suites, 11 tests; gồm resolver target Supabase thật |
-| Web unit test | PASS | 2 files, 5 tests |
-| Python AI lint/test | PASS | Ruff sạch, 17 pytest pass |
-| Production build | PASS | NestJS build và Next.js build, 9 route |
-| Supabase connectivity | PASS | Transaction pooler và session pooler đều `OK` |
-| Prisma migrations | PASS | 3/3 migration; `202607180003_course_plan_drafts` đã áp dụng trên Supabase |
-| Product smoke test | PASS | Progress → animation → attempt → recommendation → lesson review → course-plan revision/publish |
-| Live HTTP E2E contract | READY | 1 test thật; cần `E2E_API_URL` nên được skip rõ ràng trước khi có live URL |
-| Clean install lockfile | PASS | `npm ci --dry-run --ignore-scripts` exit 0 |
-| Idempotency | PASS | Gửi lại cùng key trả đúng cùng attempt, không nhân đôi dữ liệu |
-| AI attempt latency | PASS | Cùng flow range: 10,491 ms trước → 7,574 ms sau tối ưu transaction |
-| Render production build | PARTIAL | Node production build PASS; Dockerfile đã cấu hình nhưng máy kiểm tra chưa bật Docker daemon |
+| `npm run lint` | PASS | Web/API ESLint và Python Ruff: `All checks passed!` |
+| `npm run typecheck` | PASS | Next/Web và Nest/API đều `tsc --noEmit` pass |
+| `npm run test` | PASS | Web: 5 files/11 tests; API: 16 suites/59 tests |
+| `npm run ai:test` | PASS | 23 pytest pass; 43 warning không làm test fail |
+| `npm run validate:synthetic` | PASS | 20 students, 8 concepts, 48 dataset exercises, 400 attempts/events |
+| `npm run ai:evaluate` | PASS | accuracy 0,6703; ROC-AUC 0,5691; Brier 0,2169 — synthetic artifact |
+| `npm run validate:assets` | PASS | 254 SVG, 80 custom icons |
+| `npm run db:check` | PASS | Transaction pooler và session pooler đều `OK` |
+| Prisma schema/migrations | PASS | Schema valid; 5 migration directories được áp dụng, gồm RLS và class memberships |
+| `npm run db:seed:check` | PASS | Toàn bộ fixture count/label/topology/grading/target/no-future-evidence checks |
+| `npm run test:e2e` | PASS | 1 live HTTP test: login → attempt → persisted analysis → DB-backed target |
+| Product smoke | PASS | Full flow Supabase pass trong 110,4 giây |
+| Release runtime smoke | PASS | Build artifact khởi động API + AI; DB ready, 23 demo account và anonymous TTS bị chặn `401` |
+| `npm run build` | PASS | NestJS + Next.js 16.2.10, TypeScript và static generation; 9 route |
+| `npm run render:check` | PASS | Docker/standalone paths, Python runtime deps, supervisor ports, health path, Blueprint secrets và stale-env guard |
+| `npm ci` | **FAIL (host-specific)** | Workspace/junction trên filesystem Windows trả `EISDIR`/“Incorrect function”; không được ghi thành clean-clone pass |
+| `npm audit --omit=dev --audit-level=moderate` | PASS | Registry audit hiện trả `found 0 vulnerabilities` |
 
-## Dữ liệu Supabase sau kiểm thử
+Production build trong sandbox compile thành công nhưng Next worker bị `spawn EPERM`; cùng lệnh chạy ngoài sandbox pass đầy đủ. Để kiểm tra UI thật sau lỗi `npm ci`, dependency web được cài tạm đúng version lockfile với workspace linking tắt và không sửa manifest/lockfile trong thao tác cài đó. Sau đó typecheck, test và build chuẩn đều pass.
+
+## Unit/integration coverage đáng chú ý
+
+- Pseudocode `IDEA_RUBRIC`: structured evidence, syntax ignored, server recompute, deterministic fallback.
+- `CODE_ORDER`: reject block lạ/trùng/thiếu và chấm accepted order.
+- Attempt idempotency, persistence transaction, cross-user collision và target resolution.
+- Auth demo gating, live `classRoles`, class/course/source/content object authorization.
+- Author/last-editor không thể tự approve; non-published content không tới học sinh.
+- Reviewer không đọc learner rows; student projection không lộ answer key/provider trace.
+- Multi-enrollment/multi-class regression: fixture primary context không bị legacy MVP record chiếm.
+- Web practice workspaces, pending retry payload và account-session reset.
+- Web refresh-token retry; authenticated TTS quota boundary và legacy TTS-key compatibility.
+- Render contract gate kiểm tra runtime Python deps, cổng nội bộ cố định, health path, Blueprint và secret placeholders.
+
+## Fixture Supabase được xác minh
+
+Các count dưới đây lọc theo `metadataJson.fixture = pilot-v1`; smoke test có thể tạo thêm artifact ngoài fixture mà không làm thay đổi contract này.
 
 | Nhóm | Số lượng |
 | --- | ---: |
-| Người dùng / lớp / khóa học | 21 / 1 / 1 |
-| Enrollment | 20 |
-| Bài học / học liệu / bài tập | 12 / 36 / 60 |
-| Game học tập | 4 |
-| Animation spec riêng theo bài | 12 |
-| Điểm lịch sử mastery | 444 |
-| Attempt / diagnosis / recommendation | 8 / 7 / 7 |
-| Nội dung AI / micro-lesson / lượt review | 2 / 2 / 4 |
-| Course-plan draft đã xuất bản | 1 |
+| Users / teacher profiles / student profiles | 23 / 3 / 20 |
+| Organization / domain / course / class | 1 / 1 / 1 / 1 |
+| Teacher memberships / enrollments | 3 / 20 |
+| Modules / lessons / resources / exercises | 4 / 12 / 36 / 60 |
+| Verified source / chunks | 1 / 3 |
+| Concept states / histories | 160 / 400 |
+| Linked events / attempts | 20 / 20 |
+| Recommendations / evidence / schedules | 20 / 20 / 20 |
 
-Các dòng phát sinh bởi smoke test nằm trong chính Supabase, chứng minh API không chỉ gọi database kiểm tra kết nối. Bộ pilot cố ý có học sinh học nhanh/chậm, thiếu dữ liệu, kết nối kém và lỗ hổng khác nhau; không phải dữ liệu sạch lý tưởng.
+Seed cold run gần nhất mất **476,2 giây** qua Supabase. Verifier xác nhận:
 
-Tối ưu latency trên là phép đo cục bộ cùng ngày, cùng API/Supabase và cùng loại attempt; không phải SLA production. UI vẫn hiển thị operation state và chặn submit lặp vì độ trễ mạng đến region Supabase có thể dao động.
+- 12 pseudocode exercise dùng `IDEA_RUBRIC`, chỉ ở Practice và `syntaxPolicy=IGNORE`;
+- 24 exercise dùng `CODE_ORDER` với block-order contract;
+- mọi exercise active có teacher-reviewed answer contract và primary concept;
+- mọi recommendation fixture có target exercise active cùng course và một linked attempt;
+- 400 history là unique, không ở tương lai và gắn nhãn model-snapshot/synthetic;
+- class/enrollment demo được đánh dấu primary context để tránh record legacy cũ.
+
+## Database/RLS
+
+`scripts/audit-database-state.mjs` xác nhận RLS bật trên tất cả business tables, gồm `ClassTeacherMembership`. Mô hình hiện tại là API-only:
+
+- `anon` và `authenticated` bị revoke table privileges;
+- không có permissive client policy;
+- Prisma/API kết nối bằng server credential và vẫn phải thực hiện object authorization theo JWT/course/class.
+
+Migration history giữ lại một attempt `202607180004_supabase_rls_policies` đã rollback vì Supabase không cho sửa schema `auth`; migration cùng tên sau đó được dựng lại chỉ cho public business tables và áp dụng thành công. Lịch sử rollback không được xóa để giữ audit trail.
+
+## Smoke/E2E đã chứng minh
+
+```text
+health/database/AI
+→ student primary enrollment
+→ course progress + registered animation
+→ pseudocode IDEA_RUBRIC
+→ deterministic scored attempt + RANGE_STOP_INCLUDED
+→ persisted recommendation/evidence/real target
+→ VERIFIED source + full lesson generation
+→ author submit + independent reviewer approve/publish
+→ student-safe published projection
+→ course-plan draft/review/edit→REVISION_REQUIRED/re-review/publish
+```
+
+Smoke ghi dữ liệu thật vào database demo nhưng các record đó vẫn là hoạt động trên fixture synthetic, không phải dữ liệu học sinh EduOne thật.
+
+## Supply-chain gate
+
+Lần chạy hiện tại của `npm audit --omit=dev --audit-level=moderate` trả `found 0 vulnerabilities`. Kết quả phụ thuộc advisory database tại thời điểm chạy, nên GitHub Actions chạy lại gate này cho mỗi push/PR; không coi một lần audit cũ là bảo đảm lâu dài.
 
 ## Giới hạn chưa được che giấu
 
-- Kết quả mô hình hiện dựa trên dữ liệu mô phỏng; cần hiệu chỉnh lại bằng dữ liệu pilot có đồng thuận.
-- Live LLM/TTS phụ thuộc credential và quota của nhà cung cấp. `LocalTemplateProvider` bảo đảm quy trình soạn bài có cấu trúc vẫn chạy với chi phí thấp.
-- Chỉ ghi nhận external LLM khi generation log có provider `EXTERNAL_LLM`; local template không được tính là lần gọi LLM.
-- Tệp nhị phân chưa được nhận giả là đã xử lý; PDF/DOCX/PPTX cần Storage và worker extraction/OCR.
-- Trước khi dùng dữ liệu trẻ em thật cần hoàn thiện RLS, tenant isolation, retention và privacy review.
+- Clean clone/install cần được chạy lại trong CI Linux hoặc Windows filesystem không có lỗi junction trước submission.
+- Chưa có browser E2E chạy trên deployment công khai; live test hiện là HTTP contract vào API local/Supabase.
+- External LLM/TTS path có parser/unit tests nhưng chưa có live credential artifact trong lần kiểm chứng.
+- Model metrics là synthetic và ROC-AUC còn thấp; không phải chứng cứ pedagogical effectiveness.
+- Chưa có load test 20 học sinh đồng thời, paired teacher-time baseline hoặc real pilot.
+- `LOCAL_TEMPLATE` là deterministic provider, không được tính là LLM call.

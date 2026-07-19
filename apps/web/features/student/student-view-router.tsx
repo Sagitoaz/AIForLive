@@ -9,10 +9,13 @@ import { EmptyState, Metric, ProgressBar, SectionHeading, StatusPill } from "@/c
 import {
   useProduct,
   type AttemptOutcome,
+  type AttemptSubmission,
   type LessonData,
   type LessonPhase,
   type LessonResourceData
 } from "@/features/product/product-context";
+import { CodeOrderWorkspace, PseudocodeWorkspace } from "./practice-workspaces";
+import { createOrReusePendingAttempt, type PendingAttemptRequest } from "./pending-attempt";
 import { apiRequest } from "@/lib/api";
 import { speakVietnamese } from "@/lib/vietnamese-speech";
 import styles from "./student-learning.module.css";
@@ -260,12 +263,14 @@ function PracticeView({ lessonId, phase }: { lessonId?: string; phase: "PRACTICE
   const exercises = useMemo(() => section?.activities ?? [], [section]);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [blockOrders, setBlockOrders] = useState<Record<string, string[]>>({});
   const [outcomes, setOutcomes] = useState<Record<string, AttemptOutcome>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const startedAt = useRef(Date.now());
+  const pendingAttempts = useRef<Record<string, PendingAttemptRequest>>({});
 
   useEffect(() => {
-    setIndex(0); setAnswers({}); setOutcomes({}); setSubmitError(null); startedAt.current = Date.now();
+    setIndex(0); setAnswers({}); setBlockOrders({}); setOutcomes({}); setSubmitError(null); pendingAttempts.current = {}; startedAt.current = Date.now();
   }, [lesson?.id, phase]);
   useEffect(() => { startedAt.current = Date.now(); }, [index]);
 
@@ -276,8 +281,20 @@ function PracticeView({ lessonId, phase }: { lessonId?: string; phase: "PRACTICE
   const exercise = exercises[index]!;
   const answer = answers[exercise.id] ?? "";
   const outcome = outcomes[exercise.id];
-  const options = exercise.content.options ?? [];
+  const options = (Array.isArray(exercise.content.options) ? exercise.content.options : []).filter((option) =>
+    typeof option === "string" || (Boolean(option) && typeof option.id === "string" && typeof option.text === "string")
+  );
+  const blocks = (Array.isArray(exercise.content.blocks) ? exercise.content.blocks : []).filter((block) =>
+    Boolean(block) && typeof block.id === "string" && typeof block.text === "string"
+  );
+  const blockOrder = blockOrders[exercise.id] ?? blocks.map((block) => block.id);
+  const declaredResponseMode = exercise.content.responseMode
+    ?? (exercise.type === "PSEUDOCODE" ? "PSEUDOCODE" : exercise.type === "CODE_ORDER" ? "CODE_ORDER" : "TEXT");
+  const responseMode = declaredResponseMode === "PSEUDOCODE" || declaredResponseMode === "CODE_ORDER" ? declaredResponseMode : "TEXT";
   const code = firstText(exercise.content, ["code", "starterCode", "snippet"]);
+  const answerReady = responseMode === "CODE_ORDER"
+    ? blocks.length > 0 && blockOrder.length === blocks.length
+    : Boolean(answer.trim());
   const completed = Object.keys(outcomes).length;
   const correct = Object.values(outcomes).filter((item) => item.isCorrect).length;
   const allCompleted = completed === exercises.length;
@@ -285,16 +302,54 @@ function PracticeView({ lessonId, phase }: { lessonId?: string; phase: "PRACTICE
   const passed = phase === "PRACTICE" || correct >= minimumCorrect;
   const nextPhaseExists = lesson.sections.some((item) => item.phase === "CHECKPOINT" && (item.activities?.length ?? 0) > 0);
 
+  const updateAnswer = (value: string) => {
+    delete pendingAttempts.current[exercise.id];
+    setAnswers((current) => ({ ...current, [exercise.id]: value }));
+  };
+
+  const updateBlockOrder = (order: string[]) => {
+    delete pendingAttempts.current[exercise.id];
+    setBlockOrders((current) => ({ ...current, [exercise.id]: order }));
+  };
+
   const submit = async () => {
-    if (!answer || outcome || product.busy) return;
+    if (!answerReady || !product.course?.id || outcome || product.busy) return;
     setSubmitError(null);
     try {
-      const value = await product.submitAttempt(exercise, answer, phase as LessonPhase, Date.now() - startedAt.current);
+      const submission: AttemptSubmission = responseMode === "CODE_ORDER"
+        ? { kind: "CODE_ORDER", blockIds: blockOrder }
+        : { kind: responseMode === "PSEUDOCODE" ? "PSEUDOCODE" : "TEXT", text: answer };
+      const pending = createOrReusePendingAttempt(
+        pendingAttempts.current[exercise.id],
+        submission,
+        Date.now() - startedAt.current
+      );
+      pendingAttempts.current[exercise.id] = pending;
+      const value = await product.submitAttempt(exercise, pending.submission, phase as LessonPhase, pending.responseTimeMs, pending.idempotencyKey);
+      delete pendingAttempts.current[exercise.id];
       setOutcomes((current) => ({ ...current, [exercise.id]: value }));
     } catch (cause) {
       setSubmitError(cause instanceof Error ? cause.message : "Không nộp được câu trả lời");
     }
   };
+
+  const retry = () => {
+    setOutcomes((current) => {
+      const next = { ...current };
+      delete next[exercise.id];
+      return next;
+    });
+    setSubmitError(null);
+    startedAt.current = Date.now();
+  };
+
+  const gradingModeLabel = outcome?.grading?.mode === "EXTERNAL_LLM"
+    ? "LLM đề xuất độ phủ tiêu chí · server kiểm tra lại rubric và bằng chứng"
+    : outcome?.grading?.mode === "DETERMINISTIC_RUBRIC_FALLBACK"
+      ? "Rubric xác định dự phòng · dịch vụ AI không khả dụng"
+      : outcome?.grading?.mode === "DETERMINISTIC_CODE_ORDER"
+        ? "Server đối chiếu thứ tự block đã duyệt"
+        : "Server đối chiếu answer key đã duyệt";
 
   return (
     <div className="page-stack">
@@ -308,14 +363,48 @@ function PracticeView({ lessonId, phase }: { lessonId?: string; phase: "PRACTICE
         <div className="signal-chips"><span>{exercise.type.replaceAll("_", " ")}</span><span>Độ khó {Math.round(exercise.difficulty * 100)}%</span></div>
         <h2>{exercise.prompt}</h2>
         {code && <pre><code>{code}</code></pre>}
-        {options.length ? (
-          <div className="answer-list">{options.map((option) => <button className={answer === option ? "selected" : ""} disabled={Boolean(outcome)} onClick={() => setAnswers((current) => ({ ...current, [exercise.id]: option }))} key={option}><code>{option}</code></button>)}</div>
+        {responseMode === "PSEUDOCODE" ? (
+          <PseudocodeWorkspace
+            value={answer}
+            onChange={updateAnswer}
+            disabled={Boolean(outcome)}
+            guidance={exercise.content.guidance}
+            starterText={exercise.content.starterText}
+          />
+        ) : responseMode === "CODE_ORDER" ? (
+          <CodeOrderWorkspace
+            blocks={blocks}
+            order={blockOrder}
+            onChange={updateBlockOrder}
+            disabled={Boolean(outcome)}
+            guidance={exercise.content.guidance}
+          />
+        ) : options.length ? (
+          <div className="answer-list">{options.map((option, optionIndex) => {
+            const optionId = typeof option === "string" ? option : option.id;
+            const optionText = typeof option === "string" ? option : option.text;
+            return <button type="button" aria-pressed={answer === optionId} className={answer === optionId ? "selected" : ""} disabled={Boolean(outcome)} onClick={() => updateAnswer(optionId)} key={`${optionId}-${optionIndex}`}><code>{optionText}</code></button>;
+          })}</div>
         ) : (
-          <textarea className={styles.textAnswer} disabled={Boolean(outcome)} value={answer} onChange={(event) => setAnswers((current) => ({ ...current, [exercise.id]: event.target.value }))} placeholder="Nhập câu trả lời hoặc đoạn mã của bạn"/>
+          <label className={styles.textAnswerLabel}><span>Câu trả lời của bạn</span><textarea maxLength={2000} className={styles.textAnswer} disabled={Boolean(outcome)} value={answer} onChange={(event) => updateAnswer(event.target.value)} placeholder="Nhập câu trả lời của bạn"/><small>{answer.length}/2.000 ký tự</small></label>
         )}
-        <button className="button primary" disabled={!answer || Boolean(outcome) || product.busy} onClick={() => void submit()}>{product.busy ? product.operation ?? "Đang chấm…" : outcome ? "Đã ghi nhận" : "Nộp câu trả lời"}</button>
+        {!product.course?.id && <div className="provider-notice"><Asset type="icon" name="ui-info" alt="" width={22} height={22}/><span>Đang xác minh khóa học và quyền ghi bài làm…</span></div>}
+        <button className="button primary" disabled={!answerReady || !product.course?.id || Boolean(outcome) || product.busy} onClick={() => void submit()}>{product.busy ? product.operation ?? "Đang chấm…" : outcome ? "Đã ghi nhận" : responseMode === "PSEUDOCODE" ? "Gửi ý tưởng để nhận phản hồi" : "Nộp câu trả lời"}</button>
         {submitError && <div className="provider-notice"><Asset type="icon" name="ui-alert" alt="" width={22} height={22}/><span>{submitError}</span></div>}
-        {outcome && <div className={`${styles.answerFeedback} ${outcome.isCorrect ? styles.answerCorrect : styles.answerIncorrect}`} role="status"><h3>{outcome.isCorrect ? "Chính xác" : "Chưa đúng"}</h3><p>{outcome.analysis.recommendation.reasons[0] ?? (outcome.isCorrect ? "Hệ thống đã cập nhật mức độ nắm vững." : "Hãy xem lại giải thích trước khi tiếp tục.")}</p><span className={styles.helperText}>Attempt {outcome.attemptId.slice(0, 8)} · mức độ nắm vững mới {Math.round(outcome.analysis.mastery_after * 100)}%</span></div>}
+        {outcome && <div className={`${styles.answerFeedback} ${outcome.isCorrect ? styles.answerCorrect : styles.answerIncorrect}`} role="status">
+          <h3>{responseMode === "PSEUDOCODE" ? (outcome.isCorrect ? "Ý tưởng đã đạt rubric" : "Ý tưởng cần bổ sung") : outcome.isCorrect ? "Chính xác" : "Chưa đúng"}</h3>
+          <p>{outcome.grading?.feedback ?? outcome.analysis.recommendation.reasons[0] ?? (outcome.isCorrect ? "Hệ thống đã cập nhật mức độ nắm vững." : "Hãy xem lại giải thích trước khi tiếp tục.")}</p>
+          {outcome.grading && <>
+            <div className={styles.gradingSummary}><strong>{Math.round(outcome.grading.score * 100)}%</strong><span>Ngưỡng đạt {Math.round(outcome.grading.passThreshold * 100)}% · tín hiệu tin cậy tự báo cáo, chưa hiệu chuẩn {Math.round(outcome.grading.confidence * 100)}%</span></div>
+            {outcome.grading.criteria.length > 0 && <ul className={styles.rubricResults}>{outcome.grading.criteria.map((criterion) => {
+              const criterionLabel: Record<string, string> = { "identify-data": "Xác định dữ liệu", "apply-logic": "Mô tả logic xử lý", "show-result": "Nêu kết quả đầu ra" };
+              return <li key={criterion.id}><strong>{criterionLabel[criterion.id] ?? criterion.id.replaceAll("_", " ")} · {Math.round(criterion.coverage * 100)}%</strong><span>{criterion.feedback}</span>{criterion.evidence.length > 0 && <small>Bằng chứng trong bài làm: “{criterion.evidence.join(" · ")}”</small>}</li>;
+            })}</ul>}
+            {outcome.grading.trace && <details className={styles.gradingTrace}><summary>Chi tiết chấm để kiểm tra</summary><span>Provider {outcome.grading.trace.provider ?? "server"} · model {outcome.grading.trace.model ?? "deterministic"} · prompt {outcome.grading.trace.promptVersion ?? "n/a"} · {outcome.grading.trace.latencyMs ?? 0} ms · ${Number(outcome.grading.trace.estimatedCostUsd ?? 0).toFixed(6)}</span>{outcome.grading.trace.fallbackReason && <small>Fallback: {outcome.grading.trace.fallbackReason}</small>}</details>}
+          </>}
+          <span className={styles.helperText}>{gradingModeLabel} · Attempt {outcome.attemptId.slice(0, 8)} · mức độ nắm vững mới {Math.round(outcome.analysis.mastery_after * 100)}%</span>
+          {!outcome.isCorrect && <button type="button" className="button ghost small" onClick={retry}>Sửa và thử lại</button>}
+        </div>}
         <div className="action-row">
           <button className="button ghost" disabled={index === 0 || product.busy} onClick={() => setIndex((value) => value - 1)}>← Câu trước</button>
           <button className="button ghost" disabled={!outcome || index === exercises.length - 1 || product.busy} onClick={() => setIndex((value) => value + 1)}>Câu tiếp →</button>
@@ -350,7 +439,7 @@ function MicroLessonView() {
   const [slide, setSlide] = useState(0);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selections, setSelections] = useState<Record<number, number>>({});
-  const [results, setResults] = useState<Record<number, { correct: boolean; masteryAfter: number }>>({});
+  const [results, setResults] = useState<Record<number, { correct: boolean; masteryAfter: number; explanation: string }>>({});
   if (!lesson || lesson.status !== "PUBLISHED") return <EmptyState illustration="review" title="Chưa có bài bổ trợ được xuất bản" description="Bản nháp AI phải được giáo viên duyệt và xuất bản trước." href="/student/reviews" action="Xem đề xuất"/>;
   const current = lesson.slides[slide];
   const questions = lesson.practiceQuestions?.length ? lesson.practiceQuestions : [lesson.quiz];
@@ -369,7 +458,7 @@ function MicroLessonView() {
       <header className="micro-header"><Link href="/student/reviews">← Đề xuất</Link><div><StatusPill tone="green">Đã xuất bản</StatusPill><strong>{lesson.title}</strong></div><span>{slide + 1}/{lesson.slides.length}</span></header>
       {current && <section className="surface-card"><LearningAnimation template={current.animationTemplate} data={current.animationData} title={current.title}/><div className={styles.resourceBody}><h2>{current.title}</h2><p className={styles.resourceContent}>{current.body}</p>{current.code && <pre><code>{current.code}</code></pre>}<button className="button ghost small" onClick={() => void speakVietnamese(current.narration)}>Nghe bài</button></div></section>}
       <div className="micro-actions"><button className="button ghost" disabled={slide === 0} onClick={() => setSlide((value) => value - 1)}>← Trước</button><button className="button ghost" disabled={slide === lesson.slides.length - 1} onClick={() => setSlide((value) => value + 1)}>Tiếp →</button></div>
-      <section className="micro-quiz"><span className="eyebrow">Củng cố · câu {questionIndex + 1}/{questions.length}</span><ProgressBar value={(Object.keys(results).length / questions.length) * 100}/><h2>{question.question}</h2><div className="answer-list">{question.options.map((option, index) => <button className={selected === index ? "selected" : ""} disabled={Boolean(result)} onClick={() => setSelections((currentSelections) => ({ ...currentSelections, [questionIndex]: index }))} key={option}>{option}</button>)}</div><button className="button primary" disabled={selected === null || Boolean(result) || product.busy} onClick={() => void submitQuiz()}>{product.busy ? product.operation ?? "Đang chấm…" : result ? "Đã ghi nhận" : "Kiểm tra"}</button>{result && <div className={`${styles.answerFeedback} ${result.correct ? styles.answerCorrect : styles.answerIncorrect}`}><h3>{result.correct ? "Chính xác" : "Chưa đúng"}</h3><p>{question.explanation} Mức độ nắm vững mới {Math.round(result.masteryAfter * 100)}%.</p>{questionIndex < questions.length - 1 && <button className="button ghost small" onClick={() => setQuestionIndex((value) => value + 1)}>Câu tiếp →</button>}</div>}{allAnswered && <div className={styles.completionCard}><h2>Đã hoàn thành phần củng cố</h2><p>Bạn trả lời đúng {correctAnswers}/{questions.length} câu. Kết quả từng câu đã được lưu trên Supabase.</p><div className={styles.resultActions}><Link className="button primary" href="/student/course">Về khóa học →</Link><Link className="button ghost" href="/student/progress">Xem tiến bộ</Link></div></div>}</section>
+      <section className="micro-quiz"><span className="eyebrow">Củng cố · câu {questionIndex + 1}/{questions.length}</span><ProgressBar value={(Object.keys(results).length / questions.length) * 100}/><h2>{question.question}</h2><div className="answer-list">{question.options.map((option, index) => <button aria-pressed={selected === index} className={selected === index ? "selected" : ""} disabled={Boolean(result)} onClick={() => setSelections((currentSelections) => ({ ...currentSelections, [questionIndex]: index }))} key={option}>{option}</button>)}</div><button className="button primary" disabled={selected === null || Boolean(result) || product.busy} onClick={() => void submitQuiz()}>{product.busy ? product.operation ?? "Đang chấm…" : result ? "Đã ghi nhận" : "Kiểm tra"}</button>{result && <div className={`${styles.answerFeedback} ${result.correct ? styles.answerCorrect : styles.answerIncorrect}`}><h3>{result.correct ? "Chính xác" : "Chưa đúng"}</h3><p>{result.explanation} Mức độ nắm vững mới {Math.round(result.masteryAfter * 100)}%.</p>{questionIndex < questions.length - 1 && <button className="button ghost small" onClick={() => setQuestionIndex((value) => value + 1)}>Câu tiếp →</button>}</div>}{allAnswered && <div className={styles.completionCard}><h2>Đã hoàn thành phần củng cố</h2><p>Bạn trả lời đúng {correctAnswers}/{questions.length} câu. Kết quả từng câu đã được lưu trên Supabase.</p><div className={styles.resultActions}><Link className="button primary" href="/student/course">Về khóa học →</Link><Link className="button ghost" href="/student/progress">Xem tiến bộ</Link></div></div>}</section>
     </div>
   );
 }

@@ -1,8 +1,13 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Res } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
+import { AuthGuard } from "../auth/auth.guard";
 import { SynthesizeSpeechDto } from "./dto/synthesize-speech.dto";
 import { TtsService } from "./tts.service";
 
+@ApiTags("tts")
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 @Controller("tts")
 export class TtsController {
   constructor(private readonly ttsService: TtsService) {}

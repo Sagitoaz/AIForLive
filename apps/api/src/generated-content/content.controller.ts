@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -41,17 +42,21 @@ export class ContentController {
   @UseGuards(AuthGuard, RolesGuard)
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 15 * 1024 * 1024, files: 1 } }))
-  upload(@Req() request: AuthenticatedRequest, @UploadedFile() file?: Express.Multer.File) {
+  upload(
+    @Req() request: AuthenticatedRequest,
+    @Body("courseId") courseId?: string,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
     if (!file || !allowedMime.has(file.mimetype)) throw new BadRequestException("Only TXT, PDF, DOCX and PPTX are accepted");
-    return this.sources.add(file, request.user.id);
+    return this.sources.add(file, request.user.id, courseId);
   }
 
   @Get("content-sources")
   @ApiBearerAuth()
   @Roles("TEACHER")
   @UseGuards(AuthGuard, RolesGuard)
-  sourcesList(@Req() request: AuthenticatedRequest) {
-    return this.sources.list(request.user.id);
+  sourcesList(@Req() request: AuthenticatedRequest, @Query("courseId") courseId?: string) {
+    return this.sources.list(request.user.id, courseId);
   }
 
   @Get("content-sources/:id")
@@ -92,6 +97,17 @@ export class ContentController {
   @UseGuards(AuthGuard, RolesGuard)
   reviews(@Req() request: AuthenticatedRequest) {
     return this.content.listForTeacher(request.user.id);
+  }
+
+  @Get("teacher/concepts/:conceptCode/misconceptions")
+  @ApiBearerAuth()
+  @Roles("TEACHER")
+  @UseGuards(AuthGuard, RolesGuard)
+  misconceptions(
+    @Req() request: AuthenticatedRequest,
+    @Param("conceptCode") conceptCode: string
+  ) {
+    return this.content.listMisconceptions(conceptCode, request.user.id);
   }
 
   @Get("teacher/generated-content/:id")
@@ -154,16 +170,16 @@ export class ContentController {
   @ApiBearerAuth()
   @Roles("STUDENT")
   @UseGuards(AuthGuard, RolesGuard)
-  microLesson(@Param("id") id: string) {
-    return this.content.getPublished(id);
+  microLesson(@Req() request: AuthenticatedRequest, @Param("id") id: string) {
+    return this.content.getPublished(id, request.user.id);
   }
 
   @Post("micro-lessons/:id/start")
   @ApiBearerAuth()
   @Roles("STUDENT")
   @UseGuards(AuthGuard, RolesGuard)
-  async start(@Param("id") id: string): Promise<Record<string, unknown>> {
-    await this.content.getPublished(id);
+  async start(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
+    await this.content.getPublished(id, request.user.id);
     return { id, status: "STARTED", startedAt: new Date().toISOString() };
   }
 
@@ -179,8 +195,8 @@ export class ContentController {
   @ApiBearerAuth()
   @Roles("STUDENT")
   @UseGuards(AuthGuard, RolesGuard)
-  async complete(@Param("id") id: string): Promise<Record<string, unknown>> {
-    await this.content.getPublished(id);
+  async complete(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
+    await this.content.getPublished(id, request.user.id);
     return { id, status: "COMPLETED", completedAt: new Date().toISOString() };
   }
 }

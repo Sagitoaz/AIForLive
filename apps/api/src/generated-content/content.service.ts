@@ -2,13 +2,14 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import {
   AiJobStatus,
   AuditAction,
+  ClassTeacherRole,
   ContentStatus,
   Prisma,
   ReviewDecision,
   SlideType
 } from "@prisma/client";
 import { randomUUID } from "node:crypto";
-import type { GeneratedLearningContent } from "../common/types";
+import type { GeneratedLearningContent, StudentPublishedLearningContent } from "../common/types";
 import { GenerateContentDto } from "../ai-generation/dto/generate-content.dto";
 import { ExternalLlmProvider } from "../ai-generation/providers/external-llm.provider";
 import { LocalTemplateProvider } from "../ai-generation/providers/local-template.provider";
@@ -19,7 +20,13 @@ import { ContentSourceService } from "./content-source.service";
 import type { EditContentDto } from "./dto/review-content.dto";
 
 const contentInclude = Prisma.validator<Prisma.GeneratedContentInclude>()({
-  generationJob: { include: { course: { include: { domain: true } }, source: true } },
+  generationJob: {
+    include: {
+      course: { include: { domain: true } },
+      source: true,
+      requestedBy: { select: { id: true, displayName: true } }
+    }
+  },
   microLesson: {
     include: {
       concept: true,
@@ -35,6 +42,42 @@ type ContentRow = Prisma.GeneratedContentGetPayload<{ include: typeof contentInc
 
 function json(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
+}
+
+const allTeacherRoles = [ClassTeacherRole.OWNER, ClassTeacherRole.INSTRUCTOR, ClassTeacherRole.REVIEWER];
+
+function teacherCourseAccess(
+  userId: string,
+  roles: ClassTeacherRole[] = allTeacherRoles
+): Prisma.CourseWhereInput {
+  return {
+    status: "ACTIVE",
+    deletedAt: null,
+    organization: { status: "ACTIVE", deletedAt: null },
+    enrollments: {
+      some: {
+        status: "ACTIVE",
+        deletedAt: null,
+        class: {
+          status: "ACTIVE",
+          deletedAt: null,
+          OR: [
+            { teacher: { userId, status: "ACTIVE", deletedAt: null } },
+            {
+              teacherMemberships: {
+                some: {
+                  teacher: { userId, status: "ACTIVE", deletedAt: null },
+                  role: { in: roles },
+                  status: "ACTIVE",
+                  deletedAt: null
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  };
 }
 
 @Injectable()
@@ -54,26 +97,50 @@ export class ContentService {
         code: input.conceptCode,
         domain: { code: input.domainCode },
         status: "ACTIVE",
-        deletedAt: null
+        deletedAt: null,
+        lessons: {
+          some: {
+            status: "ACTIVE",
+            deletedAt: null,
+            module: {
+              course: {
+                id: verified.source.courseId,
+                ...teacherCourseAccess(teacherUserId, [ClassTeacherRole.OWNER, ClassTeacherRole.INSTRUCTOR])
+              }
+            }
+          }
+        }
       }
     });
     if (!concept) throw new BadRequestException("Concept is not registered in Supabase");
-    const misconception = await this.prisma.misconception.findFirst({
-      where: {
-        code: input.misconceptionCode,
-        conceptId: concept.id,
-        status: "ACTIVE",
-        deletedAt: null
-      }
-    });
-    if (!misconception) throw new BadRequestException("Misconception is not registered in Supabase");
+    const misconceptionCode = input.misconceptionCode?.trim();
+    if (input.draftKind === "REMEDIATION" && !misconceptionCode) {
+      throw new BadRequestException("Bài bổ trợ phải chọn một misconception thuộc concept đang dạy");
+    }
+    const misconception = input.draftKind === "REMEDIATION"
+      ? await this.prisma.misconception.findFirst({
+          where: {
+            code: misconceptionCode!,
+            conceptId: concept.id,
+            status: "ACTIVE",
+            deletedAt: null
+          }
+        })
+      : null;
+    if (input.draftKind === "REMEDIATION" && !misconception) {
+      throw new BadRequestException("Misconception không tồn tại hoặc không thuộc concept đang dạy");
+    }
 
     const reusable = input.draftKind === "REMEDIATION" ? await this.prisma.generatedContent.findFirst({
       where: {
         status: ContentStatus.PUBLISHED,
+        generationJob: {
+          requestedById: teacherUserId,
+          courseId: verified.source.courseId
+        },
         microLesson: {
           conceptId: concept.id,
-          misconceptionId: misconception.id,
+          misconceptionId: misconception!.id,
           metadataJson: { path: ["draftKind"], equals: input.draftKind }
         }
       },
@@ -89,16 +156,26 @@ export class ContentService {
       return { ...this.toDto(updated), reused: true, jobId: updated.generationJobId };
     }
 
+    const promptVersion = input.provider === "EXTERNAL_LLM"
+      ? "content-grounded-vi-v2"
+      : "local-template-vi-v2";
+    const groundingMode = input.provider === "EXTERNAL_LLM"
+      ? "VERIFIED_EXCERPT_IN_PROMPT"
+      : "VERIFIED_SOURCE_ATTACHED_TEMPLATE_NOT_INTERPRETED";
     const job = await this.prisma.aiGenerationJob.create({
       data: {
         courseId: verified.source.courseId,
         sourceId: verified.source.id,
         requestedById: teacherUserId,
         provider: input.provider,
-        promptVersion: "content-grounded-vi-v2",
+        promptVersion,
         status: AiJobStatus.GENERATING,
         requestJson: json(input),
-        contextJson: json({ sourceChecksum: verified.source.checksum, sourceChars: verified.text.length })
+        contextJson: json({
+          sourceChecksum: verified.source.checksum,
+          sourceChars: verified.text.length,
+          groundingMode
+        })
       }
     });
     const provider = input.provider === "EXTERNAL_LLM" ? this.external : this.local;
@@ -116,6 +193,7 @@ export class ContentService {
             contextJson: json({
               sourceChecksum: verified.source.checksum,
               sourceChars: verified.text.length,
+              groundingMode,
               generationTrace: output.trace ?? null
             })
           }
@@ -127,11 +205,20 @@ export class ContentService {
             type: input.draftKind,
             status: ContentStatus.DRAFT,
             provider: output.provider,
-            promptVersion: "content-grounded-vi-v2",
+            promptVersion,
             aiDraftJson: json(output),
             teacherVersionJson: json(output),
-            educationalValidationJson: json({ passed: true, locale: "vi-VN", humanReviewRequired: true }),
-            codeValidationJson: json({ passed: true, strategy: "structured-template" }),
+            educationalValidationJson: json({
+              status: "PENDING_TEACHER_REVIEW",
+              locale: "vi-VN",
+              structuredSchemaPassed: true,
+              humanReviewRequired: true
+            }),
+            codeValidationJson: json({
+              status: "NOT_EXECUTED",
+              structuredSchemaPassed: true,
+              strategy: "registered-template-only"
+            }),
             metadataJson: json({
               draftKind: input.draftKind,
               gradeBand: input.gradeBand,
@@ -143,7 +230,7 @@ export class ContentService {
             microLesson: {
               create: {
                 conceptId: concept.id,
-                misconceptionId: misconception.id,
+                misconceptionId: misconception?.id ?? null,
                 title: output.title,
                 level: input.level,
                 objectivesJson: json(output.objectives),
@@ -179,7 +266,7 @@ export class ContentService {
               create: {
                 version: 1,
                 snapshotJson: json(output),
-                changeSummary: "AI draft created from verified source",
+                changeSummary: `${output.provider} draft created from verified source`,
                 createdById: teacherUserId
               }
             }
@@ -214,7 +301,7 @@ export class ContentService {
 
   async job(id: string, teacherUserId: string): Promise<Record<string, unknown>> {
     const row = await this.prisma.aiGenerationJob.findFirst({
-      where: { id, requestedById: teacherUserId },
+      where: { id, course: teacherCourseAccess(teacherUserId) },
       include: { generatedContent: { include: contentInclude } }
     });
     if (!row) throw new NotFoundException("AI generation job not found");
@@ -231,23 +318,79 @@ export class ContentService {
 
   async listForTeacher(teacherUserId: string): Promise<GeneratedLearningContent[]> {
     const rows = await this.prisma.generatedContent.findMany({
-      where: { generationJob: { requestedById: teacherUserId } },
+      where: { generationJob: { course: teacherCourseAccess(teacherUserId) } },
       include: contentInclude,
       orderBy: { updatedAt: "desc" }
     });
     return rows.map((row) => this.toDto(row));
   }
 
+  async listMisconceptions(conceptCode: string, teacherUserId: string): Promise<Array<Record<string, string>>> {
+    const concept = await this.prisma.learningConcept.findFirst({
+      where: {
+        code: conceptCode,
+        status: "ACTIVE",
+        deletedAt: null,
+        lessons: {
+          some: {
+            status: "ACTIVE",
+            deletedAt: null,
+            module: {
+              course: {
+                status: "ACTIVE",
+                deletedAt: null,
+                enrollments: {
+                  some: {
+                    class: {
+                      status: "ACTIVE",
+                      deletedAt: null,
+                      OR: [
+                        { teacher: { userId: teacherUserId } },
+                        {
+                          teacherMemberships: {
+                            some: {
+                              status: "ACTIVE",
+                              deletedAt: null,
+                              teacher: { userId: teacherUserId }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      include: {
+        misconceptions: {
+          where: { status: "ACTIVE", deletedAt: null },
+          orderBy: [{ severity: "desc" }, { title: "asc" }]
+        }
+      }
+    });
+    if (!concept) throw new NotFoundException("Không tìm thấy concept trong khóa học được phân công");
+    return concept.misconceptions.map((item) => ({
+      id: item.id,
+      code: item.code,
+      title: item.title,
+      description: item.description,
+      severity: item.severity
+    }));
+  }
+
   async getForTeacher(id: string, teacherUserId: string): Promise<GeneratedLearningContent> {
     return this.toDto(await this.contentRow(id, { teacherUserId }));
   }
 
-  async getPublished(id: string): Promise<GeneratedLearningContent> {
-    return this.toDto(await this.contentRow(id, { published: true }));
+  async getPublished(id: string, studentUserId: string): Promise<StudentPublishedLearningContent> {
+    return this.toStudentDto(await this.publishedContentRow(id, studentUserId));
   }
 
   async edit(id: string, input: EditContentDto, teacherUserId: string): Promise<GeneratedLearningContent> {
-    const existing = await this.contentRow(id, { teacherUserId });
+    const existing = await this.contentRow(id, { teacherUserId, roles: [ClassTeacherRole.OWNER, ClassTeacherRole.INSTRUCTOR] });
     const immutableStatuses: ContentStatus[] = [ContentStatus.PUBLISHED, ContentStatus.ARCHIVED, ContentStatus.REJECTED];
     if (immutableStatuses.includes(existing.status)) {
       throw new BadRequestException("This status cannot be edited");
@@ -266,6 +409,7 @@ export class ContentService {
       dto.quiz = { ...input.quiz };
     }
     this.validator.validate(this.providerOutput(dto));
+    const existingMetadata = this.objectJson(existing.metadataJson);
     const nextVersion = existing.version + 1;
     const nextStatus = existing.status === ContentStatus.APPROVED
       ? ContentStatus.REVISION_REQUIRED
@@ -279,6 +423,7 @@ export class ContentService {
           teacherVersionJson: json(this.providerOutput(dto)),
           version: nextVersion,
           teacherEditingSeconds: { increment: input.teacherEditingSeconds ?? 0 },
+          metadataJson: json({ ...existingMetadata, lastEditedById: teacherUserId }),
           microLesson: { update: { title: dto.title, status: nextStatus, version: { increment: 1 } } },
           versions: {
             create: {
@@ -351,9 +496,11 @@ export class ContentService {
   }
 
   async completeQuiz(id: string, selectedIndex: number, studentUserId: string, questionIndex = 0): Promise<Record<string, unknown>> {
-    const content = await this.contentRow(id, { published: true });
+    const content = await this.publishedContentRow(id, studentUserId);
     if (!content.microLesson?.quiz) throw new NotFoundException("Published quiz not found");
-    const profile = await this.prisma.studentProfile.findUnique({ where: { userId: studentUserId } });
+    const profile = await this.prisma.studentProfile.findFirst({
+      where: { userId: studentUserId, status: "ACTIVE", deletedAt: null }
+    });
     if (!profile) throw new NotFoundException("Student profile not found");
     const metadata = this.objectJson(content.microLesson.metadataJson);
     const questions = this.quizArray(metadata.practiceQuestions);
@@ -422,7 +569,19 @@ export class ContentService {
     allowed: ContentStatus[],
     teacherUserId: string
   ): Promise<GeneratedLearningContent> {
-    const existing = await this.contentRow(id, { teacherUserId });
+    const reviewAction = action !== "SUBMIT_REVIEW";
+    const roles = reviewAction
+      ? [ClassTeacherRole.OWNER, ClassTeacherRole.REVIEWER]
+      : [ClassTeacherRole.OWNER, ClassTeacherRole.INSTRUCTOR];
+    const existing = await this.contentRow(id, { teacherUserId, roles });
+    const metadata = this.objectJson(existing.metadataJson);
+    const lastEditedById = typeof metadata.lastEditedById === "string" ? metadata.lastEditedById : null;
+    if (
+      reviewAction
+      && (existing.generationJob.requestedById === teacherUserId || lastEditedById === teacherUserId)
+    ) {
+      throw new BadRequestException("Người tạo bản nháp không thể tự duyệt hoặc xuất bản nội dung của mình");
+    }
     if (!allowed.includes(existing.status)) throw new BadRequestException(`Cannot ${action} content from ${existing.status}`);
     const nextVersion = existing.version + 1;
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -472,16 +631,47 @@ export class ContentService {
     return this.toDto(updated);
   }
 
-  private async contentRow(id: string, options: { teacherUserId?: string; published?: boolean }): Promise<ContentRow> {
+  private async contentRow(id: string, options: { teacherUserId: string; roles?: ClassTeacherRole[] }): Promise<ContentRow> {
     const row = await this.prisma.generatedContent.findFirst({
       where: {
         OR: [{ id }, { microLesson: { id } }],
-        ...(options.teacherUserId ? { generationJob: { requestedById: options.teacherUserId } } : {}),
-        ...(options.published ? { status: ContentStatus.PUBLISHED, microLesson: { status: ContentStatus.PUBLISHED } } : {})
+        generationJob: { course: teacherCourseAccess(options.teacherUserId, options.roles) }
       },
       include: contentInclude
     });
-    if (!row) throw new NotFoundException(options.published ? "Published micro-lesson not found" : "Generated content not found");
+    if (!row) throw new NotFoundException("Generated content not found");
+    return row;
+  }
+
+  private async publishedContentRow(id: string, studentUserId: string): Promise<ContentRow> {
+    const row = await this.prisma.generatedContent.findFirst({
+      where: {
+        OR: [{ id }, { microLesson: { id } }],
+        status: ContentStatus.PUBLISHED,
+        microLesson: { status: ContentStatus.PUBLISHED },
+        generationJob: {
+          course: {
+            status: "ACTIVE",
+            deletedAt: null,
+            organization: { status: "ACTIVE", deletedAt: null },
+            enrollments: {
+              some: {
+                status: "ACTIVE",
+                deletedAt: null,
+                class: { status: "ACTIVE", deletedAt: null },
+                student: {
+                  userId: studentUserId,
+                  status: "ACTIVE",
+                  deletedAt: null
+                }
+              }
+            }
+          }
+        }
+      },
+      include: contentInclude
+    });
+    if (!row) throw new NotFoundException("Published micro-lesson not found");
     return row;
   }
 
@@ -536,6 +726,7 @@ export class ContentService {
       generationMs: typeof metadata.generationMs === "number" ? metadata.generationMs : row.generationJob.durationMs ?? 0,
       teacherEditingSeconds: row.teacherEditingSeconds,
       estimatedCostUsd: typeof metadata.estimatedCostUsd === "number" ? metadata.estimatedCostUsd : row.generationJob.estimatedCostUsd,
+      requestedBy: row.generationJob.requestedBy,
       ...(generationTrace ? { generationTrace } : {}),
       reviewHistory: row.reviews.map((review) => ({
         action: review.decision,
@@ -549,6 +740,35 @@ export class ContentService {
       gradeBand: typeof lessonMetadata.gradeBand === "string" ? lessonMetadata.gradeBand : undefined,
       totalDurationMinutes: row.microLesson.durationMinutes,
       sections: Array.isArray(lessonMetadata.sections) ? lessonMetadata.sections as GeneratedLearningContent["sections"] : []
+    };
+  }
+
+  private toStudentDto(row: ContentRow): StudentPublishedLearningContent {
+    const content = this.toDto(row);
+    return {
+      id: content.id,
+      title: content.title,
+      domainCode: content.domainCode,
+      conceptCode: content.conceptCode,
+      level: content.level,
+      objectives: content.objectives,
+      sourceReferences: content.sourceReferences,
+      slides: content.slides,
+      quiz: {
+        question: content.quiz.question,
+        options: content.quiz.options
+      },
+      practiceQuestions: (content.practiceQuestions ?? []).map((question) => ({
+        question: question.question,
+        options: question.options
+      })),
+      status: "PUBLISHED",
+      version: content.version,
+      updatedAt: content.updatedAt,
+      ...(content.draftKind ? { draftKind: content.draftKind } : {}),
+      ...(content.gradeBand ? { gradeBand: content.gradeBand } : {}),
+      ...(content.totalDurationMinutes === undefined ? {} : { totalDurationMinutes: content.totalDurationMinutes }),
+      ...(content.sections ? { sections: content.sections } : {})
     };
   }
 

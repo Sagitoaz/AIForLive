@@ -21,6 +21,8 @@ coverage/
 *.tsbuildinfo
 .turbo/
 .cache/
+.tmp-esbuild-check*/
+docs/build-verification.generated.md
 
 # Python environments and caches
 .venv/

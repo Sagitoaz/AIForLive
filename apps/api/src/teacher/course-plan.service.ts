@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AuditAction, ContentStatus, LessonPhase, Prisma } from "@prisma/client";
+import { AuditAction, ClassTeacherRole, ContentStatus, LessonPhase, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { PrismaService } from "../database/prisma.service";
 import type {
@@ -77,6 +77,57 @@ function objectJson(value: Prisma.JsonValue): Record<string, Prisma.JsonValue> {
   return value && !Array.isArray(value) && typeof value === "object"
     ? (value as Record<string, Prisma.JsonValue>)
     : {};
+}
+
+const allTeacherRoles: ClassTeacherRole[] = [
+  ClassTeacherRole.OWNER,
+  ClassTeacherRole.INSTRUCTOR,
+  ClassTeacherRole.REVIEWER
+];
+const planAuthorRoles: ClassTeacherRole[] = [ClassTeacherRole.OWNER, ClassTeacherRole.INSTRUCTOR];
+const planReviewerRoles: ClassTeacherRole[] = [ClassTeacherRole.OWNER, ClassTeacherRole.REVIEWER];
+
+function teacherClassAccess(
+  userId: string,
+  roles: ClassTeacherRole[] = allTeacherRoles
+): Prisma.LearningClassWhereInput {
+  const accessPaths: Prisma.LearningClassWhereInput[] = [];
+  if (roles.includes(ClassTeacherRole.OWNER)) {
+    accessPaths.push({ teacher: { userId, status: "ACTIVE", deletedAt: null } });
+  }
+  accessPaths.push({
+    teacherMemberships: {
+      some: {
+        teacher: { userId, status: "ACTIVE", deletedAt: null },
+        role: { in: roles },
+        status: "ACTIVE",
+        deletedAt: null
+      }
+    }
+  });
+  return {
+    status: "ACTIVE",
+    deletedAt: null,
+    OR: accessPaths
+  };
+}
+
+function teacherCourseAccess(
+  userId: string,
+  roles: ClassTeacherRole[] = allTeacherRoles
+): Prisma.CourseWhereInput {
+  return {
+    status: "ACTIVE",
+    deletedAt: null,
+    organization: { status: "ACTIVE", deletedAt: null },
+    enrollments: {
+      some: {
+        status: "ACTIVE",
+        deletedAt: null,
+        class: teacherClassAccess(userId, roles)
+      }
+    }
+  };
 }
 
 function stringArray(value: Prisma.JsonValue): string[] {
@@ -192,7 +243,7 @@ export class CoursePlanService {
 
   async list(teacherUserId: string): Promise<Record<string, unknown>[]> {
     const rows = await this.prisma.coursePlanDraft.findMany({
-      where: { requestedById: teacherUserId },
+      where: { course: teacherCourseAccess(teacherUserId) },
       include: planInclude,
       orderBy: { updatedAt: "desc" }
     });
@@ -204,7 +255,7 @@ export class CoursePlanService {
   }
 
   async edit(id: string, input: EditCoursePlanDto, teacherUserId: string): Promise<Record<string, unknown>> {
-    const existing = await this.row(id, teacherUserId);
+    const existing = await this.row(id, teacherUserId, planAuthorRoles);
     const immutableStatuses: ContentStatus[] = [ContentStatus.PUBLISHED, ContentStatus.REJECTED, ContentStatus.ARCHIVED];
     if (immutableStatuses.includes(existing.status)) {
       throw new BadRequestException("Lộ trình ở trạng thái này không thể chỉnh sửa; hãy tạo một bản nháp mới");
@@ -254,6 +305,7 @@ export class CoursePlanService {
           planJson: json(nextPlan),
           reviewHistoryJson: json(history),
           teacherEditingSeconds: { increment: input.teacherEditingSeconds ?? 0 },
+          metadataJson: json({ ...objectJson(existing.metadataJson), lastEditedById: teacherUserId }),
           ...(nextStatus === ContentStatus.REVISION_REQUIRED ? { approvedAt: null, publishedAt: null } : {})
         },
         include: planInclude
@@ -302,7 +354,19 @@ export class CoursePlanService {
     comment: string | undefined,
     teacherUserId: string
   ): Promise<Record<string, unknown>> {
-    const existing = await this.row(id, teacherUserId);
+    const reviewAction = action !== "SUBMIT_REVIEW";
+    const existing = await this.row(
+      id,
+      teacherUserId,
+      reviewAction ? planReviewerRoles : planAuthorRoles
+    );
+    const existingMetadata = objectJson(existing.metadataJson);
+    const lastEditedById = typeof existingMetadata.lastEditedById === "string"
+      ? existingMetadata.lastEditedById
+      : null;
+    if (reviewAction && (existing.requestedById === teacherUserId || lastEditedById === teacherUserId)) {
+      throw new BadRequestException("Người tạo bản nháp không thể tự duyệt hoặc xuất bản lộ trình của mình");
+    }
     if (!allowed.includes(existing.status)) {
       throw new BadRequestException(`Không thể ${action} lộ trình từ trạng thái ${existing.status}`);
     }
@@ -344,17 +408,15 @@ export class CoursePlanService {
     return this.toDto(updated);
   }
 
-  private async catalog(courseIdOrCode: string, teacherUserId: string): Promise<Catalog> {
+  private async catalog(
+    courseIdOrCode: string,
+    teacherUserId: string,
+    roles: ClassTeacherRole[] = planAuthorRoles
+  ): Promise<Catalog> {
     const course = await this.prisma.course.findFirst({
       where: {
         OR: [{ id: courseIdOrCode }, { code: courseIdOrCode }],
-        status: "ACTIVE",
-        deletedAt: null,
-        organization: {
-          classes: {
-            some: { teacher: { userId: teacherUserId }, status: "ACTIVE", deletedAt: null }
-          }
-        }
+        ...teacherCourseAccess(teacherUserId, roles)
       },
       include: catalogInclude
     });
@@ -365,22 +427,28 @@ export class CoursePlanService {
     return course;
   }
 
-  private async ownedClass(classIdOrCode: string, teacherUserId: string) {
+  private async ownedClass(
+    classIdOrCode: string,
+    teacherUserId: string,
+    roles: ClassTeacherRole[] = planAuthorRoles
+  ) {
     const row = await this.prisma.learningClass.findFirst({
       where: {
         OR: [{ id: classIdOrCode }, { code: classIdOrCode }],
-        teacher: { userId: teacherUserId },
-        status: "ACTIVE",
-        deletedAt: null
+        AND: [teacherClassAccess(teacherUserId, roles)]
       }
     });
     if (!row) throw new NotFoundException("Không tìm thấy lớp học của giáo viên");
     return row;
   }
 
-  private async row(id: string, teacherUserId: string): Promise<CoursePlanRow> {
+  private async row(
+    id: string,
+    teacherUserId: string,
+    roles: ClassTeacherRole[] = allTeacherRoles
+  ): Promise<CoursePlanRow> {
     const row = await this.prisma.coursePlanDraft.findFirst({
-      where: { id, requestedById: teacherUserId },
+      where: { id, course: teacherCourseAccess(teacherUserId, roles) },
       include: planInclude
     });
     if (!row) throw new NotFoundException("Không tìm thấy bản nháp lộ trình");

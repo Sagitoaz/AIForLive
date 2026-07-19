@@ -43,4 +43,18 @@ describe("TtsService", () => {
       "Vietnamese TTS is unavailable: FPT TTS returned HTTP 400"
     );
   });
+
+  it("accepts the legacy separate TTS key during a Render environment migration", async () => {
+    delete process.env.TTS_API_KEY;
+    delete process.env.EXTERNAL_LLM_API_KEY;
+    process.env.EXTERNAL_TTS_API_KEY = "legacy-tts-key";
+    const wav = Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(100)]);
+    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue(
+      new Response(new Uint8Array(wav), { status: 200, headers: { "Content-Type": "audio/wav" } })
+    );
+
+    await new TtsService().synthesize("Khóa tương thích Render.");
+
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: "Bearer legacy-tts-key" });
+  });
 });

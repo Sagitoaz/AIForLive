@@ -1,10 +1,10 @@
 import type { LearningAttempt } from "../common/types";
-import { SubmitAttemptDto } from "../learning-events/dto/submit-attempt.dto";
+import type { ScoredAttemptInput } from "../learning-events/dto/submit-attempt.dto";
 import { AiClientService } from "./ai-client.service";
 import { FallbackAnalysisService } from "./fallback-analysis.service";
 
-function dto(): SubmitAttemptDto {
-  return Object.assign(new SubmitAttemptDto(), {
+function dto(): ScoredAttemptInput {
+  return {
     idempotencyKey: "current-attempt",
     studentId: "student-minh",
     domainCode: "python-foundations",
@@ -19,8 +19,10 @@ function dto(): SubmitAttemptDto {
     submittedAnswer: "1,2,3,4,5",
     expectedAnswer: "1,2,3,4",
     stopValue: 5,
-    prerequisiteMastery: 0.72
-  });
+    prerequisiteMastery: 0.72,
+    activityId: "range-exercise",
+    lessonPhase: "PRACTICE"
+  };
 }
 
 describe("AiClientService", () => {

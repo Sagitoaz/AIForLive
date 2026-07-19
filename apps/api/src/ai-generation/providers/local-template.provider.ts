@@ -8,8 +8,15 @@ export class LocalTemplateProvider implements ContentProvider {
 
   async generate(input: ContentGenerationInput): Promise<ProviderOutput> {
     const start = performance.now();
-    const isRange = input.misconceptionCode === "RANGE_STOP_INCLUDED";
-    const title = isRange ? "Dừng đúng lúc với range()" : `Gỡ rối ${input.conceptCode}`;
+    const isFullLesson = input.draftKind === "FULL_LESSON";
+    const isRange = input.conceptCode === "PYTHON_RANGE"
+      && (isFullLesson || input.misconceptionCode === "RANGE_STOP_INCLUDED");
+    const title = isFullLesson
+      ? `Khung bài học 3 pha: ${isRange ? "range()" : input.conceptCode}`
+      : isRange
+        ? "Dừng đúng lúc với range()"
+        : `Gỡ rối ${input.conceptCode}`;
+    const misconceptionLabel = input.misconceptionCode ?? "điểm dễ nhầm cần giáo viên bổ sung";
     const slides: ContentSlide[] = isRange
       ? [
           {
@@ -82,7 +89,9 @@ export class LocalTemplateProvider implements ContentProvider {
             order: 3,
             type: "MISCONCEPTION",
             title: "Kiểm tra hiểu nhầm",
-            body: `Đừng kết luận ${input.misconceptionCode} nếu chưa có đủ evidence từ đáp án và lịch sử.`,
+            body: isFullLesson
+              ? "Đây là khung nội dung xác định. Giáo viên cần bổ sung điểm dễ nhầm phù hợp với concept trước khi duyệt."
+              : `Đừng kết luận ${misconceptionLabel} nếu chưa có đủ evidence từ đáp án và lịch sử.`,
             narration: "Một lỗi đơn lẻ có thể là sơ suất, nên hệ thống cần bằng chứng.",
             animationTemplate: "BUG_REVEAL",
             animationData: { wrongLine: "Giả định", fixedLine: "Kiểm tra evidence", message: "Need evidence" }
@@ -114,7 +123,7 @@ export class LocalTemplateProvider implements ContentProvider {
           phase: "THEORY",
           title: "Lý thuyết có minh họa",
           durationMinutes: Math.max(2, Math.round(input.durationMinutes * 0.35)),
-          summary: `Bài giảng, AI animation và phiếu đọc được grounding từ ${input.sourceId}.`,
+          summary: `Khung bài giảng và animation theo mẫu an toàn được gắn với nguồn VERIFIED ${input.sourceId} để giáo viên đối chiếu; Local Template không tự diễn giải tài liệu.`,
           activityTypes: ["LECTURE", "ANIMATION", "DOCUMENT"]
         },
         {

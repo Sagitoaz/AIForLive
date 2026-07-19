@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import {
   ActivityType,
   LearningEventStatus,
@@ -7,16 +7,13 @@ import {
   RecommendationAction,
   ReviewScheduleStatus
 } from "@prisma/client";
-import { randomUUID } from "node:crypto";
-import type { AnalysisResult, LearningAttempt } from "../common/types";
+import { createHash, randomUUID } from "node:crypto";
+import type { AnalysisResult, AttemptGradingDetails, LearningAttempt } from "../common/types";
 import { PrismaService } from "../database/prisma.service";
 import { AiClientService } from "../personalization/ai-client.service";
 import { FallbackAnalysisService } from "../personalization/fallback-analysis.service";
-import { SubmitAttemptDto, type LearningEventDto } from "./dto/submit-attempt.dto";
-
-function normalizeAnswer(value: string): string {
-  return value.toLowerCase().normalize("NFC").replace(/\s+/g, "").replaceAll("[", "").replaceAll("]", "");
-}
+import type { LearningEventDto, ScoredAttemptInput, SubmitAttemptDto } from "./dto/submit-attempt.dto";
+import { ExerciseGraderService } from "./exercise-grader.service";
 
 function json(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
@@ -57,35 +54,52 @@ export class LearningService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ai: AiClientService,
-    private readonly fallback: FallbackAnalysisService
+    private readonly fallback: FallbackAnalysisService,
+    private readonly grader: ExerciseGraderService
   ) {}
 
-  async recordEvent(dto: LearningEventDto): Promise<Record<string, unknown>> {
-    const enrollment = await this.activeEnrollment(dto.studentId);
+  async recordEvent(userId: string, dto: LearningEventDto): Promise<Record<string, unknown>> {
+    const enrollment = await this.activeEnrollment(userId);
     const type = this.activityType(dto.type);
     const existing = await this.prisma.learningEvent.findUnique({ where: { idempotencyKey: dto.idempotencyKey } });
-    if (existing) return this.eventDto(existing);
-    const event = await this.prisma.learningEvent.create({
-      data: {
-        idempotencyKey: dto.idempotencyKey,
-        userId: dto.studentId,
-        courseId: enrollment.courseId,
-        type,
-        status: LearningEventStatus.ANALYZED,
-        analyzedAt: new Date(),
-        correlationId: randomUUID(),
-        payloadJson: json(dto.metadata ?? {}),
-        metadataJson: { source: "web" }
+    if (existing) {
+      if (existing.userId !== userId) throw new ForbiddenException("Idempotency key belongs to another user");
+      return this.eventDto(existing);
+    }
+    try {
+      const event = await this.prisma.learningEvent.create({
+        data: {
+          idempotencyKey: dto.idempotencyKey,
+          userId,
+          courseId: enrollment.courseId,
+          type,
+          status: LearningEventStatus.ANALYZED,
+          analyzedAt: new Date(),
+          correlationId: randomUUID(),
+          payloadJson: json(dto.metadata ?? {}),
+          metadataJson: { source: "web" }
+        }
+      });
+      return this.eventDto(event);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const collision = await this.prisma.learningEvent.findUnique({ where: { idempotencyKey: dto.idempotencyKey } });
+        if (!collision) throw error;
+        if (collision.userId !== userId) throw new ForbiddenException("Idempotency key belongs to another user");
+        return this.eventDto(collision);
       }
-    });
-    return this.eventDto(event);
+      throw error;
+    }
   }
 
-  async submitAttempt(dto: SubmitAttemptDto): Promise<LearningAttempt> {
+  async submitAttempt(userId: string, dto: SubmitAttemptDto): Promise<LearningAttempt> {
+    const requestHash = this.attemptRequestHash(dto);
+    const existing = await this.preflightAttempt(dto.idempotencyKey, userId, requestHash);
+    if (existing) return existing;
     const [exercise, enrollment] = await Promise.all([
       this.prisma.exercise.findFirst({
         where: {
-          OR: [{ id: dto.activityId ?? "" }, { code: dto.activityId ?? "" }],
+          OR: [{ id: dto.activityId }, { code: dto.activityId }],
           status: "ACTIVE",
           deletedAt: null,
           lesson: {
@@ -107,27 +121,37 @@ export class LearningService {
           }
         }
       }),
-      this.activeEnrollment(dto.studentId, dto.courseId)
+      this.activeEnrollment(userId, dto.courseId)
     ]);
     if (!exercise) throw new NotFoundException("Bài tập không tồn tại trong Supabase");
     if (enrollment.courseId !== exercise.lesson.module.course.id) {
       throw new ForbiddenException("Bài tập không thuộc khóa học đang ghi danh");
     }
-    const answerKey = this.answerKey(exercise.answerJson);
-    const isCorrect = answerKey.acceptedAnswers.some(
-      (answer) => normalizeAnswer(dto.submittedAnswer) === normalizeAnswer(answer)
-    );
-    const scoredDto = Object.assign(new SubmitAttemptDto(), dto, {
+    const grade = await this.grader.grade({
+      prompt: exercise.prompt,
+      contentJson: exercise.contentJson,
+      answerJson: exercise.answerJson,
+      submission: dto.submission
+    });
+    const scoredDto: ScoredAttemptInput = {
+      idempotencyKey: dto.idempotencyKey,
+      studentId: userId,
       courseId: enrollment.courseId,
       domainCode: exercise.lesson.module.course.domain.code,
       conceptCode: exercise.lesson.concept.code,
       activityId: exercise.id,
       lessonPhase: exercise.phase,
       difficulty: exercise.difficulty,
-      expectedAnswer: answerKey.acceptedAnswers[0],
-      stopValue: answerKey.stopValue,
-      isCorrect
-    });
+      expectedAnswer: grade.expectedAnswer,
+      ...(grade.stopValue === undefined ? {} : { stopValue: grade.stopValue }),
+      isCorrect: grade.isCorrect,
+      usedHint: dto.usedHint,
+      skipped: dto.skipped,
+      attemptNumber: 1,
+      responseTimeMs: dto.responseTimeMs,
+      submittedAnswer: grade.submittedAnswer,
+      prerequisiteMastery: 0.72
+    };
 
     const stateRequest = this.prisma.studentConceptState.findUnique({
       where: {
@@ -138,7 +162,7 @@ export class LearningService {
       }
     });
     const recentRequest = this.prisma.attempt.findMany({
-      where: { userId: dto.studentId, exercise: { concepts: { some: { conceptId: exercise.lesson.concept.id } } } },
+      where: { userId, exercise: { concepts: { some: { conceptId: exercise.lesson.concept.id } } } },
       include: {
         exercise: { include: { lesson: { include: { concept: true } } } },
         event: { include: { personalizationRun: true } },
@@ -161,53 +185,53 @@ export class LearningService {
         }
       }
     });
-    const eventRequest = this.prisma.learningEvent.create({
-      data: {
-        idempotencyKey: scoredDto.idempotencyKey,
-        userId: dto.studentId,
-        courseId: enrollment.courseId,
-        type: exercise.phase === LessonPhase.CHECKPOINT ? ActivityType.CHECKPOINT : ActivityType.EXERCISE,
-        status: LearningEventStatus.PENDING_ANALYSIS,
-        correlationId: randomUUID(),
-        payloadJson: json({
-          exerciseId: exercise.id,
-          submittedAnswer: dto.submittedAnswer,
-          lessonPhase: exercise.phase
-        }),
-        attempt: {
-          create: {
-            userId: dto.studentId,
-            exerciseId: exercise.id,
-            isCorrect,
-            usedHint: dto.usedHint,
-            skipped: dto.skipped,
-            attemptNumber: dto.attemptNumber,
-            responseTimeMs: dto.responseTimeMs,
-            submittedJson: json({ answer: dto.submittedAnswer }),
-            score: isCorrect ? 1 : 0,
-            metadataJson: { scoring: "SERVER_ANSWER_KEY" }
-          }
-        }
-      },
-      include: { attempt: true }
-    });
+    const attemptNumberRequest = this.prisma.attempt.count({ where: { userId, exerciseId: exercise.id } });
+    const [state, recentRows, prerequisiteRows, priorAttemptCount] = await Promise.all([
+      stateRequest,
+      recentRequest,
+      prerequisiteRequest,
+      attemptNumberRequest
+    ]);
+    scoredDto.attemptNumber = Math.min(100, priorAttemptCount + 1);
 
-    let state: Awaited<typeof stateRequest>;
-    let recentRows: Awaited<typeof recentRequest>;
-    let prerequisiteRows: Awaited<typeof prerequisiteRequest>;
-    let event: Awaited<typeof eventRequest>;
+    let event: Prisma.LearningEventGetPayload<{ include: { attempt: true } }>;
     try {
-      [state, recentRows, prerequisiteRows, event] = await Promise.all([
-        stateRequest,
-        recentRequest,
-        prerequisiteRequest,
-        eventRequest
-      ]);
+      event = await this.prisma.learningEvent.create({
+        data: {
+          idempotencyKey: scoredDto.idempotencyKey,
+          userId,
+          courseId: enrollment.courseId,
+          type: exercise.phase === LessonPhase.CHECKPOINT ? ActivityType.CHECKPOINT : ActivityType.EXERCISE,
+          status: LearningEventStatus.PENDING_ANALYSIS,
+          correlationId: randomUUID(),
+          payloadJson: json({
+            exerciseId: exercise.id,
+            submission: this.submissionJson(dto),
+            lessonPhase: exercise.phase,
+            requestHash
+          }),
+          metadataJson: json({ source: "web", requestHash, gradingMode: grade.grading.mode }),
+          attempt: {
+            create: {
+              userId,
+              exerciseId: exercise.id,
+              isCorrect: grade.isCorrect,
+              usedHint: dto.usedHint,
+              skipped: dto.skipped,
+              attemptNumber: scoredDto.attemptNumber,
+              responseTimeMs: dto.responseTimeMs,
+              submittedJson: json(this.submissionJson(dto)),
+              score: grade.score,
+              metadataJson: json({ scoring: grade.grading.mode, requestHash, grading: grade.grading })
+            }
+          }
+        },
+        include: { attempt: true }
+      });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        const duplicate = await this.findByIdempotencyKey(dto.idempotencyKey);
+        const duplicate = await this.preflightAttempt(dto.idempotencyKey, userId, requestHash);
         if (!duplicate) throw error;
-        if (duplicate.studentId !== dto.studentId) throw new ForbiddenException("Idempotency key belongs to another user");
         return duplicate;
       }
       throw error;
@@ -222,7 +246,8 @@ export class LearningService {
     scoredDto.prerequisiteMastery = prerequisiteMastery;
     const recentAttempts = recentRows.reverse().map((row) => this.rowToAttempt(row));
 
-    if (!event.attempt) throw new Error("Attempt transaction failed");
+    const persistedAttempt = event.attempt;
+    if (!persistedAttempt) throw new Error("Attempt transaction failed");
 
     const startedAt = Date.now();
     let analysis: AnalysisResult;
@@ -269,7 +294,7 @@ export class LearningService {
 
     await this.persistAnalysis({
       eventId: event.id,
-      attemptId: event.attempt.id,
+      attemptId: persistedAttempt.id,
       studentProfileId: enrollment.studentProfileId,
       conceptId: exercise.lesson.concept.id,
       domainId: exercise.lesson.concept.domainId,
@@ -286,21 +311,26 @@ export class LearningService {
         skipped: scoredDto.skipped,
         attemptNumber: scoredDto.attemptNumber,
         difficulty: scoredDto.difficulty,
+        gradingMode: grade.grading.mode,
+        gradingStrategy: grade.grading.strategy,
+        formativeScore: grade.score,
+        gradingConfidence: grade.grading.confidence,
         recentAttemptIds: recentAttempts.map((attempt) => attempt.id)
       }
     });
     return {
-      id: event.attempt.id,
+      id: persistedAttempt.id,
       idempotencyKey: scoredDto.idempotencyKey,
-      studentId: dto.studentId,
+      studentId: userId,
       conceptCode: exercise.lesson.concept.code,
       activityId: exercise.id,
       lessonPhase: exercise.phase,
-      isCorrect,
+      isCorrect: grade.isCorrect,
       usedHint: dto.usedHint,
       status,
       createdAt: event.createdAt.toISOString(),
-      analysis
+      analysis,
+      grading: grade.grading
     };
   }
 
@@ -705,22 +735,6 @@ export class LearningService {
     return enrollment;
   }
 
-  private answerKey(value: Prisma.JsonValue): { acceptedAnswers: string[]; stopValue?: number } {
-    if (!value || Array.isArray(value) || typeof value !== "object") {
-      throw new BadRequestException("Bài tập chưa có đáp án đã được giáo viên duyệt");
-    }
-    const record = value as Record<string, unknown>;
-    const acceptedAnswers = Array.isArray(record.acceptedAnswers)
-      ? record.acceptedAnswers.filter((item): item is string => typeof item === "string")
-      : typeof record.expectedAnswer === "string"
-        ? [record.expectedAnswer]
-        : [];
-    if (!acceptedAnswers.length || record.teacherReviewed !== true) {
-      throw new BadRequestException("Bài tập chưa có đáp án đã được giáo viên duyệt");
-    }
-    return { acceptedAnswers, ...(typeof record.stopValue === "number" ? { stopValue: record.stopValue } : {}) };
-  }
-
   private activityType(value: string): ActivityType {
     return Object.values(ActivityType).includes(value as ActivityType) ? (value as ActivityType) : ActivityType.LESSON;
   }
@@ -755,15 +769,91 @@ export class LearningService {
     return row ? this.rowToAttempt(row) : null;
   }
 
+  private async preflightAttempt(key: string, userId: string, requestHash: string): Promise<LearningAttempt | null> {
+    const event = await this.prisma.learningEvent.findUnique({
+      where: { idempotencyKey: key },
+      select: {
+        userId: true,
+        status: true,
+        metadataJson: true,
+        payloadJson: true,
+        attempt: { select: { id: true } },
+        personalizationRun: { select: { id: true } }
+      }
+    });
+    if (!event) return null;
+    if (event.userId !== userId) throw new ForbiddenException("Idempotency key belongs to another user");
+    const metadata = this.jsonRecord(event.metadataJson);
+    const payload = this.jsonRecord(event.payloadJson);
+    const storedHash = typeof metadata.requestHash === "string"
+      ? metadata.requestHash
+      : typeof payload.requestHash === "string"
+        ? payload.requestHash
+        : null;
+    if (!storedHash || storedHash !== requestHash) {
+      throw new ConflictException("Idempotency key was already used with a different request");
+    }
+    if (!event.attempt || !event.personalizationRun || event.status === LearningEventStatus.PENDING_ANALYSIS) {
+      throw new ConflictException("Attempt with this idempotency key is still being processed");
+    }
+    const attempt = await this.findByIdempotencyKey(key);
+    if (!attempt?.analysis) throw new ConflictException("Attempt analysis is not ready yet");
+    return attempt;
+  }
+
+  private attemptRequestHash(dto: SubmitAttemptDto): string {
+    return createHash("sha256").update(JSON.stringify({
+      activityId: dto.activityId,
+      courseId: dto.courseId,
+      submission: this.submissionJson(dto),
+      usedHint: dto.usedHint,
+      skipped: dto.skipped,
+      responseTimeMs: dto.responseTimeMs
+    })).digest("hex");
+  }
+
+  private submissionJson(dto: SubmitAttemptDto): Record<string, string | string[]> {
+    return {
+      kind: dto.submission.kind,
+      ...(dto.submission.text === undefined ? {} : { text: dto.submission.text }),
+      ...(dto.submission.blockIds === undefined ? {} : { blockIds: dto.submission.blockIds })
+    };
+  }
+
+  private jsonRecord(value: Prisma.JsonValue): Record<string, unknown> {
+    return value && !Array.isArray(value) && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
+  }
+
+  private gradingDetails(value: Prisma.JsonValue): AttemptGradingDetails | undefined {
+    const metadata = this.jsonRecord(value);
+    const grading = metadata.grading;
+    if (!grading || Array.isArray(grading) || typeof grading !== "object") return undefined;
+    const candidate = grading as Partial<AttemptGradingDetails>;
+    if (
+      typeof candidate.strategy !== "string"
+      || typeof candidate.mode !== "string"
+      || typeof candidate.score !== "number"
+      || typeof candidate.passThreshold !== "number"
+      || typeof candidate.confidence !== "number"
+      || !Array.isArray(candidate.criteria)
+      || typeof candidate.feedback !== "string"
+    ) return undefined;
+    return candidate as AttemptGradingDetails;
+  }
+
   private rowToAttempt(row: {
     id: string;
     userId: string;
     isCorrect: boolean;
     usedHint: boolean;
+    metadataJson: Prisma.JsonValue;
     createdAt: Date;
     exercise: { id: string; phase: LessonPhase; lesson: { concept: { code: string } } };
     event: { idempotencyKey: string; status: LearningEventStatus; personalizationRun: { outputJson: Prisma.JsonValue } | null };
   }): LearningAttempt {
+    const grading = this.gradingDetails(row.metadataJson);
     return {
       id: row.id,
       idempotencyKey: row.event.idempotencyKey,
@@ -775,7 +865,8 @@ export class LearningService {
       usedHint: row.usedHint,
       status: row.event.status,
       createdAt: row.createdAt.toISOString(),
-      analysis: row.event.personalizationRun?.outputJson as unknown as AnalysisResult | null
+      analysis: row.event.personalizationRun?.outputJson as unknown as AnalysisResult | null,
+      ...(grading ? { grading } : {})
     };
   }
 }

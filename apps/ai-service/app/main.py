@@ -7,14 +7,17 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.grading import router as grading_router
 from app.api.personalization import router as personalization_router
 from app.core.settings import settings
+from app.services.idea_grading import IdeaGradingService
 from app.services.personalization import PersonalizationService
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.personalization_service = PersonalizationService()
+    app.state.idea_grading_service = IdeaGradingService()
     yield
 
 
@@ -47,3 +50,4 @@ def health() -> dict[str, str]:
 
 
 app.include_router(personalization_router)
+app.include_router(grading_router)

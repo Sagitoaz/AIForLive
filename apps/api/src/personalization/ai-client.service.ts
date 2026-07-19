@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import type { AnalysisResult, LearningAttempt } from "../common/types";
-import type { SubmitAttemptDto } from "../learning-events/dto/submit-attempt.dto";
+import type { ScoredAttemptInput } from "../learning-events/dto/submit-attempt.dto";
 
 export interface PersonalizationContext {
   stability: number;
@@ -28,7 +28,7 @@ export class AiClientService {
 
   async analyze(
     eventId: string,
-    dto: SubmitAttemptDto,
+    dto: ScoredAttemptInput,
     mastery: number,
     recentAttempts: LearningAttempt[],
     context: PersonalizationContext

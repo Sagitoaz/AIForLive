@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Asset } from "@/components/asset";
 import { Metric, SectionHeading, StatusPill } from "@/components/ui";
 import { useProduct } from "@/features/product/product-context";
+import { apiRequest } from "@/lib/api";
 
 const pendingStatuses = new Set(["DRAFT", "IN_REVIEW", "REVISION_REQUIRED", "APPROVED"]);
 
@@ -15,9 +17,26 @@ function statusTone(status: string): "green" | "yellow" | "red" | "blue" | "purp
   return "yellow";
 }
 
+function statusLabel(status: string): string {
+  return ({
+    DRAFT: "Bản nháp",
+    IN_REVIEW: "Đang chờ duyệt",
+    REVISION_REQUIRED: "Cần chỉnh sửa",
+    APPROVED: "Đã phê duyệt",
+    PUBLISHED: "Đã xuất bản"
+  } as Record<string, string>)[status] ?? status;
+}
+
 export function TeacherDashboard() {
   const product = useProduct();
   const data = product.teacher;
+  const [teacherName, setTeacherName] = useState("Giảng viên");
+
+  useEffect(() => {
+    void apiRequest<{ displayName: string }>("/auth/me")
+      .then((user) => setTeacherName(user.displayName))
+      .catch(() => setTeacherName("Giảng viên"));
+  }, []);
 
   if (!data) {
     return (
@@ -37,7 +56,7 @@ export function TeacherDashboard() {
       <header className="teacher-welcome">
         <div>
           <span className="eyebrow">{data.class.name} · dữ liệu Supabase</span>
-          <h1>Chào Cô Mai.</h1>
+          <h1>Chào {teacherName}.</h1>
           <p>
             Có <strong>{data.needsSupport} học sinh</strong> cần hỗ trợ theo nhiều signal,
             không chỉ một câu sai.
@@ -46,7 +65,7 @@ export function TeacherDashboard() {
         <div className="teacher-actions">
           <Link href="/teacher/studio" className="button primary">
             <Asset type="icon" name="ai-spark" alt="" width={20} height={20} />
-            Soạn bài với AI
+            Soạn nội dung
           </Link>
           <Link href="/teacher/reviews" className="button ghost">Duyệt bản nháp</Link>
         </div>
@@ -69,7 +88,7 @@ export function TeacherDashboard() {
         <Metric
           label="Bản chờ xử lý"
           value={String(pending.length)}
-          note="Draft, review và approved"
+          note="Bản nháp, chờ duyệt và đã duyệt"
           icon="nav-review"
           tone="purple"
         />
@@ -85,7 +104,7 @@ export function TeacherDashboard() {
       <div className="teacher-grid-main">
         <section className="surface-card">
           <SectionHeading
-            eyebrow="Knowledge gaps"
+            eyebrow="Khoảng trống kiến thức"
             title="Lớp đang mắc ở đâu?"
             action={<Link href="/teacher/heatmap" className="text-link">Mở heatmap →</Link>}
           />
@@ -105,7 +124,7 @@ export function TeacherDashboard() {
 
         <aside className="surface-card misconception-list">
           <SectionHeading
-            eyebrow="Content workflow"
+            eyebrow="Quy trình nội dung"
             title="Bản nháp cần quyết định"
             action={<Link href="/teacher/studio" className="text-link">Mở studio →</Link>}
           />
@@ -114,12 +133,12 @@ export function TeacherDashboard() {
               <span className={`severity ${item.status === "REVISION_REQUIRED" ? "red" : "yellow"}`} />
               <div>
                 <strong>{item.title}</strong>
-                <small>{item.draftKind === "FULL_LESSON" ? "Bài đầy đủ" : "Bài bổ trợ"} · v{item.version}</small>
+                <small>{item.draftKind === "FULL_LESSON" ? "Khung bài học 3 pha" : "Bài bổ trợ"} · v{item.version}</small>
               </div>
-              <StatusPill tone={statusTone(item.status)}>{item.status}</StatusPill>
+              <StatusPill tone={statusTone(item.status)}>{statusLabel(item.status)}</StatusPill>
             </article>
           )) : (
-            <p>Không có bản nháp đang chờ. Có thể bắt đầu từ một lesson brief mới.</p>
+            <p>Không có bản nháp đang chờ. Có thể bắt đầu bằng cách chọn bài, nguồn đã xác minh và mục tiêu học tập.</p>
           )}
           <Link href="/teacher/studio" className="button primary small">Tạo hoặc tiếp tục bài →</Link>
         </aside>
@@ -128,7 +147,7 @@ export function TeacherDashboard() {
       {data.misconceptions.length > 0 && (
         <section className="surface-card">
           <SectionHeading
-            eyebrow="Pattern từ attempt"
+            eyebrow="Mẫu hình từ bài làm"
             title="Misconception có thể chuyển thành bài bổ trợ"
             description="Giáo viên vẫn chọn mục tiêu, nguồn và quyết định xuất bản."
           />

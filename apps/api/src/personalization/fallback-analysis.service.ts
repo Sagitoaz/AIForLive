@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import type { AnalysisResult } from "../common/types";
-import type { SubmitAttemptDto } from "../learning-events/dto/submit-attempt.dto";
+import type { ScoredAttemptInput } from "../learning-events/dto/submit-attempt.dto";
 
 @Injectable()
 export class FallbackAnalysisService {
-  analyze(eventId: string, dto: SubmitAttemptDto, mastery: number): AnalysisResult {
+  analyze(eventId: string, dto: ScoredAttemptInput, mastery: number): AnalysisResult {
     const confidence = dto.usedHint ? 0.48 : dto.skipped ? 0.2 : 0.82;
     const delta = dto.isCorrect ? 0.12 * confidence : -0.09 * confidence;
     const masteryAfter = Math.max(0.02, Math.min(0.98, mastery + delta));

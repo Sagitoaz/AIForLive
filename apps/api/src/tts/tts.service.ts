@@ -23,7 +23,11 @@ export class TtsService {
     const cached = this.cache.get(key);
     if (cached) return { ...cached, cacheHit: true };
 
-    const apiKey = process.env.TTS_API_KEY ?? process.env.EXTERNAL_LLM_API_KEY;
+    // EXTERNAL_TTS_API_KEY is retained as a compatibility alias for the
+    // original Render environment. New deployments should use TTS_API_KEY.
+    const apiKey = process.env.TTS_API_KEY
+      ?? process.env.EXTERNAL_TTS_API_KEY
+      ?? process.env.EXTERNAL_LLM_API_KEY;
     if (!apiKey) throw new ServiceUnavailableException("FPT Marketplace API key is not configured for TTS");
 
     const controller = new AbortController();

@@ -10,6 +10,11 @@ import { LoginDto, RefreshDto } from "./dto/login.dto";
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  @Get("demo-accounts")
+  demoAccounts(): Promise<Record<string, unknown>[]> {
+    return this.auth.demoAccounts();
+  }
+
   @Post("login")
   login(@Body() body: LoginDto): Promise<Record<string, unknown>> {
     return this.auth.login(body.email, body.password);

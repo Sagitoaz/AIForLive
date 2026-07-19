@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { ContentSourceStatus, ContentSourceType, Prisma } from "@prisma/client";
+import { ClassTeacherRole, ContentSourceStatus, ContentSourceType, Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../database/prisma.service";
 
@@ -21,7 +21,7 @@ export interface ContentSourceRecord {
 export class ContentSourceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async add(file: Express.Multer.File, teacherUserId: string): Promise<ContentSourceRecord> {
+  async add(file: Express.Multer.File, teacherUserId: string, courseId?: string): Promise<ContentSourceRecord> {
     const isPlainText = file.mimetype === "text/plain";
     if (!isPlainText) {
       throw new BadRequestException(
@@ -30,7 +30,8 @@ export class ContentSourceService {
     }
     const extractedText = file.buffer.toString("utf8").replace(/\0/g, "").trim().slice(0, 200_000);
     if (extractedText.length < 40) throw new BadRequestException("Tài liệu văn bản quá ngắn để làm nguồn bài học");
-    const course = await this.teacherCourse(teacherUserId);
+    if (!courseId?.trim()) throw new BadRequestException("Hãy chọn khóa học đích trước khi tải nguồn lên");
+    const course = await this.teacherCourse(teacherUserId, courseId, [ClassTeacherRole.OWNER, ClassTeacherRole.INSTRUCTOR]);
     const checksum = createHash("sha256").update(file.buffer).digest("hex");
     const existing = await this.prisma.contentSource.findUnique({
       where: { courseId_checksum: { courseId: course.id, checksum } }
@@ -61,10 +62,15 @@ export class ContentSourceService {
     return this.toRecord(source);
   }
 
-  async list(teacherUserId: string): Promise<ContentSourceRecord[]> {
-    const course = await this.teacherCourse(teacherUserId);
+  async list(teacherUserId: string, courseId?: string): Promise<ContentSourceRecord[]> {
     const rows = await this.prisma.contentSource.findMany({
-      where: { courseId: course.id, deletedAt: null },
+      where: {
+        deletedAt: null,
+        course: {
+          ...(courseId ? { id: courseId } : {}),
+          ...this.teacherCourseAccess(teacherUserId)
+        }
+      },
       orderBy: { createdAt: "desc" }
     });
     return rows.map((row) => this.toRecord(row));
@@ -105,24 +111,57 @@ export class ContentSourceService {
       where: {
         id,
         deletedAt: null,
-        ...(teacherUserId ? { course: { enrollments: { some: { class: { teacher: { userId: teacherUserId } } } } } } : {})
+        ...(teacherUserId
+          ? {
+              course: this.teacherCourseAccess(teacherUserId)
+            }
+          : {})
       }
     });
     if (!row) throw new NotFoundException("Content source not found");
     return row;
   }
 
-  private async teacherCourse(teacherUserId: string) {
+  private async teacherCourse(teacherUserId: string, courseId: string, roles?: ClassTeacherRole[]) {
     const course = await this.prisma.course.findFirst({
       where: {
-        status: "ACTIVE",
-        deletedAt: null,
-        enrollments: { some: { class: { teacher: { userId: teacherUserId }, status: "ACTIVE", deletedAt: null } } }
-      },
-      orderBy: { createdAt: "asc" }
+        id: courseId,
+        ...this.teacherCourseAccess(teacherUserId, roles)
+      }
     });
     if (!course) throw new NotFoundException("Giảng viên chưa được phân công khóa học đang hoạt động");
     return course;
+  }
+
+  private teacherCourseAccess(teacherUserId: string, roles?: ClassTeacherRole[]): Prisma.CourseWhereInput {
+    return {
+      status: "ACTIVE",
+      deletedAt: null,
+      organization: { status: "ACTIVE", deletedAt: null },
+      enrollments: {
+        some: {
+          status: "ACTIVE",
+          deletedAt: null,
+          class: {
+            status: "ACTIVE",
+            deletedAt: null,
+            OR: [
+              { teacher: { userId: teacherUserId, status: "ACTIVE", deletedAt: null } },
+              {
+                teacherMemberships: {
+                  some: {
+                    status: "ACTIVE",
+                    deletedAt: null,
+                    ...(roles ? { role: { in: roles } } : {}),
+                    teacher: { userId: teacherUserId, status: "ACTIVE", deletedAt: null }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    };
   }
 
   private toRecord(source: {

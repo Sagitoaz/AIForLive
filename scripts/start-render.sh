@@ -1,9 +1,12 @@
 #!/bin/sh
 set -eu
 
-export API_PORT="${API_PORT:-4000}"
-export AI_SERVICE_URL="${AI_SERVICE_URL:-http://127.0.0.1:8001}"
-export API_INTERNAL_URL="${API_INTERNAL_URL:-http://127.0.0.1:4000}"
+# These are private ports inside the single-container topology. Do not allow a
+# stale Render variable from the old multi-service setup to move one process
+# away from the readiness checks or the Next.js rewrite compiled for :4000.
+export API_PORT="4000"
+export AI_SERVICE_URL="http://127.0.0.1:8001"
+export API_INTERNAL_URL="http://127.0.0.1:4000"
 export HOSTNAME="0.0.0.0"
 
 # `migrate deploy` is idempotent: it applies reviewed migrations only and never

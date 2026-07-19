@@ -2,7 +2,7 @@
 
 ## Scope
 
-One six-week Python foundations course (4 modules, 12 lessons, about 16 hours), one class, one teacher and 20 consented learners. Every lesson follows Theory → Practice → Checkpoint. AI content always requires human review. The model cannot be used for grades or discipline.
+One six-week Python foundations course (4 modules, 12 lessons, about 16 hours), one class, one primary teacher, one independent content reviewer and 20 consented learners. The reviewer may be a course lead shared across cohorts rather than a second classroom teacher. Every lesson follows Theory → Practice → Checkpoint. AI content always requires human review. The model cannot be used for grades or discipline.
 
 ## Weeks
 
@@ -41,6 +41,33 @@ An efficiency gain is not counted when content fails educational validation or n
 ## Privacy
 
 Collect the minimum event fields, define retention, separate identity from analytics, obtain appropriate consent/assent, prohibit external provider training on pilot data and provide deletion/export procedures.
+
+## Ownership and go/no-go gates
+
+| Owner | Responsibility |
+| --- | --- |
+| EduOne pilot owner | Consent/assent, cohort communication, incident escalation and final go/no-go |
+| Primary teacher | Baseline diary, lesson authoring, learner support and recommendation override |
+| Independent reviewer | Source/age/factual/rubric review and publish decision |
+| Technical owner | Availability, access control, deletion/export, fallback and cost monitoring |
+| Privacy/safeguarding owner | Retention, child-data review, provider policy and incident response |
+
+Do not start with real learner data unless all owners are named, deletion/export has been rehearsed and tenant isolation has been tested. Pause the provider or pilot if there is a cross-user access incident, an unreviewed content exposure, a critical factual error that passes review or an unresolved safeguarding concern.
+
+## Nonprofit cost and adoption measurement
+
+The core personalization path does not require a paid LLM. `LOCAL_TEMPLATE` is a deterministic zero-paid-provider authoring option, while external generation is optional and must record provider, tokens, estimated cost and latency per job.
+
+Report cost as observed components rather than a guessed subscription price:
+
+- fixed infrastructure cost per pilot month;
+- external generation and TTS cost per approved lesson;
+- teacher active edit/review minutes per approved lesson;
+- failed/rejected generation cost;
+- reuse count and cost avoided through reuse;
+- support/incident time.
+
+Expansion requires an agreed monthly budget ceiling, acceptable correction/reject rate and positive teacher willingness-to-adopt. Do not subsidize the product by training on or monetizing child data.
 
 ## Retraining gate
 

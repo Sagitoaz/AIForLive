@@ -1,40 +1,39 @@
-# Checkpoint 2 — Evidence index
+# Checkpoint 2 — evidence index
 
-Mục tiêu của bảng này là giúp người chấm đi từ claim đến màn hình, API và record thật. `Verified` nghĩa là đã có source/test hoặc dữ liệu Supabase; `Demo after deploy` cần live URL; `Missing` không được claim.
+Ngày cập nhật: 19/07/2026. Bảng này là index ngắn; bảng rubric đầy đủ nằm tại [JUDGING-EVIDENCE.md](JUDGING-EVIDENCE.md).
 
-| Claim | Trạng thái | Demo/API | Artifact có thể kiểm tra |
+| Claim | Nhãn | Demo/API | Artifact |
 | --- | --- | --- | --- |
-| Mỗi attempt tạo phân tích cá nhân | Verified | Học sinh làm Practice; `POST /attempts` | `LearningEvent`, `Attempt`, `PersonalizationRun`, `StudentConceptState` |
-| AI dùng mục tiêu/quỹ thời gian/progress thật | Verified | So sánh hai hồ sơ | `AiClientService` đọc `StudentProfile`, `Enrollment`, prerequisite states; unit test payload |
-| Recommendation giải thích được | Verified | Trang AI đề xuất/evidence giảng viên | reasons, candidate scores, rule/model version, attempt ID |
-| Target recommendation mở nội dung thật | Verified | Bấm target sau attempt | Resolver chỉ chọn `PUBLISHED MicroLesson`, `ACTIVE Exercise/Lesson`; metadata `targetResolution` |
-| Nội dung không bypass giáo viên | Verified | Draft → Review → Approve → Publish | `ContentReview`, `ContentVersion`, `AuditLog`; student chỉ đọc `PUBLISHED` |
-| AI giúp giảm thời gian thao tác | Demo measurement | Tạo rồi sửa một draft | `generationMs`, `teacherEditingSeconds`; không suy rộng thành 40–50 giờ |
-| Dữ liệu pilot 1/1/20 không quá sạch | Verified synthetic | Dashboard lớp/heatmap | 1 course, 1 class, 20 enrollment, mastery/history khác nhau |
-| Supabase là nguồn nghiệp vụ duy nhất | Verified | `/backend-api/health`, refresh sau write | Prisma services + smoke test; không có frontend demo store |
-| Live URL | Demo after deploy | Render Web Service | Thêm URL thật vào README sau khi health PASS |
-| External LLM | Demo after deploy | Tạo draft với provider `EXTERNAL_LLM` | `AiGenerationJob`/`GeneratedContent` provider/model/latency; cần key và quota thật |
-| Video 60–90 giây | Missing | Golden path | Chủ dự án cần quay sau deploy |
-| Tác động dropout/learning outcome | Missing | Pilot thật | Không claim ở Checkpoint 2 |
+| Attempt tạo phân tích cá nhân và target thật | **Demonstrated** | `POST /attempts` rồi `GET /attempts/:id/analysis` | `LearningEvent`, `Attempt`, `PersonalizationRun`, `Recommendation`, `RecommendationEvidence` |
+| Mã giả được chấm theo ý tưởng, bỏ qua syntax | **Demonstrated** | `EX-08-1`, strategy `IDEA_RUBRIC` | AI criterion evidence + server grading trace |
+| Code order ghép thành chương trình | **Tested** | `EX-08-2`/checkpoint | Block allowlist + accepted order contract |
+| AI dùng profile/state/goal/time/prerequisite | **Tested** | So sánh account học sinh | AI client payload tests và persisted input snapshot |
+| Content không bypass giáo viên | **Demonstrated** | Author submit → reviewer approve/publish | `ContentVersion`, `ContentReview`, `AuditLog`; student chỉ đọc `PUBLISHED` |
+| Author và reviewer tách biệt | **Tested** | Cô Mai → Cô Linh | Class roles, author/last-editor guards |
+| Course plan không tự ghi đè course | **Demonstrated** | Draft → review → revision → publish artifact | `CoursePlanDraft.reviewHistory`; apply-to-course vẫn Planned |
+| Fixture 1/1/20 có thể tái tạo | **Tested** | `npm run db:seed:check` | 23 users, 12 lessons, 60 exercises, 400 synthetic histories |
+| Supabase là persistence runtime | **Demonstrated** | Health, E2E, smoke, refresh-after-write | Prisma/API code và linked IDs |
+| AI giảm authoring time | **Planned measurement** | Timer/trace có sẵn | Chưa có paired complete-lesson baseline |
+| External LLM/TTS live | **Planned demo artifact** | Chỉ khi credential/quota thật | Path/parser unit-tested; lần verify này không có live provider trace |
+| Dropout/learning outcome | **Planned pilot** | Không demo bằng fixture | Không claim trước consented pilot |
 
 ## Lệnh tái kiểm chứng
 
 ```powershell
-npm run typecheck
 npm run lint
+npm run typecheck
 npm run test
-npm run build
+npm run ai:test
+npm run validate:synthetic
+npm run validate:assets
+npm run db:check
+npm run db:seed:check
 
-$env:E2E_API_URL="https://<service>.onrender.com/backend-api"
+$env:E2E_API_URL="http://127.0.0.1:4000/api"
 npm run test:e2e
-Remove-Item Env:E2E_API_URL
+
+powershell -ExecutionPolicy Bypass -File scripts/smoke-product.ps1
+npm run build
 ```
 
-Luồng write đầy đủ hơn:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/smoke-product.ps1 `
-  -ApiUrl "https://<service>.onrender.com/backend-api"
-```
-
-Smoke script ghi dữ liệu thật vào Supabase pilot. Không chạy trên dữ liệu trẻ em thật và không chỉnh output để làm bằng chứng.
+Smoke ghi vào database demo synthetic. Không chỉnh output hoặc xóa failure để biến fixture thành bằng chứng tác động giáo dục.

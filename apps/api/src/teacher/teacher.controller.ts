@@ -1,6 +1,6 @@
 import { Body, Controller, Get, NotFoundException, Param, Patch, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { Prisma } from "@prisma/client";
+import { ClassTeacherRole, Prisma } from "@prisma/client";
 import type { AuthenticatedRequest } from "../auth/auth.guard";
 import { AuthGuard } from "../auth/auth.guard";
 import { Roles } from "../auth/roles.decorator";
@@ -17,6 +17,42 @@ function objectJson(value: Prisma.JsonValue): Record<string, Prisma.JsonValue> {
     : {};
 }
 
+const allTeacherClassRoles: ClassTeacherRole[] = [
+  ClassTeacherRole.OWNER,
+  ClassTeacherRole.INSTRUCTOR,
+  ClassTeacherRole.REVIEWER
+];
+
+const learnerDataRoles: ClassTeacherRole[] = [
+  ClassTeacherRole.OWNER,
+  ClassTeacherRole.INSTRUCTOR
+];
+
+function teacherClassAccess(
+  userId: string,
+  roles: ClassTeacherRole[] = allTeacherClassRoles
+): Prisma.LearningClassWhereInput {
+  const accessPaths: Prisma.LearningClassWhereInput[] = [];
+  if (roles.includes(ClassTeacherRole.OWNER)) {
+    accessPaths.push({ teacher: { userId, status: "ACTIVE", deletedAt: null } });
+  }
+  accessPaths.push({
+    teacherMemberships: {
+      some: {
+        teacher: { userId, status: "ACTIVE", deletedAt: null },
+        role: { in: roles },
+        status: "ACTIVE",
+        deletedAt: null
+      }
+    }
+  });
+  return {
+    status: "ACTIVE",
+    deletedAt: null,
+    OR: accessPaths
+  };
+}
+
 @ApiTags("teacher")
 @ApiBearerAuth()
 @Roles("TEACHER")
@@ -31,30 +67,32 @@ export class TeacherController {
     const learningClass = context.classes[0]!;
     const enrollmentIds = learningClass.enrollments.map((item) => item.studentProfileId);
     const userIds = learningClass.enrollments.map((item) => item.student.userId);
+    const courseIds = [...new Set(learningClass.enrollments.map((item) => item.courseId))];
+    const domainIds = [...new Set(learningClass.enrollments.map((item) => item.course.domainId))];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const [states, activeToday, fallbackAnalyses, dueReviews, diagnoses, reviewQueue] = await Promise.all([
       this.prisma.studentConceptState.findMany({
-        where: { studentProfileId: { in: enrollmentIds }, concept: { domainId: learningClass.enrollments[0]?.course.domainId } },
+        where: { studentProfileId: { in: enrollmentIds }, concept: { domainId: { in: domainIds } } },
         include: { concept: true }
       }),
       this.prisma.learningEvent.groupBy({
         by: ["userId"],
-        where: { userId: { in: userIds }, occurredAt: { gte: today } }
+        where: { userId: { in: userIds }, courseId: { in: courseIds }, occurredAt: { gte: today } }
       }),
       this.prisma.personalizationRun.count({
-        where: { studentProfileId: { in: enrollmentIds }, mode: "DETERMINISTIC_FALLBACK" }
+        where: { studentProfileId: { in: enrollmentIds }, mode: "DETERMINISTIC_FALLBACK", learningEvent: { courseId: { in: courseIds } } }
       }),
       this.prisma.reviewSchedule.count({
-        where: { studentProfileId: { in: enrollmentIds }, status: { in: ["DUE", "SCHEDULED"] }, dueAt: { lte: new Date() } }
+        where: { studentProfileId: { in: enrollmentIds }, concept: { domainId: { in: domainIds } }, status: { in: ["DUE", "SCHEDULED"] }, dueAt: { lte: new Date() } }
       }),
       this.prisma.attemptDiagnosis.findMany({
-        where: { attempt: { userId: { in: userIds } }, misconceptionId: { not: null } },
+        where: { attempt: { userId: { in: userIds }, event: { courseId: { in: courseIds } } }, misconceptionId: { not: null } },
         include: { misconception: true, attempt: true }
       }),
       this.prisma.generatedContent.count({
         where: {
-          generationJob: { requestedById: request.user.id },
+          generationJob: { courseId: { in: courseIds } },
           status: { in: ["DRAFT", "IN_REVIEW", "REVISION_REQUIRED", "APPROVED"] }
         }
       })
@@ -103,12 +141,14 @@ export class TeacherController {
     const context = await this.teacherContext(request.user.id);
     return Promise.all(context.classes.map(async (learningClass) => {
       const studentIds = learningClass.enrollments.map((item) => item.studentProfileId);
-      const states = await this.prisma.studentConceptState.findMany({ where: { studentProfileId: { in: studentIds } } });
+      const courseIds = [...new Set(learningClass.enrollments.map((item) => item.courseId))];
+      const domainIds = [...new Set(learningClass.enrollments.map((item) => item.course.domainId))];
+      const states = await this.prisma.studentConceptState.findMany({ where: { studentProfileId: { in: studentIds }, concept: { domainId: { in: domainIds } } } });
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const active = await this.prisma.learningEvent.groupBy({
         by: ["userId"],
-        where: { userId: { in: learningClass.enrollments.map((item) => item.student.userId) }, occurredAt: { gte: today } }
+        where: { userId: { in: learningClass.enrollments.map((item) => item.student.userId) }, courseId: { in: courseIds }, occurredAt: { gte: today } }
       });
       return {
         id: learningClass.id,
@@ -125,8 +165,9 @@ export class TeacherController {
   @Get("classes/:id")
   async classDetail(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
     const learningClass = await this.ownedClass(id, request.user.id);
+    const domainIds = [...new Set(learningClass.enrollments.map((item) => item.course.domainId))];
     const states = await this.prisma.studentConceptState.findMany({
-      where: { studentProfileId: { in: learningClass.enrollments.map((item) => item.studentProfileId) } }
+      where: { studentProfileId: { in: learningClass.enrollments.map((item) => item.studentProfileId) }, concept: { domainId: { in: domainIds } } }
     });
     return {
       id: learningClass.id,
@@ -204,19 +245,21 @@ export class TeacherController {
   @Get("students/:id")
   async student(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>> {
     const profile = await this.ownedStudent(id, request.user.id);
+    const authorizedCourseIds = profile.enrollments.map((enrollment) => enrollment.courseId);
+    const authorizedDomainIds = [...new Set(profile.enrollments.map((enrollment) => enrollment.course.domainId))];
     const conceptStates = await this.prisma.studentConceptState.findMany({
-      where: { studentProfileId: profile.id },
+      where: { studentProfileId: profile.id, concept: { domainId: { in: authorizedDomainIds } } },
       include: { concept: true },
       orderBy: { concept: { order: "asc" } }
     });
     const timeline = await this.prisma.attempt.findMany({
-      where: { userId: profile.userId },
+      where: { userId: profile.userId, event: { courseId: { in: authorizedCourseIds } } },
       include: { exercise: true, diagnoses: { include: { misconception: true } }, event: { include: { personalizationRun: true } } },
       orderBy: { createdAt: "desc" },
       take: 50
     });
     const rangeHistory = await this.prisma.conceptStateHistory.findMany({
-      where: { studentProfileId: profile.id, concept: { code: "PYTHON_RANGE" } },
+      where: { studentProfileId: profile.id, concept: { code: "PYTHON_RANGE", domainId: { in: authorizedDomainIds } } },
       orderBy: { recordedAt: "asc" }
     });
     return {
@@ -258,8 +301,14 @@ export class TeacherController {
   @Get("students/:id/recommendations")
   async recommendations(@Req() request: AuthenticatedRequest, @Param("id") id: string): Promise<Record<string, unknown>[]> {
     const profile = await this.ownedStudent(id, request.user.id);
+    const authorizedCourseIds = profile.enrollments.map((enrollment) => enrollment.courseId);
+    const authorizedDomainIds = [...new Set(profile.enrollments.map((enrollment) => enrollment.course.domainId))];
     const rows = await this.prisma.recommendation.findMany({
-      where: { studentProfileId: profile.id },
+      where: {
+        studentProfileId: profile.id,
+        concept: { domainId: { in: authorizedDomainIds } },
+        evidence: { some: { attempt: { event: { courseId: { in: authorizedCourseIds } } } } }
+      },
       include: { concept: true, evidence: { include: { attempt: true } } },
       orderBy: { createdAt: "desc" }
     });
@@ -284,11 +333,31 @@ export class TeacherController {
     const row = await this.prisma.recommendation.findFirst({
       where: {
         id,
-        student: { enrollments: { some: { class: { teacher: { userId: request.user.id } } } } }
+        student: {
+          enrollments: {
+            some: {
+              status: "ACTIVE",
+              deletedAt: null,
+              class: teacherClassAccess(request.user.id, learnerDataRoles)
+            }
+          }
+        }
       },
       include: {
         concept: true,
-        student: { include: { user: true } },
+        student: {
+          include: {
+            user: true,
+            enrollments: {
+              where: {
+                status: "ACTIVE",
+                deletedAt: null,
+                class: teacherClassAccess(request.user.id, learnerDataRoles)
+              },
+              select: { courseId: true }
+            }
+          }
+        },
         evidence: {
           include: {
             attempt: {
@@ -299,6 +368,10 @@ export class TeacherController {
       }
     });
     if (!row) throw new NotFoundException("Recommendation not found");
+    const authorizedCourseIds = new Set(row.student.enrollments.map((enrollment) => enrollment.courseId));
+    if (!row.evidence.some((item) => item.attempt?.event && authorizedCourseIds.has(item.attempt.event.courseId))) {
+      throw new NotFoundException("Recommendation not found");
+    }
     return {
       id: row.id,
       student: { id: row.student.userId, name: row.student.user.displayName },
@@ -318,9 +391,10 @@ export class TeacherController {
 
   @Get("analytics/mastery")
   async mastery(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
-    const context = await this.teacherContext(request.user.id);
+    const context = await this.teacherContext(request.user.id, learnerDataRoles);
     const ids = context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.studentProfileId));
-    const history = await this.prisma.conceptStateHistory.findMany({ where: { studentProfileId: { in: ids } }, orderBy: { recordedAt: "asc" } });
+    const domainIds = [...new Set(context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.course.domainId)))];
+    const history = await this.prisma.conceptStateHistory.findMany({ where: { studentProfileId: { in: ids }, concept: { domainId: { in: domainIds } } }, orderBy: { recordedAt: "asc" } });
     const grouped = new Map<string, number[]>();
     for (const item of history) {
       const key = item.recordedAt.toISOString().slice(0, 10);
@@ -332,10 +406,11 @@ export class TeacherController {
 
   @Get("analytics/misconceptions")
   async misconceptionAnalytics(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
-    const context = await this.teacherContext(request.user.id);
+    const context = await this.teacherContext(request.user.id, learnerDataRoles);
     const userIds = context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.student.userId));
+    const courseIds = [...new Set(context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.courseId)))];
     const rows = await this.prisma.attemptDiagnosis.findMany({
-      where: { attempt: { userId: { in: userIds } }, misconceptionId: { not: null } },
+      where: { attempt: { userId: { in: userIds }, event: { courseId: { in: courseIds } } }, misconceptionId: { not: null } },
       include: { misconception: true, attempt: true }
     });
     const grouped = new Map<string, Set<string>>();
@@ -367,10 +442,11 @@ export class TeacherController {
 
   @Get("analytics/retention")
   async retention(@Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
-    const context = await this.teacherContext(request.user.id);
+    const context = await this.teacherContext(request.user.id, learnerDataRoles);
     const ids = context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.studentProfileId));
-    const states = await this.prisma.studentConceptState.findMany({ where: { studentProfileId: { in: ids } } });
-    const schedules = await this.prisma.reviewSchedule.findMany({ where: { studentProfileId: { in: ids } } });
+    const domainIds = [...new Set(context.classes.flatMap((item) => item.enrollments.map((enrollment) => enrollment.course.domainId)))];
+    const states = await this.prisma.studentConceptState.findMany({ where: { studentProfileId: { in: ids }, concept: { domainId: { in: domainIds } } } });
+    const schedules = await this.prisma.reviewSchedule.findMany({ where: { studentProfileId: { in: ids }, concept: { domainId: { in: domainIds } } } });
     return {
       averageRetrievability: average(states.map((item) => item.retrievability)),
       dueIn24Hours: schedules.filter((item) => item.dueAt <= new Date(Date.now() + 86_400_000) && item.status !== "COMPLETED").length,
@@ -403,7 +479,7 @@ export class TeacherController {
 
   @Patch("leaderboard/settings")
   async settings(@Req() request: AuthenticatedRequest, @Body("enabled") enabled: boolean): Promise<Record<string, unknown>> {
-    const context = await this.teacherContext(request.user.id);
+    const context = await this.teacherContext(request.user.id, [ClassTeacherRole.OWNER]);
     const updated = await this.prisma.learningClass.update({
       where: { id: context.classes[0]!.id },
       data: { leaderboardEnabled: Boolean(enabled) }
@@ -411,30 +487,47 @@ export class TeacherController {
     return { enabled: updated.leaderboardEnabled, updatedAt: updated.updatedAt.toISOString() };
   }
 
-  private async teacherContext(userId: string) {
+  private async teacherContext(userId: string, roles: ClassTeacherRole[] = allTeacherClassRoles) {
     const profile = await this.prisma.teacherProfile.findFirst({
       where: { userId, status: "ACTIVE", deletedAt: null },
-      include: {
-        user: true,
-        classes: {
-          where: { status: "ACTIVE", deletedAt: null },
-          include: {
-            enrollments: {
-              where: { status: "ACTIVE", deletedAt: null },
-              include: { student: { include: { user: true } }, course: true }
-            }
-          },
-          orderBy: { createdAt: "asc" }
-        }
-      }
+      include: { user: true }
     });
-    if (!profile || !profile.classes[0]) throw new NotFoundException("Không tìm thấy lớp đang hoạt động của giảng viên");
-    return profile;
+    if (!profile) throw new NotFoundException("Không tìm thấy hồ sơ giảng viên đang hoạt động");
+    const classes = await this.prisma.learningClass.findMany({
+      where: teacherClassAccess(userId, roles),
+      include: {
+        enrollments: {
+          where: { status: "ACTIVE", deletedAt: null },
+          include: { student: { include: { user: true } }, course: true }
+        }
+      },
+      orderBy: { createdAt: "asc" }
+    });
+    if (!classes[0]) throw new NotFoundException("Không tìm thấy lớp đang hoạt động của giảng viên");
+    const classPriority = (value: Prisma.JsonValue): number => {
+      const metadata = objectJson(value);
+      if (metadata.primaryDemoClass === true) return 2;
+      if (typeof metadata.fixture === "string" && metadata.fixture.length > 0) return 1;
+      return 0;
+    };
+    const prioritizedClasses = [...classes].sort(
+      (left, right) => classPriority(right.metadataJson) - classPriority(left.metadataJson)
+    );
+    return { ...profile, classes: prioritizedClasses };
   }
 
-  private async ownedClass(id: string, teacherUserId: string) {
+  private async ownedClass(
+    id: string,
+    teacherUserId: string,
+    roles: ClassTeacherRole[] = learnerDataRoles
+  ) {
     const row = await this.prisma.learningClass.findFirst({
-      where: { OR: [{ id }, { code: id }], teacher: { userId: teacherUserId }, status: "ACTIVE", deletedAt: null },
+      where: {
+        AND: [
+          { OR: [{ id }, { code: id }] },
+          teacherClassAccess(teacherUserId, roles)
+        ]
+      },
       include: {
         enrollments: {
           where: { status: "ACTIVE", deletedAt: null },
@@ -450,11 +543,27 @@ export class TeacherController {
     const profile = await this.prisma.studentProfile.findFirst({
       where: {
         OR: [{ id }, { userId: id }],
-        enrollments: { some: { status: "ACTIVE", class: { teacher: { userId: teacherUserId } } } },
+        enrollments: {
+          some: {
+            status: "ACTIVE",
+            deletedAt: null,
+            class: teacherClassAccess(teacherUserId, learnerDataRoles)
+          }
+        },
         status: "ACTIVE",
         deletedAt: null
       },
-      include: { user: true }
+      include: {
+        user: true,
+        enrollments: {
+          where: {
+            status: "ACTIVE",
+            deletedAt: null,
+            class: teacherClassAccess(teacherUserId, learnerDataRoles)
+          },
+          include: { course: true }
+        }
+      }
     });
     if (!profile) throw new NotFoundException("Student not found");
     return profile;

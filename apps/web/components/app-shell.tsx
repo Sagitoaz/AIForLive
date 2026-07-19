@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useProduct } from "@/features/product/product-context";
+import { apiRequest } from "@/lib/api";
 import { Asset } from "./asset";
 import { Logo } from "./logo";
 
 const studentNav = [["/student", "Hôm nay", "nav-home"], ["/student/course", "Khóa học", "nav-roadmap"], ["/student/reviews", "AI đề xuất", "ai-spark"], ["/student/progress", "Tiến bộ", "nav-chart"], ["/student/games", "Luyện tập", "nav-game"]] as const;
-const teacherNav = [["/teacher", "Tổng quan lớp", "nav-home"], ["/teacher/classes", "Học sinh", "nav-class"], ["/teacher/studio", "AI soạn bài", "ai-spark"], ["/teacher/reviews", "Kiểm duyệt", "nav-review"], ["/teacher/analytics", "Đo lường", "nav-chart"]] as const;
+const teacherNav = [["/teacher", "Tổng quan lớp", "nav-home"], ["/teacher/classes", "Học sinh", "nav-class"], ["/teacher/studio", "Soạn nội dung", "ai-spark"], ["/teacher/sources", "Nguồn học liệu", "teacher-source"], ["/teacher/reviews", "Kiểm duyệt", "nav-review"], ["/teacher/analytics", "Đo lường", "nav-chart"]] as const;
 
 export function AppShell({ role, children }: { role: "student" | "teacher"; children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,8 +17,12 @@ export function AppShell({ role, children }: { role: "student" | "teacher"; chil
   const product = useProduct();
   const setRole = product.setRole;
   const nav = role === "student" ? studentNav : teacherNav;
+  const [currentUser, setCurrentUser] = useState<{ displayName: string; avatar?: string | null } | null>(null);
 
   useEffect(() => { void setRole(role).catch(() => undefined); }, [role, setRole]);
+  useEffect(() => {
+    void apiRequest<{ displayName: string; avatar?: string | null }>("/auth/me").then(setCurrentUser).catch(() => setCurrentUser(null));
+  }, []);
 
   const profile = role === "student" ? product.student?.student : null;
   const logout = () => { if (product.busy) return; product.logout(); router.push("/login"); };
@@ -43,7 +48,7 @@ export function AppShell({ role, children }: { role: "student" | "teacher"; chil
           <div className="mode-status" title={product.error ?? product.message}><span className={`live-dot ${product.error ? "fallback" : ""}`}/><span>{product.operation ?? product.error ?? (product.backgroundLoading ? "Đang đồng bộ dữ liệu chi tiết…" : product.message)}</span></div>
           <div className="top-actions">
             {role === "student" && <><span className="xp-chip"><Asset type="icon" name="gamify-xp" alt="" width={20} height={20}/>{profile?.xp ?? 0} XP</span><span className="streak-chip"><Asset type="icon" name="gamify-streak" alt="" width={20} height={20}/>{profile?.streak ?? 0}</span></>}
-            <span className="profile-chip"><Asset type="avatar" name={role === "student" ? profile?.avatar ?? "avatar-01" : "avatar-24"} alt="" width={36} height={36}/><span>{role === "student" ? profile?.name ?? "Học sinh" : "Cô Mai"}</span></span>
+            <span className="profile-chip"><Asset type="avatar" name={role === "student" ? profile?.avatar ?? "avatar-01" : currentUser?.avatar ?? "avatar-24"} alt="" width={36} height={36}/><span>{role === "student" ? profile?.name ?? "Học sinh" : currentUser?.displayName ?? "Giảng viên"}</span></span>
             <button className="switch-link" disabled={product.busy} onClick={logout}>Đăng xuất</button>
           </div>
         </header>

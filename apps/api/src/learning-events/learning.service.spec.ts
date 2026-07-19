@@ -1,8 +1,10 @@
-import { LessonPhase } from "@prisma/client";
+import { ConflictException, ForbiddenException } from "@nestjs/common";
+import { LearningEventStatus, LessonPhase } from "@prisma/client";
 import type { AnalysisResult } from "../common/types";
 import { PrismaService } from "../database/prisma.service";
 import { AiClientService } from "../personalization/ai-client.service";
 import { FallbackAnalysisService } from "../personalization/fallback-analysis.service";
+import { ExerciseGraderService } from "./exercise-grader.service";
 import { LearningService } from "./learning.service";
 
 type Target = NonNullable<AnalysisResult["recommendation"]["target"]>;
@@ -27,6 +29,10 @@ interface ResolverHarness {
       originalSemanticTargetId: string | null;
     };
   }>;
+}
+
+interface IdempotencyHarness {
+  preflightAttempt(key: string, userId: string, requestHash: string): Promise<unknown>;
 }
 
 function analysis(action: string, target: Target): AnalysisResult {
@@ -75,17 +81,17 @@ function context(): ResolverContext {
   };
 }
 
-function service(prisma: {
-  microLesson?: { findFirst: jest.Mock };
-  lesson?: { findFirst: jest.Mock; findMany: jest.Mock };
-  exercise?: { findMany: jest.Mock };
-}): ResolverHarness {
-  const learning = new LearningService(
+function rawService(prisma: Record<string, unknown>): LearningService {
+  return new LearningService(
     prisma as unknown as PrismaService,
     {} as AiClientService,
-    new FallbackAnalysisService()
+    new FallbackAnalysisService(),
+    {} as ExerciseGraderService
   );
-  return learning as unknown as ResolverHarness;
+}
+
+function service(prisma: Record<string, unknown>): ResolverHarness {
+  return rawService(prisma) as unknown as ResolverHarness;
 }
 
 describe("LearningService recommendation target resolver", () => {
@@ -212,5 +218,149 @@ describe("LearningService recommendation target resolver", () => {
       phase: "THEORY"
     });
     expect(resolved.metadata.source).toBe("ACTIVE_LESSON");
+  });
+});
+
+describe("LearningService idempotency ownership", () => {
+  it("rejects a cross-user attempt collision before returning attempt data", async () => {
+    const learning = rawService({
+      learningEvent: {
+        findUnique: jest.fn().mockResolvedValue({
+          userId: "student-b",
+          status: LearningEventStatus.ANALYZED,
+          metadataJson: { requestHash: "same-hash" },
+          payloadJson: {},
+          attempt: { id: "attempt-b" },
+          personalizationRun: { id: "run-b" }
+        })
+      }
+    }) as unknown as IdempotencyHarness;
+
+    await expect(learning.preflightAttempt("shared-key", "student-a", "same-hash"))
+      .rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it("rejects reuse of a same-user key with a changed request hash", async () => {
+    const learning = rawService({
+      learningEvent: {
+        findUnique: jest.fn().mockResolvedValue({
+          userId: "student-a",
+          status: LearningEventStatus.ANALYZED,
+          metadataJson: { requestHash: "original-hash" },
+          payloadJson: {},
+          attempt: { id: "attempt-a" },
+          personalizationRun: { id: "run-a" }
+        })
+      }
+    }) as unknown as IdempotencyHarness;
+
+    await expect(learning.preflightAttempt("attempt-key", "student-a", "changed-hash"))
+      .rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("does not return an identical retry while its personalization run is pending", async () => {
+    const learning = rawService({
+      learningEvent: {
+        findUnique: jest.fn().mockResolvedValue({
+          userId: "student-a",
+          status: LearningEventStatus.PENDING_ANALYSIS,
+          metadataJson: { requestHash: "same-hash" },
+          payloadJson: {},
+          attempt: { id: "attempt-a" },
+          personalizationRun: null
+        })
+      }
+    }) as unknown as IdempotencyHarness;
+
+    await expect(learning.preflightAttempt("attempt-key", "student-a", "same-hash"))
+      .rejects.toThrow("still being processed");
+  });
+
+  it("returns the persisted result for an identical completed retry", async () => {
+    const analysisOutput = analysis("CONTINUE_PATH", {
+      type: "LESSON_PHASE",
+      id: "lesson-next",
+      title: "Bài tiếp theo",
+      phase: "THEORY",
+      estimated_minutes: 10
+    });
+    const attempt = {
+      id: "attempt-a",
+      userId: "student-a",
+      isCorrect: true,
+      usedHint: false,
+      metadataJson: {
+        grading: {
+          strategy: "LEGACY_EXACT",
+          mode: "SERVER_ANSWER_KEY",
+          score: 1,
+          passThreshold: 1,
+          confidence: 1,
+          rubricVersion: null,
+          criteria: [],
+          feedback: "Matched"
+        }
+      },
+      createdAt: new Date("2026-07-19T00:00:00.000Z"),
+      exercise: {
+        id: "exercise-a",
+        phase: LessonPhase.PRACTICE,
+        lesson: { concept: { code: "PYTHON_RANGE" } }
+      },
+      event: {
+        idempotencyKey: "attempt-key",
+        status: LearningEventStatus.ANALYZED,
+        personalizationRun: { outputJson: analysisOutput }
+      }
+    };
+    const learning = rawService({
+      learningEvent: {
+        findUnique: jest.fn().mockResolvedValue({
+          userId: "student-a",
+          status: LearningEventStatus.ANALYZED,
+          metadataJson: { requestHash: "same-hash" },
+          payloadJson: {},
+          attempt: { id: "attempt-a" },
+          personalizationRun: { id: "run-a" }
+        })
+      },
+      attempt: { findFirst: jest.fn().mockResolvedValue(attempt) }
+    }) as unknown as IdempotencyHarness;
+
+    await expect(learning.preflightAttempt("attempt-key", "student-a", "same-hash"))
+      .resolves.toMatchObject({
+        id: "attempt-a",
+        studentId: "student-a",
+        isCorrect: true,
+        analysis: analysisOutput,
+        grading: { mode: "SERVER_ANSWER_KEY" }
+      });
+  });
+
+  it("checks recordEvent collision ownership", async () => {
+    const learning = rawService({
+      enrollment: {
+        findFirst: jest.fn().mockResolvedValue({
+          courseId: "course-a",
+          student: { learningGoal: null, weeklyAvailabilityMinutes: 60 }
+        })
+      },
+      learningEvent: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: "event-b",
+          idempotencyKey: "shared-event",
+          userId: "student-b",
+          type: "LESSON",
+          status: LearningEventStatus.ANALYZED,
+          occurredAt: new Date(),
+          metadataJson: {}
+        })
+      }
+    });
+
+    await expect(learning.recordEvent("student-a", {
+      idempotencyKey: "shared-event",
+      type: "LESSON"
+    })).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
